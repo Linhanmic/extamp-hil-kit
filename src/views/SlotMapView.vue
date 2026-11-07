@@ -1,41 +1,57 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useSlotMapStore } from '@/stores/slotMap'
+import { formatSlots, scenarioSlots, sourceTitles } from '@/stores/slot-map-format'
 
 /**
- * SLOT 映射页：展示 mapping.ini 里每款车型对应的 slot 文件内容。数据由 store 读回，只做展示。
+ * SLOT 映射：目录下每个 txt 是一种映射方案。
+ * 总览按「音源 × 映射方案」展示；详情左侧方案列表，右侧车型与音源 SLOT。
  */
 const store = useSlotMapStore()
-const keyword = ref('')
+const viewMode = ref<'overview' | 'detail'>('overview')
+const selectedName = ref('')
 
-const filteredEntries = computed(() => {
-  const query = keyword.value.trim().toLowerCase()
-  if (!query) return store.entries
-  return store.entries.filter((entry) => entry.vehicle.toLowerCase().includes(query))
-})
+const titles = computed(() => sourceTitles(store.plans))
+const selectedPlan = computed(
+  () => store.plans.find((plan) => plan.name === selectedName.value) ?? store.plans[0] ?? null,
+)
 
-const emptyText = computed(() =>
-  keyword.value.trim() ? '未找到匹配的车型' : '该项目还没有 SLOT 映射数据',
+watch(
+  () => store.plans,
+  (plans) => {
+    if (!plans.some((plan) => plan.name === selectedName.value)) {
+      selectedName.value = plans[0]?.name ?? ''
+    }
+  },
+  { immediate: true },
 )
 </script>
 
+<!--
+  @grid A：标题 6 · 视图切换 6；详情左列表 3 · 右详情 9。
+  总览是动态列数的原生表格，列随映射文件数量增减，横向超出在表格内部滚动。
+-->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-12 flex flex-wrap items-center gap-2">
-        <h1 class="text-lg font-medium text-ink">SLOT 映射</h1>
-        <el-tag size="small" type="info" effect="plain">{{ store.entryCount }} 款车型</el-tag>
-        <el-tag v-if="store.missingCount" size="small" type="warning" effect="plain">
-          {{ store.missingCount }} 个 slot 文件缺失
-        </el-tag>
-      </div>
-    </div>
-
-    <!-- 工具栏 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-7">
-        <el-input v-model="keyword" size="small" clearable placeholder="搜索车型" />
+    <div class="w-[calc(11.5/12*100%)]">
+      <div class="grid grid-cols-12 items-center gap-2">
+        <div class="col-span-6 flex items-center gap-2">
+          <h1 class="text-lg font-medium text-ink">SLOT 映射</h1>
+          <el-tag size="small" type="info" effect="plain">{{ store.planCount }} 个映射</el-tag>
+          <el-tag v-if="store.errorPlanCount" size="small" type="warning" effect="plain">
+            {{ store.errorPlanCount }} 个文件异常
+          </el-tag>
+        </div>
+        <div class="col-span-6 justify-self-end">
+          <el-segmented
+            v-model="viewMode"
+            size="small"
+            :options="[
+              { label: '总览', value: 'overview' },
+              { label: '详情', value: 'detail' },
+            ]"
+          />
+        </div>
       </div>
     </div>
 
@@ -43,8 +59,8 @@ const emptyText = computed(() =>
       v-if="store.unconfigured"
       type="info"
       :closable="false"
-      title="还没有配置 SLOT 映射配置文件"
-      description="请在项目设置里指定 SLOT 映射配置（如 config/SLOT映射/mapping.ini）。"
+      title="还没有配置 SLOT 映射目录"
+      description="请在项目设置里指定 SLOT 映射目录（如 config/SLOT映射）。"
     />
 
     <el-alert
@@ -53,43 +69,100 @@ const emptyText = computed(() =>
       show-icon
       :closable="false"
       :title="store.error"
-      description="文件内容不可用，修正后重试即可。"
+      description="目录内容不可用，修正后重试即可。"
     />
 
-    <!-- 列表区 -->
-    <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
-        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取 SLOT 映射…</p>
-        <div v-else-if="filteredEntries.length" class="flex flex-col gap-2">
-          <div
-            v-for="entry in filteredEntries"
-            :key="entry.vehicle"
-            class="rounded-lg border border-line bg-surface p-3"
-          >
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <h2 class="text-sm font-medium text-ink">{{ entry.vehicle }}</h2>
-              <el-tag v-if="entry.missing" size="small" type="warning" effect="plain">
-                slot 文件缺失
-              </el-tag>
-            </div>
-            <p class="mt-1 truncate text-[11px] text-ink-muted" :title="entry.filePath">
-              {{ entry.filePath }}
-            </p>
-            <div
-              v-if="entry.lines.length"
-              class="mt-2 max-h-40 overflow-y-auto rounded-md border border-line bg-surface px-2.5 py-2"
-            >
-              <p
-                v-for="(line, index) in entry.lines"
-                :key="index"
-                class="text-[11px] leading-relaxed whitespace-pre-wrap text-ink"
+    <div class="w-[calc(11.5/12*100%)]">
+      <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取 SLOT 映射…</p>
+      <el-empty v-else-if="!store.hasData" description="该目录下还没有 SLOT 映射 txt 文件" />
+
+      <!-- 总览矩阵 -->
+      <div v-else-if="viewMode === 'overview'" class="overflow-x-auto border border-line">
+        <table class="w-full min-w-max border-collapse text-left text-[11px] text-ink">
+          <thead class="bg-surface-soft">
+            <tr>
+              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
+                音源类型
+              </th>
+              <th
+                v-for="plan in store.plans"
+                :key="plan.name"
+                class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap last:border-r-0"
+                :title="plan.filePath"
               >
-                {{ line }}
-              </p>
-            </div>
+                {{ plan.name }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="title in titles" :key="title">
+              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
+                {{ title }}
+              </th>
+              <td
+                v-for="plan in store.plans"
+                :key="plan.name"
+                class="border-b border-r border-line px-3 py-2 text-center whitespace-nowrap last:border-r-0"
+                :title="formatSlots(scenarioSlots(plan, title))"
+              >
+                {{ formatSlots(scenarioSlots(plan, title)) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 详情：左方案列表 + 右文件详情 -->
+      <div v-else class="grid grid-cols-12 gap-3">
+        <div class="col-span-3">
+          <div class="flex max-h-[60vh] flex-col overflow-y-auto border border-line">
+            <button
+              v-for="plan in store.plans"
+              :key="plan.name"
+              type="button"
+              class="border-b border-line px-3 py-2 text-left text-[11px] break-all outline-none last:border-b-0 hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-primary/40"
+              :class="selectedPlan?.name === plan.name ? 'bg-surface-soft text-primary' : 'text-ink'"
+              @click="selectedName = plan.name"
+            >
+              {{ plan.name }}
+            </button>
           </div>
         </div>
-        <el-empty v-else :description="emptyText" />
+
+        <div class="col-span-9 min-w-0">
+          <div v-if="selectedPlan" class="border border-line">
+            <div class="border-b border-line bg-surface-soft px-3 py-2">
+              <h2 class="text-[13px] font-medium break-all text-ink">{{ selectedPlan.name }}</h2>
+              <p class="mt-1 text-[11px] break-all text-ink-muted">
+                适用车型：{{ selectedPlan.vehicles.join('/') || '—' }}
+              </p>
+            </div>
+            <el-alert
+              v-if="selectedPlan.error"
+              type="warning"
+              :closable="false"
+              :title="selectedPlan.error"
+            />
+            <div
+              v-for="scenario in selectedPlan.scenarios"
+              :key="scenario.title"
+              class="grid grid-cols-12 items-center border-b border-line/60 last:border-b-0"
+            >
+              <p class="col-span-8 min-w-0 truncate px-3 py-2 text-[11px] text-ink" :title="scenario.title">
+                {{ scenario.title }}
+              </p>
+              <p class="col-span-4 px-3 py-2 text-center text-[11px] whitespace-nowrap text-ink">
+                {{ formatSlots(scenario.slots) }}
+              </p>
+            </div>
+            <p
+              v-if="!selectedPlan.scenarios.length && !selectedPlan.error"
+              class="px-3 py-3 text-[11px] text-ink-muted"
+            >
+              文件中没有解析到音源场景
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

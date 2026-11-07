@@ -4,8 +4,8 @@ import type { SlotMappingDocument } from '@/models'
 import { useAsyncData } from '@/composables/useAsyncData'
 
 /**
- * SLOT 映射数据：应用启动、切换项目时从项目设置指向的「SLOT 映射配置」读回来，
- * 连同映射里指向的 slot 文件内容一起展示。只做展示，没有写回。加载骨架复用 useAsyncData。
+ * SLOT 映射数据：应用启动、切换项目时从项目设置指向的「SLOT 映射目录」读回来，
+ * 目录下每个 txt 解析为一种映射方案，供总览矩阵与详情视图展示。只做展示，没有写回。
  */
 export const useSlotMapStore = defineStore('slotMap', () => {
   const data = useAsyncData<SlotMappingDocument>(
@@ -13,10 +13,10 @@ export const useSlotMapStore = defineStore('slotMap', () => {
     '读取 SLOT 映射失败',
   )
 
-  const entries = computed(() => data.document.value?.entries ?? [])
-  const hasData = computed(() => entries.value.length > 0)
-  const entryCount = computed(() => entries.value.length)
-  const missingCount = computed(() => entries.value.filter((entry) => entry.missing).length)
+  const plans = computed(() => data.document.value?.plans ?? [])
+  const hasData = computed(() => plans.value.length > 0)
+  const planCount = computed(() => plans.value.length)
+  const errorPlanCount = computed(() => plans.value.filter((plan) => plan.error).length)
 
-  return { ...data, entries, hasData, entryCount, missingCount }
+  return { ...data, plans, hasData, planCount, errorPlanCount }
 })

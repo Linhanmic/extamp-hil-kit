@@ -58,7 +58,8 @@ export type {
   VolumeTableLoadOutcome,
 } from './volume'
 export type {
-  SlotMappingEntry,
+  SlotMappingScenario,
+  SlotMappingPlan,
   SlotMappingDocument,
   SlotMappingLoadOutcome,
 } from './slot-map'

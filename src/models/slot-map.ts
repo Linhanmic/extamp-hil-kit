@@ -1,16 +1,24 @@
-/** SLOT 映射里一款车型的对应关系 */
-export interface SlotMappingEntry {
-  vehicle: string
-  /** 解析后的 slot 文件绝对路径，界面展示用 */
-  filePath: string
-  /** slot 文件逐行内容；文件缺失时为空并置 missing */
-  lines: string[]
-  missing?: boolean
+/** 一个音源场景及其 SLOT 通道 */
+export interface SlotMappingScenario {
+  title: string
+  slots: number[]
+  /** 是否存在 sleep 等非 SLOT 步骤；没有 slots 时界面统一显示“-” */
+  hasNonSlotSteps: boolean
 }
 
-/** SLOT 映射文件的解析结果（见「config/SLOT映射/mapping.ini」及其指向的 slot 文件） */
+/** 一个 SLOT 映射文件对应一种映射方案 */
+export interface SlotMappingPlan {
+  name: string
+  filePath: string
+  vehicles: string[]
+  scenarios: SlotMappingScenario[]
+  /** 单文件读取或解析失败，不影响目录下其他方案 */
+  error?: string
+}
+
+/** SLOT 映射目录的解析结果 */
 export interface SlotMappingDocument {
-  entries: SlotMappingEntry[]
+  plans: SlotMappingPlan[]
 }
 
 /** 读取 SLOT 映射数据的结果 */

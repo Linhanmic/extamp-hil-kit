@@ -61,14 +61,15 @@ async function chooseFile(kind: SettingsPickKind) {
   }
 }
 
-async function chooseDirectory() {
+async function chooseDirectory(kind: 'snapshot' | 'slot-mapping' = 'snapshot') {
   const outcome = await store.pickDirectory()
   if (outcome.canceled) return
   if (outcome.error || !outcome.path) {
     error.value = outcome.error ?? '选择目录失败'
     return
   }
-  form.value.snapshotDir = outcome.path
+  if (kind === 'slot-mapping') form.value.slotMappingPath = outcome.path
+  else form.value.snapshotDir = outcome.path
 }
 
 function validate(): string {
@@ -177,7 +178,7 @@ async function submit() {
             v-model="form.snapshotDir"
             label="扬声器快照目录"
             placeholder="如 config/扬声器快照"
-            @pick="chooseDirectory"
+            @pick="chooseDirectory('snapshot')"
           />
           <SettingsPathField
             v-model="form.volumeTablePath"
@@ -187,9 +188,9 @@ async function submit() {
           />
           <SettingsPathField
             v-model="form.slotMappingPath"
-            label="SLOT 映射配置"
-            placeholder="如 config/SLOT映射/mapping.ini"
-            @pick="chooseFile('slot-mapping')"
+            label="SLOT 映射目录"
+            placeholder="如 config/SLOT映射"
+            @pick="chooseDirectory('slot-mapping')"
           />
         </div>
       </div>

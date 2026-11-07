@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   parseOutputText,
-  parseSlotMappingText,
+  parseSlotMappingFileText,
   parseSnapshotText,
   parseVolumeTableText,
   readOutput,
@@ -79,17 +79,6 @@ describe('parseVolumeTableText', () => {
   })
 })
 
-describe('parseSlotMappingText', () => {
-  it('按 车型=路径 解析，跳过空行与注释', () => {
-    const text = ['# 注释', 'SC6H=/a/1.txt', 'FE=.\\config\\2.txt', ''].join('\n')
-
-    expect(parseSlotMappingText(text)).toEqual([
-      { vehicle: 'SC6H', path: '/a/1.txt' },
-      { vehicle: 'FE', path: '.\\config\\2.txt' },
-    ])
-  })
-})
-
 describe('parseSnapshotText', () => {
   it('解析「通道N对应名称」，拿不到通道号时按行序兜底', () => {
     const text = ['通道1对应左前低音', '通道2:左前高音', '没有通道前缀'].join('\n')
@@ -124,25 +113,60 @@ describe('读取器', () => {
     expect(readSnapshotDir(project, 'config/不存在目录')).toEqual({ document: { files: [] } })
   })
 
-  it('SLOT 映射会解析相对项目根的 slot 文件并读出内容', () => {
+  it('SLOT 映射按目录读取 txt，解析车型、音源与 SLOT', () => {
     const project = temporaryProject()
-    mkdirSync(join(project, 'config', 'SLOT映射'), { recursive: true })
+    const dir = join(project, 'config', 'SLOT映射')
+    mkdirSync(dir, { recursive: true })
     writeFileSync(
-      join(project, 'config', 'SLOT映射', 'mapping.ini'),
-      ['SC6H=.\\config\\SLOT映射\\slot_1.txt', 'YU2=.\\config\\SLOT映射\\slot_2.txt'].join('\n'),
+      join(dir, 'SLOT映射（带杜比模式）.txt'),
+      [
+        '适用车型:SC6H/YU2,SF海外',
+        '# 媒体音立体声',
+        '* 打开SLOT 1、SLOT 2',
+        '# 杜比音',
+        '* 打开SLOT 1、SLOT 2、SLOT 3、SLOT 4',
+        '# 电话音',
+        '* 打开SLOT 13',
+      ].join('\n'),
       'utf8',
     )
-    writeFileSync(join(project, 'config', 'SLOT映射', 'slot_1.txt'), 'slot 1\nslot 2', 'utf8')
+    writeFileSync(
+      join(dir, 'SLOT映射（不带杜比模式）.txt'),
+      ['适用车型:SC6E/HKE', '# 媒体音立体声', '* 打开SLOT 1、SLOT 2', '# 杜比音', '* sleep "100ms"'].join(
+        '\n',
+      ),
+      'utf8',
+    )
 
-    const outcome = readSlotMapping(project, 'config/SLOT映射/mapping.ini')
+    const outcome = readSlotMapping(project, 'config/SLOT映射')
 
-    expect(outcome.document?.entries).toHaveLength(2)
-    expect(outcome.document?.entries[0]).toMatchObject({
-      vehicle: 'SC6H',
-      filePath: join(project, 'config', 'SLOT映射', 'slot_1.txt'),
-      lines: ['slot 1', 'slot 2'],
+    expect(outcome.document?.plans).toHaveLength(2)
+    expect(outcome.document?.plans[0]).toMatchObject({
+      name: 'SLOT映射（不带杜比模式）.txt',
+      vehicles: ['SC6E', 'HKE'],
     })
-    // slot_2.txt 没写，标记 missing
-    expect(outcome.document?.entries[1]).toMatchObject({ vehicle: 'YU2', missing: true })
+    expect(outcome.document?.plans[0]?.scenarios[1]).toMatchObject({
+      title: '杜比音',
+      slots: [],
+      hasNonSlotSteps: true,
+    })
+    expect(outcome.document?.plans[1]).toMatchObject({
+      name: 'SLOT映射（带杜比模式）.txt',
+      vehicles: ['SC6H', 'YU2', 'SF海外'],
+    })
+    expect(outcome.document?.plans[1]?.scenarios[2]).toMatchObject({
+      title: '电话音',
+      slots: [13],
+    })
+  })
+
+  it('SLOT 映射文件文本支持多行适用车型与无 SLOT 步骤', () => {
+    const parsed = parseSlotMappingFileText(
+      ['适用车型:FD/HE/DK', '# 媒体音立体声', '* SLOT 1', '* SLOT 2', '# 电话音', '* sleep "100ms"'].join(
+        '\n',
+      ),
+    )
+    expect(parsed.vehicles).toEqual(['FD', 'HE', 'DK'])
+    expect(parsed.scenarios.map((scenario) => scenario.slots)).toEqual([[1, 2], []])
   })
 })

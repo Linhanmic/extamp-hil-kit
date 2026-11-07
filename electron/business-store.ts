@@ -8,14 +8,15 @@
  * 文件缺失按「空数据」处理，只有文件存在但读不了 / 解析不了才报 error。
  */
 import { readFileSync, readdirSync } from 'node:fs'
-import { isAbsolute, join, resolve } from 'node:path'
+import { join } from 'node:path'
 import type {
   OutputDocument,
   OutputLoadOutcome,
   OutputScenario,
   SlotMappingDocument,
-  SlotMappingEntry,
+  SlotMappingPlan,
   SlotMappingLoadOutcome,
+  SlotMappingScenario,
   SnapshotChannel,
   SnapshotDocument,
   SnapshotLoadOutcome,
@@ -150,18 +151,40 @@ export function parseVolumeTableText(text: string): VolumeTableDocument {
 /* SLOT 映射                                                          */
 /* ------------------------------------------------------------------ */
 
-/** 解析 mapping.ini：每行 `车型=slot 文件路径`，跳过空行与注释 */
-export function parseSlotMappingText(text: string): { vehicle: string; path: string }[] {
-  const entries: { vehicle: string; path: string }[] = []
+/** 解析单个 SLOT 映射文件：首行适用车型，# 音源场景，* 步骤中的 SLOT数字为通道 */
+export function parseSlotMappingFileText(text: string): {
+  vehicles: string[]
+  scenarios: SlotMappingScenario[]
+} {
+  const vehicles: string[] = []
+  const scenarios: SlotMappingScenario[] = []
+  let current: SlotMappingScenario | null = null
+
   for (const line of readLines(text)) {
-    if (line.startsWith('#') || line.startsWith(';')) continue
-    const eq = line.indexOf('=')
-    if (eq < 0) continue
-    const vehicle = line.slice(0, eq).trim()
-    const path = line.slice(eq + 1).trim()
-    if (vehicle && path) entries.push({ vehicle, path })
+    if (line.startsWith('适用车型:') || line.startsWith('适用车型：')) {
+      const value = line.slice('适用车型'.length + 1)
+      for (const vehicle of value.split(/[/、,，;；]/)) {
+        const name = vehicle.trim()
+        if (name && !vehicles.includes(name)) vehicles.push(name)
+      }
+      continue
+    }
+    if (line.startsWith('#')) {
+      current = { title: line.slice(1).trim(), slots: [], hasNonSlotSteps: false }
+      scenarios.push(current)
+      continue
+    }
+    if (!current || !line.startsWith('*')) continue
+
+    const matches = [...line.matchAll(/SLOT\s*(\d+)/gi)]
+    for (const match of matches) {
+      const slot = Number(match[1])
+      if (!current.slots.includes(slot)) current.slots.push(slot)
+    }
+    if (!matches.length) current.hasNonSlotSteps = true
   }
-  return entries
+
+  return { vehicles, scenarios }
 }
 
 /* ------------------------------------------------------------------ */
@@ -211,31 +234,39 @@ export function readVolumeTable(projectPath: string, filePath = ''): VolumeTable
   }
 }
 
-/** 读取 SLOT 映射配置及其指向的 slot 文件 */
-export function readSlotMapping(projectPath: string, filePath = ''): SlotMappingLoadOutcome {
-  const target = resolveProjectPath(projectPath, filePath)
+/** 读取 SLOT 映射目录：目录下每个 txt 文件是一种映射方案 */
+export function readSlotMapping(projectPath: string, dirPath = ''): SlotMappingLoadOutcome {
+  const target = resolveProjectPath(projectPath, dirPath)
   if (!target) return { unconfigured: true }
 
-  let text: string
+  let files: string[]
   try {
-    text = readFileSync(target, 'utf8')
+    files = readdirSync(target, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.txt'))
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b, 'zh-CN'))
   } catch (error) {
-    if (isMissing(error)) return { document: { entries: [] } }
-    return { error: `SLOT 映射配置无法读取（${target}）：${message(error)}` }
+    if (isMissing(error)) return { document: { plans: [] } }
+    return { error: `SLOT 映射目录无法读取（${target}）：${message(error)}` }
   }
 
-  const entries: SlotMappingEntry[] = parseSlotMappingText(text).map(({ vehicle, path }) => {
-    // slot 文件路径同样允许绝对路径，或相对项目根（如 .\config\SLOT映射\xxx.txt）
-    const slotPath = isAbsolute(path) ? path : resolve(projectPath, path.replace(/^[\\/]+/, ''))
+  const plans: SlotMappingPlan[] = files.map((name) => {
+    const filePath = join(target, name)
     try {
-      return { vehicle, filePath: slotPath, lines: readLines(readFileSync(slotPath, 'utf8')) }
+      const parsed = parseSlotMappingFileText(readFileSync(filePath, 'utf8'))
+      return { name, filePath, ...parsed }
     } catch (error) {
-      if (isMissing(error)) return { vehicle, filePath: slotPath, lines: [], missing: true }
-      throw error
+      return {
+        name,
+        filePath,
+        vehicles: [],
+        scenarios: [],
+        error: `映射文件无法读取：${message(error)}`,
+      }
     }
   })
 
-  return { document: { entries } satisfies SlotMappingDocument }
+  return { document: { plans } satisfies SlotMappingDocument }
 }
 
 /** 读取扬声器快照目录下的所有 txt 文件 */
