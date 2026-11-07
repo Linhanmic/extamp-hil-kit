@@ -109,57 +109,59 @@ async function onRemoveVariant(
 </script>
 
 <!--
-  @grid A：标题行（标题 + 新增）、筛选行（配置键 + 车型）、列表区均为 12 列 Row。
-  标题：标题 8 · 新增 4；筛选：配置键 4 · 车型 3（画稿左侧两块，右侧留空）。
-  列表内容宽 11.5/12，右缘落在第 12 栅格中线。
+  @grid A：标题 / 筛选 / 列表共用同一内容宽 11.5/12（右缘 = 第 12 栅格中线），
+  标题行与筛选行在该宽度内再建 12 列；标题 8 · 新增 4；筛选配置键 4 · 车型 3。
 -->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行：配置参数 · 新增配置参数（无统计徽章） -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-8 flex min-w-0 items-center">
-        <h1 class="text-lg font-medium text-ink">配置参数</h1>
+    <!-- 内容区：统一 11.5/12，保证新增按钮右缘与表格对齐 -->
+    <div class="w-[calc(11.5/12*100%)]">
+      <!-- 标题行：配置参数 · 新增配置参数（无统计徽章） -->
+      <div class="grid grid-cols-12 items-center gap-2">
+        <div class="col-span-8 flex min-w-0 items-center">
+          <h1 class="text-lg font-medium text-ink">配置参数</h1>
+        </div>
+        <div v-if="available" class="col-span-4 justify-self-end">
+          <el-button size="small" type="primary" @click="openCreateConfiguration">
+            新增配置参数
+          </el-button>
+        </div>
       </div>
-      <div v-if="available" class="col-span-4 justify-self-end">
-        <el-button size="small" type="primary" @click="openCreateConfiguration">
-          新增配置参数
-        </el-button>
-      </div>
-    </div>
 
-    <!-- 筛选行：配置键下拉 · 车型下拉（均单选；无最近更新） -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-4">
-        <el-select
-          v-model="configKeyFilter"
-          size="small"
-          clearable
-          placeholder="配置键：全部"
-          class="w-full"
-        >
-          <el-option
-            v-for="key in configKeyOptions"
-            :key="key"
-            :label="key"
-            :value="key"
-          />
-        </el-select>
-      </div>
-      <div class="col-span-3">
-        <el-select
-          v-model="vehicleFilter"
-          size="small"
-          clearable
-          placeholder="车型：全部"
-          class="w-full"
-        >
-          <el-option
-            v-for="vehicle in vehicleOptions"
-            :key="vehicle"
-            :label="vehicle"
-            :value="vehicle"
-          />
-        </el-select>
+      <!-- 筛选行：配置键下拉 · 车型下拉（均单选；无最近更新） -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-4">
+          <el-select
+            v-model="configKeyFilter"
+            size="small"
+            clearable
+            placeholder="配置键：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="key in configKeyOptions"
+              :key="key"
+              :label="key"
+              :value="key"
+            />
+          </el-select>
+        </div>
+        <div class="col-span-3">
+          <el-select
+            v-model="vehicleFilter"
+            size="small"
+            clearable
+            placeholder="车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
+        </div>
       </div>
     </div>
 
@@ -188,27 +190,23 @@ async function onRemoveVariant(
       description="导入需求分析表后，配置值可以关联需求变体，适用车型会自动跟着需求数据更新。"
     />
 
-    <!-- 列表区：外层 12 列，内容宽 11.5/12 → 右缘 = 第 12 栅格中线 -->
-    <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
-        <div class="w-[calc(11.5/12*100%)]">
-          <p v-if="store.loading" class="text-[11px] text-ink-muted">
-            正在读取已保存的配置参数…
-          </p>
-          <ConfigurationTable
-            v-else-if="filteredRows.length"
-            :rows="filteredRows"
-            @add-value="openCreateValue"
-            @edit-configuration="openEditConfiguration"
-            @delete-configuration="store.removeConfiguration"
-            @edit-value="openEditValue"
-            @delete-value="store.removeConfigValue"
-            @add-variant="openAddVariant"
-            @remove-variant="onRemoveVariant"
-          />
-          <el-empty v-else :description="emptyText" />
-        </div>
-      </div>
+    <!-- 列表区：与标题/筛选同宽 11.5/12 -->
+    <div class="w-[calc(11.5/12*100%)]">
+      <p v-if="store.loading" class="text-[11px] text-ink-muted">
+        正在读取已保存的配置参数…
+      </p>
+      <ConfigurationTable
+        v-else-if="filteredRows.length"
+        :rows="filteredRows"
+        @add-value="openCreateValue"
+        @edit-configuration="openEditConfiguration"
+        @delete-configuration="store.removeConfiguration"
+        @edit-value="openEditValue"
+        @delete-value="store.removeConfigValue"
+        @add-variant="openAddVariant"
+        @remove-variant="onRemoveVariant"
+      />
+      <el-empty v-else :description="emptyText" />
     </div>
 
     <ConfigurationFormDialog
