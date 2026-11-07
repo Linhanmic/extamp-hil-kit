@@ -120,7 +120,7 @@ function displayName(fileName: string): string {
 
       <!-- 总览矩阵 -->
       <div v-else-if="viewMode === 'overview'" class="overflow-x-auto border border-line">
-        <table class="w-full min-w-max border-collapse text-left text-[11px] text-ink">
+        <table class="w-full min-w-max border-collapse text-center text-[11px] text-ink">
           <thead class="bg-surface-soft">
             <tr>
               <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
