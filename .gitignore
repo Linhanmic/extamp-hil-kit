@@ -36,5 +36,8 @@ coverage
 # Vitest
 __screenshots__/
 
+# Playwright MCP 的快照与截图输出
+.playwright-mcp/
+
 # Vite
 *.timestamp-*-*.mjs

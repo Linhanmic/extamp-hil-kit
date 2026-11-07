@@ -14,6 +14,8 @@ electron/               Electron 主进程侧（不参与渲染进程打包）
   requirements-sheet.ts 用 SheetJS 把工作表读成二维单元格矩阵（不依赖 Electron，可单测）
   requirements-parse.ts 需求行 → Requirement / Variant 的纯解析逻辑（含表头与列探测）
   requirements-store.ts 解析结果落盘到 <项目>/.hil-kit/requirements.json
+  configs.ts            配置参数 IPC：读回与整份写回 .hil-kit/config.json
+  config-store.ts       配置参数落盘读写：结构校验、配置值补齐 / 去掉 config_key
 src/                    渲染进程（Vue 应用）
   App.vue               壳层：标题栏 + 启动页闸门 + 可拖拽三栏内容区
   components/
@@ -24,7 +26,7 @@ src/                    渲染进程（Vue 应用）
                         useWorkspace（Gauge 项目选择与持久化）、useRequirementsImport（需求导入流程）
   config/navigation.ts  侧栏导航项与顺序（路由与侧栏共用同一份定义）
   models/               数据模型：纯类型模块，common.ts 放共享基础类型，领域模型按需补充
-  views/                LaunchView（启动页）、RequirementView（需求导入）、
+  views/                LaunchView（启动页）、RequirementView（需求）、ConfigView（配置参数）、
                         FeatureView（其余导航项占位页）、Home/About
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
   router/               由 NAV_ITEMS 生成导航路由；file:// 协议下自动切到 hash history
@@ -86,6 +88,26 @@ npm run lint        # oxlint + eslint
 解析逻辑（`electron/requirements-parse.ts`）是纯函数，回归测试直接跑 `testdatas/需求分析表.xlsx` 这张真实表格：`npm run test:unit`。
 
 Excel 读取用 SheetJS，但走「Node 读字节 + `XLSX.read(buffer)`」而不是 `XLSX.readFile`——SheetJS 的 ESM 构建里 `readFile` 依赖的文件系统钩子不会自动接上，主进程打包后调用会直接失败。
+
+## 配置参数（侧栏「配置参数」）
+
+页面结构：顶部是标题与统计标签（配置项 / 配置值 / 车型 / 引用待处理数）加「新增配置项」按钮，中间是搜索框（可按配置项、配置值、车型或需求名称过滤），主体是配置项表格——展开一行是它的配置值列表，每行显示配置值和来源标注的车型，操作是编辑 / 删除。
+
+配置项与配置值**全部在页面里手工维护**，不解析 Excel：
+
+- **配置项**：名称即主键，全项目唯一；重命名会同步配置值里的归属。
+- **配置值**：在配置项下新增，配置值名称在同一配置项内唯一。
+- **关联需求变体**：从当前项目的需求数据里选「需求 → 变体」后添加，也可删除。引用只存需求名称与变体键，变体内容与车型都以 `requirements.json` 为准。
+- **手工车型**：可以直接选择或输入车型名，用于没有对应需求的特殊配置值。
+- **适用车型**是派生的：关联变体解析出的车型 ∪ 手工车型，去重后展示。变体车型用 `info` 标签，手工车型用默认色标签。
+
+引用会随需求数据变化：需求还没导入、需求改名、或变体已被重新导入覆盖时，标签标为「失效」；需求表里出现同名需求时按「同名需求歧义」提示。这两种情况都保留引用、不静默删除，由用户决定移除还是重新关联。页面上「N 个引用待处理」的标签统计的就是这类配置值。
+
+落盘位置 `<项目>/.hil-kit/config.json`，采用「读 → 改 → 写」编辑器模型：每次增删改都把整份文件写回，首次保存写 `createdAt`，之后只刷新 `updatedAt`。写入前主进程校验结构、配置项唯一、配置值唯一，并把名称去空白、车型与变体引用去重；校验不过不写文件，错误直接回到页面。结构见 [docs/config-json.md](docs/config-json.md)，机器可校验的版本见 [docs/config.schema.json](docs/config.schema.json)。
+
+**已保存的数据会自动读回**：应用启动、切换项目时 `stores/configs.ts` 调 `configs:load` 读该项目的 `config.json`，配置参数页直接列出配置项；文件损坏或版本不支持时提示重新维护。
+
+界面上的读写都经主进程（`electron/config-store.ts`）：落盘结构与模型只差一个字段——配置值不重复写 `config_key`（归属由所在配置项确定），读取时按所属配置项补齐、写入时去掉。传给 IPC 前 store 会把数据转成纯对象，Vue 响应式代理不能被结构化克隆。
 
 ## Electron 约定
 

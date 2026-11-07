@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue'
 
 // 已接入真实功能的导航项：其余项仍走占位页
 const NAV_VIEWS: Record<string, () => Promise<unknown>> = {
+  config: () => import('../views/ConfigView.vue'),
   requirement: () => import('../views/RequirementView.vue'),
 }
 

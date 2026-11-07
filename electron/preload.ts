@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { RequirementsParseConfig } from '../src/models/common'
+import type { Configuration, RequirementsParseConfig } from '../src/models/common'
 
 // 渲染进程不直接接触 Node：只通过 contextBridge 暴露只读环境信息、窗口控制与工作区操作
 contextBridge.exposeInMainWorld('desktop', {
@@ -33,5 +33,9 @@ contextBridge.exposeInMainWorld('desktop', {
       ipcRenderer.invoke('requirements:probe', filePath, sheetName, headerRow),
     preview: (config: RequirementsParseConfig) => ipcRenderer.invoke('requirements:preview', config),
     save: (config: RequirementsParseConfig) => ipcRenderer.invoke('requirements:save', config),
+  },
+  configs: {
+    load: () => ipcRenderer.invoke('configs:load'),
+    save: (configurations: Configuration[]) => ipcRenderer.invoke('configs:save', configurations),
   },
 })

@@ -11,6 +11,7 @@ import SplitResizer from './components/layout/SplitResizer.vue'
 import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
 import { useWorkspace } from './composables/useWorkspace'
+import { useConfigsStore } from './stores/configs'
 import { useRequirementsStore } from './stores/requirements'
 import LaunchView from './views/LaunchView.vue'
 
@@ -21,13 +22,19 @@ const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '�
 const { project, ready, load } = useWorkspace()
 const hasProject = computed(() => project.value !== null)
 
-// 应用打开（或切换项目）时读回该项目已保存的需求数据
+// 应用打开（或切换项目）时读回该项目已保存的需求与配置参数
 const requirementsStore = useRequirementsStore()
+const configsStore = useConfigsStore()
 watch(
   () => project.value?.path,
   (path) => {
-    if (path) void requirementsStore.load()
-    else requirementsStore.clear()
+    if (path) {
+      void requirementsStore.load()
+      void configsStore.load()
+      return
+    }
+    requirementsStore.clear()
+    configsStore.clear()
   },
   { immediate: true },
 )

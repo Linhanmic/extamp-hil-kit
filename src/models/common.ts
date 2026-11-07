@@ -30,6 +30,32 @@ export interface Configuration {
   config_key: string//配置键
   config_value: ConfigValue[]//配置包含的所有配置值
 }
+/** config.json 的文件结构：结构约定见 docs/config-json.md */
+export interface ConfigsDocument {
+  schemaVersion: number
+  createdAt: string
+  updatedAt: string
+  configurations: Configuration[]
+}
+/** 读取已落盘配置数据的结果 */
+export interface ConfigsLoadOutcome {
+  error?: string//文件存在但结构/版本不可用，需要重新维护
+  empty?: boolean//该项目还没有配置参数
+  document?: ConfigsDocument
+}
+/** 一次保存落盘后的摘要 */
+export interface ConfigsSavedState {
+  filePath: string//落盘的数据文件绝对路径
+  createdAt: string//首次保存时间（ISO 8601 UTC），后续保存不变
+  updatedAt: string//最近一次保存时间（ISO 8601 UTC）
+  configurationCount: number
+  configValueCount: number
+}
+/** 保存落盘结果 */
+export interface ConfigsSaveOutcome {
+  error?: string
+  saved?: ConfigsSavedState
+}
 /** 需求表的列位置配置（不含文件位置），表头探测后可在导入界面确认与调整 */
 export interface RequirementsColumnMapping {
   headerRow: number// 表头所在行号

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
+import { registerConfigsIpc } from './configs'
 import { registerRequirementsIpc } from './requirements'
 import { registerWorkspaceIpc } from './workspace'
 
@@ -104,6 +105,7 @@ if (!app.requestSingleInstanceLock()) {
     registerWindowControls()
     registerWorkspaceIpc()
     registerRequirementsIpc()
+    registerConfigsIpc()
     createWindow()
 
     app.on('activate', () => {

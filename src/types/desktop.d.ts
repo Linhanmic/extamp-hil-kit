@@ -1,4 +1,7 @@
 import type {
+  ConfigsLoadOutcome,
+  ConfigsSaveOutcome,
+  Configuration,
   RequirementsChooseOutcome,
   RequirementsLoadOutcome,
   RequirementsParseConfig,
@@ -57,6 +60,12 @@ export interface DesktopBridge {
     preview: (config: RequirementsParseConfig) => Promise<RequirementsPreviewOutcome>
     /** 解析并写入项目目录 .hil-kit/requirements.json */
     save: (config: RequirementsParseConfig) => Promise<RequirementsSaveOutcome>
+  }
+  configs: {
+    /** 读取当前项目已保存的配置参数（应用启动、切换项目时用） */
+    load: () => Promise<ConfigsLoadOutcome>
+    /** 整份写回配置参数到 .hil-kit/config.json */
+    save: (configurations: Configuration[]) => Promise<ConfigsSaveOutcome>
   }
 }
 
