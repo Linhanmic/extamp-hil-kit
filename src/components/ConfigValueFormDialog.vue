@@ -141,15 +141,19 @@ async function save() {
 }
 </script>
 
+<!--
+  @grid A：配置值行标签 3 + 控件 9；变体选择行需求 4 · 变体 4 · 按钮 4；
+  车型输入行输入 9 · 按钮 3。区块说明压缩为一行短提示，去掉长段解释。
+-->
 <template>
   <el-dialog
     v-model="visible"
     :title="configValue ? '编辑配置值' : '新增配置值'"
-    width="640px"
+    width="560px"
     destroy-on-close
   >
     <div class="flex flex-col gap-3">
-      <!-- @grid A：配置值一行（标签 3 列 + 控件 9 列） -->
+      <!-- @grid A：标签 3 列 + 控件 9 列 -->
       <div class="grid grid-cols-12 items-center gap-2">
         <label class="col-span-3 text-[11px] text-ink-muted">配置值</label>
         <div class="col-span-9">
@@ -165,10 +169,10 @@ async function save() {
 
       <!-- 关联变体 -->
       <div class="rounded-lg border border-line bg-surface-soft p-3">
-        <p class="text-[11px] font-medium text-ink">关联需求变体</p>
-        <p class="mt-1 text-[11px] text-ink-muted">
-          配置值的适用车型从关联变体解析，变体内容与车型以当前项目的需求数据为准。
-        </p>
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[11px] font-medium text-ink">关联需求变体</p>
+          <p v-if="refs.length" class="text-[11px] text-ink-muted">{{ refs.length }} 条</p>
+        </div>
 
         <div v-if="refs.length" class="mt-2 flex flex-wrap items-center gap-1">
           <el-tag
@@ -183,12 +187,12 @@ async function save() {
             {{ ref.requirement_name }} · {{ refLabel(ref) }}
           </el-tag>
         </div>
-        <p v-else class="mt-2 text-[11px] text-ink-muted">还没有关联变体，可以只靠手工车型确定</p>
+        <p v-else class="mt-2 text-[11px] text-ink-muted">尚未关联；可只靠手工车型</p>
 
         <template v-if="store.requirementOptions.length">
-          <!-- @grid A：需求 5 列 + 变体 5 列 + 添加按钮 2 列 -->
+          <!-- @grid A：需求 4 · 变体 4 · 添加 4 -->
           <div class="mt-2 grid grid-cols-12 items-center gap-2">
-            <div class="col-span-5">
+            <div class="col-span-4">
               <el-select
                 v-model="requirementIndex"
                 size="small"
@@ -204,7 +208,7 @@ async function save() {
                 />
               </el-select>
             </div>
-            <div class="col-span-5">
+            <div class="col-span-4">
               <el-select
                 v-model="variantIndex"
                 size="small"
@@ -220,25 +224,22 @@ async function save() {
                 />
               </el-select>
             </div>
-            <div class="col-span-2 justify-self-end">
+            <div class="col-span-4 flex justify-end">
               <el-button size="small" :disabled="!chosenVariant" @click="addRef">添加</el-button>
             </div>
           </div>
-          <p v-if="store.requirementOptions.some((option) => option.duplicate)" class="mt-1 text-[11px] text-ink-muted">
-            需求表里有同名需求：按名称引用会被标成歧义，建议先确认需求名称是否重复。
-          </p>
         </template>
         <p v-else class="mt-2 text-[11px] text-ink-muted">
-          还没有导入需求，暂时只能手工填写车型；导入需求后可以回来关联变体。
+          未导入需求，仅支持手工车型
         </p>
       </div>
 
       <!-- 手工车型 -->
       <div class="rounded-lg border border-line bg-surface-soft p-3">
-        <p class="text-[11px] font-medium text-ink">手工车型</p>
-        <p class="mt-1 text-[11px] text-ink-muted">
-          这里填写的车型直接计入适用车型，适合没有对应需求的特殊配置值。
-        </p>
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[11px] font-medium text-ink">手工车型</p>
+          <p v-if="vehicles.length" class="text-[11px] text-ink-muted">{{ vehicles.length }} 款</p>
+        </div>
 
         <div v-if="vehicles.length" class="mt-2 flex flex-wrap items-center gap-1">
           <el-tag
@@ -252,7 +253,7 @@ async function save() {
             {{ vehicle }}
           </el-tag>
         </div>
-        <p v-else class="mt-2 text-[11px] text-ink-muted">还没有手工车型</p>
+        <p v-else class="mt-2 text-[11px] text-ink-muted">尚未填写</p>
 
         <!-- @grid A：输入 9 列 + 添加按钮 3 列 -->
         <div class="mt-2 grid grid-cols-12 items-center gap-2">
@@ -263,13 +264,17 @@ async function save() {
               class="w-full"
               :fetch-suggestions="fetchVehicleSuggestions"
               select-when-unmatched
-              placeholder="输入或选择车型名，回车添加"
+              placeholder="输入或选择车型，回车添加"
               @select="onVehicleSelect"
               @keyup.enter="addVehicle(vehicleInput)"
             />
           </div>
-          <div class="col-span-3 justify-self-end">
-            <el-button size="small" :disabled="!vehicleInput.trim()" @click="addVehicle(vehicleInput)">
+          <div class="col-span-3 flex justify-end">
+            <el-button
+              size="small"
+              :disabled="!vehicleInput.trim()"
+              @click="addVehicle(vehicleInput)"
+            >
               添加
             </el-button>
           </div>
