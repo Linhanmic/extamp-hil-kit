@@ -50,20 +50,31 @@ const mainSpanClass = computed(() => {
             <section
               class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface"
             >
-              <div class="flex h-10 shrink-0 items-center justify-between border-b border-line px-2">
-                <div class="flex min-w-0 items-center gap-1.5">
-                  <RegionToggle v-model:visible="visible.sidebar" region="sidebar" class="grid" />
-                  <span class="truncate pl-1 text-xs text-ink-muted">工作区 / {{ routeTitle }}</span>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
-                  <ThemeSwitcher />
-                  <RegionToggle v-model:visible="visible.panel" region="panel" class="grid" />
-                  <RegionToggle
-                    v-model:visible="visible.secondSidebar"
-                    region="secondSidebar"
-                    class="grid"
-                  />
-                </div>
+              <!-- @grid A：工具栏是水平组合容器，内部重新建立 12 列栅格 -->
+              <div
+                class="grid h-10 shrink-0 grid-cols-12 items-center gap-2 border-b border-line px-2"
+              >
+                <RegionToggle
+                  v-model:visible="visible.sidebar"
+                  region="sidebar"
+                  class="col-span-2 grid justify-self-start lg:col-span-1"
+                />
+                <span
+                  class="col-span-2 truncate pl-1 text-xs text-ink-muted lg:col-span-6"
+                >
+                  工作区 / {{ routeTitle }}
+                </span>
+                <ThemeSwitcher class="col-span-4 justify-self-end lg:col-span-3" />
+                <RegionToggle
+                  v-model:visible="visible.panel"
+                  region="panel"
+                  class="col-span-2 grid justify-self-end lg:col-span-1"
+                />
+                <RegionToggle
+                  v-model:visible="visible.secondSidebar"
+                  region="secondSidebar"
+                  class="col-span-2 grid justify-self-end lg:col-span-1"
+                />
               </div>
               <div class="min-h-0 flex-1 overflow-y-auto p-4">
                 <RouterView />

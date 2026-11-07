@@ -1,19 +1,18 @@
 <template>
-  <section
-    class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-line bg-surface"
-  >
-    <!-- 面板标签栏（占位，尚未接入具体功能） -->
+  <section class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-line bg-surface">
+    <!-- @grid A：面板标签栏是「标签组 + 右侧说明」的水平组合容器 -->
     <header
-      class="flex h-9 shrink-0 items-center justify-between border-b border-line bg-surface-soft px-2"
+      class="grid h-9 shrink-0 grid-cols-12 items-center gap-2 border-b border-line bg-surface-soft px-2 text-xs"
     >
-      <div class="flex items-center gap-1 text-xs">
-        <span class="flex items-center gap-1.5 rounded px-2 py-1 bg-surface font-medium text-ink">
+      <!-- @grid B：标签组内容固有尺寸，整组占 col-span-8，内部只用统一 gap -->
+      <div class="col-span-8 flex items-center gap-1">
+        <span class="flex items-center gap-1.5 rounded bg-surface px-2 py-1 font-medium text-ink">
           <span class="size-1.5 rounded-full bg-primary"></span>
           终端
         </span>
         <span class="rounded px-2 py-1 text-ink-muted">日志</span>
       </div>
-      <span class="pr-1 text-[11px] text-ink-muted">panel 占位</span>
+      <span class="col-span-4 justify-self-end pr-1 text-[11px] text-ink-muted">panel 占位</span>
     </header>
 
     <!-- 面板内容区 -->

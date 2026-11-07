@@ -13,13 +13,17 @@ function showMessage() {
     <HelloWorld msg="You did it!" />
     <TheWelcome />
 
-    <section class="mt-8 mb-4 flex flex-wrap items-center justify-center gap-3">
-      <el-button type="primary" @click="showMessage">Element Plus 按钮</el-button>
-      <el-tag type="success" effect="dark">按需引入</el-tag>
-      <!-- bg-primary 来自 main.css 的 @theme，取值是 Element Plus 的 --el-color-primary -->
-      <span class="rounded-full bg-primary px-3 py-1 text-sm font-semibold text-white">
-        Tailwind 生效
-      </span>
+    <!-- @grid A：示例区建立自己的 Row -->
+    <section class="mt-8 mb-4 grid grid-cols-12 gap-3">
+      <!-- @grid B：按钮 / 标签 / 徽标都是固有尺寸，整组占 col-span-12，内部只用统一 gap -->
+      <div class="col-span-12 flex flex-wrap items-center justify-center gap-3">
+        <el-button type="primary" @click="showMessage">Element Plus 按钮</el-button>
+        <el-tag type="success" effect="dark">按需引入</el-tag>
+        <!-- bg-primary 来自 main.css 的 @theme，取值是 Element Plus 的 --el-color-primary -->
+        <span class="rounded-full bg-primary px-3 py-1 text-sm font-semibold text-white">
+          Tailwind 生效
+        </span>
+      </div>
     </section>
   </div>
 </template>
