@@ -6,7 +6,7 @@ import type { VariantRef } from '@/models'
 
 /**
  * 新增 / 编辑配置值：配置值 + 关联的需求变体 + 直接填写的车型。
- * 生效车型由 store 合并计算（关联变体解析出的车型 ∪ 手工车型），这里只负责录入。
+ * 生效车型由 store 合并计算（关联变体解析出的车型 ∪ 特殊车型配置），这里只负责录入。
  */
 const props = defineProps<{
   configKey: string
@@ -88,7 +88,7 @@ function removeRef(ref: VariantRef) {
   )
 }
 
-/** 手工车型的输入建议：需求数据里的车型，排除已经加进来的 */
+/** 特殊车型配置的输入建议：需求数据里的车型，排除已经加进来的 */
 function fetchVehicleSuggestions(query: string, callback: (items: { value: string }[]) => void) {
   const keyword = query.trim().toLowerCase()
   callback(
@@ -187,7 +187,6 @@ async function save() {
             {{ ref.requirement_name }} · {{ refLabel(ref) }}
           </el-tag>
         </div>
-        <p v-else class="mt-2 text-[11px] text-ink-muted">尚未关联；可只靠手工车型</p>
 
         <template v-if="store.requirementOptions.length">
           <!-- @grid A：需求 4 · 变体 4 · 添加 4 -->
@@ -230,16 +229,19 @@ async function save() {
           </div>
         </template>
         <p v-else class="mt-2 text-[11px] text-ink-muted">
-          未导入需求，仅支持手工车型
+          未导入需求，暂不能关联变体
         </p>
       </div>
 
-      <!-- 手工车型 -->
+      <!-- 特殊车型配置 -->
       <div class="rounded-lg border border-line bg-surface-soft p-3">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-[11px] font-medium text-ink">手工车型</p>
+          <p class="text-[11px] font-medium text-ink">特殊车型配置</p>
           <p v-if="vehicles.length" class="text-[11px] text-ink-muted">{{ vehicles.length }} 款</p>
         </div>
+        <p class="mt-1 text-[11px] text-ink-muted">
+          两种形式：1、车型名称以 xx 开头；2、车型名称包含 xxx
+        </p>
 
         <div v-if="vehicles.length" class="mt-2 flex flex-wrap items-center gap-1">
           <el-tag
