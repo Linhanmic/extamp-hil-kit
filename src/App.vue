@@ -2,6 +2,7 @@
 import { RouterLink, RouterView } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import HelloWorld from './components/HelloWorld.vue'
+import ThemeSwitcher from './components/ThemeSwitcher.vue'
 </script>
 
 <template>
@@ -17,6 +18,10 @@ import HelloWorld from './components/HelloWorld.vue'
           <RouterLink to="/">Home</RouterLink>
           <RouterLink to="/about">About</RouterLink>
         </nav>
+
+        <div class="mt-4 flex w-full justify-center lg:justify-start">
+          <ThemeSwitcher />
+        </div>
       </div>
     </header>
 

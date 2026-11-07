@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     ElButton: typeof import('element-plus/es')['ElButton']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
+    ElSegmented: typeof import('element-plus/es')['ElSegmented']
     ElTag: typeof import('element-plus/es')['ElTag']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     IconCommunity: typeof import('./components/icons/IconCommunity.vue')['default']
@@ -22,6 +23,7 @@ declare module 'vue' {
     IconTooling: typeof import('./components/icons/IconTooling.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
     TheWelcome: typeof import('./components/TheWelcome.vue')['default']
     WelcomeItem: typeof import('./components/WelcomeItem.vue')['default']
   }

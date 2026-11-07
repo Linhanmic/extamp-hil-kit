@@ -1,4 +1,6 @@
 import './assets/main.css'
+// Element Plus 深色变量（html.dark 下生效），组件样式仍走按需导入
+import 'element-plus/theme-chalk/dark/css-vars.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
