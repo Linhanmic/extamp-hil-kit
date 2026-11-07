@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import RequirementImportDialog from '@/components/RequirementImportDialog.vue'
-import RequirementTable from '@/components/RequirementTable.vue'
+import RequirementAssociationTable from '@/components/RequirementAssociationTable.vue'
+import { useConfigsStore } from '@/stores/configs'
 import { useRequirementsStore } from '@/stores/requirements'
+import { missingRequirementNames } from '@/stores/requirement-association'
 
 /**
  * 需求页（参考 tauri-app 的需求管理页）：统计 + 搜索 + 需求表，导入走弹窗。
  * 数据由 store 在应用启动 / 切换项目时从项目目录读回，导入成功后刷新。
  */
 const store = useRequirementsStore()
+const configsStore = useConfigsStore()
 const importVisible = ref(false)
 const keyword = ref('')
 
@@ -25,6 +28,11 @@ const filteredRequirements = computed(() => {
 
 const emptyText = computed(() =>
   keyword.value.trim() ? '未找到匹配的需求' : '该项目还没有导入需求',
+)
+
+/** 配置值仍引用、但当前需求列表已不存在的需求 */
+const orphanNames = computed(() =>
+  missingRequirementNames(store.document?.requirements ?? [], configsStore.configurations),
 )
 
 // ISO 存 UTC，界面按本地时间展示
@@ -89,16 +97,23 @@ async function onImported() {
       description="文件内容不可用，重新导入一次即可覆盖。"
     />
 
-    <!-- @grid B：列表区整块占一栏 -->
-    <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
-        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的需求…</p>
-        <RequirementTable
-          v-else-if="filteredRequirements.length"
-          :requirements="filteredRequirements"
-        />
-        <el-empty v-else :description="emptyText" />
-      </div>
+    <el-alert
+      v-if="orphanNames.length"
+      type="warning"
+      show-icon
+      :closable="false"
+      :title="`有 ${orphanNames.length} 个被配置值引用的需求已不存在`"
+      :description="orphanNames.join('、')"
+    />
+
+    <!-- 列表区：与配置参数页同宽，右缘对齐第 12 栅格中线 -->
+    <div class="w-[calc(11.5/12*100%)]">
+      <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的需求…</p>
+      <RequirementAssociationTable
+        v-else-if="filteredRequirements.length"
+        :requirements="filteredRequirements"
+      />
+      <el-empty v-else :description="emptyText" />
     </div>
 
     <RequirementImportDialog v-model="importVisible" @imported="onImported" />
