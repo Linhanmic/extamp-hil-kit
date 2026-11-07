@@ -9,12 +9,12 @@ const navItems = [
 
 <template>
   <aside class="flex min-h-0 flex-col overflow-hidden bg-surface-soft">
-    <!-- 品牌名：界面内不显示 Logo，HIL 标识仅作为应用桌面图标 -->
-    <div class="flex min-w-0 items-center border-b border-line px-3 py-2.5">
+    <!-- 品牌名：高 3/48，占侧栏 3 份中的左侧 2 份，块内文字居中，mono 字体；界面内不显示 Logo -->
+    <div class="flex h-[6.25dvh] shrink-0 items-center border-b border-line">
       <span
-        class="truncate font-brand text-[13px] font-black tracking-tight text-black dark:text-white"
+        class="block w-2/3 text-center font-mono text-sm font-bold leading-tight text-black dark:text-white"
       >
-        External Amplifier HIL Kit
+        External Amplifier<br />HIL Kit
       </span>
     </div>
 
