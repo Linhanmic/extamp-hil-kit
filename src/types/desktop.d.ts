@@ -1,3 +1,11 @@
+import type {
+  RequirementsChooseOutcome,
+  RequirementsParseConfig,
+  RequirementsPreviewOutcome,
+  RequirementsProbeOutcome,
+  RequirementsSaveOutcome,
+} from '@/models'
+
 export interface WorkspaceProject {
   /** 项目根目录的绝对路径 */
   path: string
@@ -36,6 +44,16 @@ export interface DesktopBridge {
     /** 直接按路径打开（最近项目列表使用），同样会校验 */
     open: (dir: string) => Promise<WorkspaceResult>
     clear: () => Promise<WorkspaceState>
+  }
+  requirements: {
+    /** 打开文件选择器挑需求分析表，返回文件路径与工作表名 */
+    choose: () => Promise<RequirementsChooseOutcome>
+    /** 探测表头行与列位置，用于预填列配置 */
+    probe: (filePath: string, sheetName: string, headerRow?: number) => Promise<RequirementsProbeOutcome>
+    /** 按列配置解析整张表，返回预览数据（不落盘） */
+    preview: (config: RequirementsParseConfig) => Promise<RequirementsPreviewOutcome>
+    /** 解析并写入项目目录 .hil-kit/requirements.json */
+    save: (config: RequirementsParseConfig) => Promise<RequirementsSaveOutcome>
   }
 }
 

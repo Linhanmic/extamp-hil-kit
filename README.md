@@ -8,8 +8,12 @@
 build/                  应用图标与图标生成脚本（icon.png / icon.ico / icon.svg）
 electron/               Electron 主进程侧（不参与渲染进程打包）
   main.ts               窗口创建、无边框配置、窗口控制 IPC、生命周期、单实例锁
-  preload.ts            contextBridge 暴露窗口控制、工作区选择等受限 API
+  preload.ts            contextBridge 暴露窗口控制、工作区选择、需求导入等受限 API
   workspace.ts          Gauge 项目目录选择、校验与持久化（userData/workspace.json）
+  requirements.ts       需求导入 IPC：选表、表头探测、解析预览、写入项目目录
+  requirements-sheet.ts 用 SheetJS 把工作表读成二维单元格矩阵（不依赖 Electron，可单测）
+  requirements-parse.ts 需求行 → Requirement / Variant 的纯解析逻辑（含表头与列探测）
+  requirements-store.ts 解析结果落盘到 <项目>/.hil-kit/requirements.json
 src/                    渲染进程（Vue 应用）
   App.vue               壳层：标题栏 + 启动页闸门 + 可拖拽三栏内容区
   components/
@@ -17,15 +21,17 @@ src/                    渲染进程（Vue 应用）
                         AppSecondSidebar、RegionToggle、SplitResizer、DesignGrid、NavIcon
     ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
   composables/          useTheme（主题）、useLayoutSize（区域尺寸）、useDesignGrid（设计网格）、
-                        useWorkspace（Gauge 项目选择与持久化）
+                        useWorkspace（Gauge 项目选择与持久化）、useRequirementsImport（需求导入流程）
   config/navigation.ts  侧栏导航项与顺序（路由与侧栏共用同一份定义）
   models/               数据模型：纯类型模块，common.ts 放共享基础类型，领域模型按需补充
-  views/                LaunchView（启动页）、FeatureView（导航项占位页）、Home/About
+  views/                LaunchView（启动页）、RequirementView（需求导入）、
+                        FeatureView（其余导航项占位页）、Home/About
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
   router/               由 NAV_ITEMS 生成导航路由；file:// 协议下自动切到 hash history
 fixtures/gauge-sample/  最小的 Gauge 测试项目，用于验证启动页的项目选择流程
 docs/grid-system.md     12 列栅格设计规范（页面级 + 组件级 A/B/C 方案）
 docs/data-model.md      数据模型模块的组织方式与约定
+testdatas/              需求分析表样例（需求导入的回归测试跑真实表格）
 dist/                   渲染进程构建产物（git 忽略）
 dist-electron/          主进程 / 预加载构建产物（git 忽略）
 ```
@@ -54,6 +60,21 @@ npm run lint        # oxlint + eslint
 启动页样式参考 ZCode 欢迎页：柔和渐变背景 + 居中卡片，自上而下为应用图标、欢迎标题、说明、整宽主按钮与「最近打开」列表。选择目录时会先把路径归一化（`path.resolve`），避免同一项目因分隔符不同在最近列表里重复。
 
 仓库内置了测试用项目 `fixtures/gauge-sample`（含 `manifest.json`、`specs/smoke.spec`、`env/default/default.properties`），启动页直接选它即可通过校验。
+
+## 需求导入（侧栏「需求」）
+
+把需求分析表（Excel）解析成 `Requirement` / `Variant` 并落盘到当前项目，是一条四步流程：
+
+1. **选择文件** —— 主进程弹文件选择器，只读工作表名后返回，渲染层优先选中名字带「需求」的工作表。
+2. **表头探测** —— 前 30 行里找同时含「需求ID」「需求名称」的表头行；需求ID / 名称 / 详情列按同义词表匹配，车型起始列取详情列之后第一个表头含「平台」或数据区出现 `●` / `—` 的列（`功能安全` 这类只写 `QM` 的列因此不会被误判）。
+3. **解析预览** —— 需求行 × 车型列的两维解析，结果在页面里展开核对：需求数、变体数、车型数、跳过行与逐行告警。
+4. **导入保存** —— 写入 `<项目>/.hil-kit/requirements.json`（含解析时的列配置与车型清单，便于回溯）。
+
+单元格约定（车型列）：`●` 适用且无变体差异、`●变体1` / `●多行差异描述` 适用并带变体描述（`●` 之后全部文本就是变体描述，`变体N` 只是代号）、`—` 不适用、空表示未填写。变体按 `key` 合并：`key` 由描述做 NFKC 归一后去掉控制字符、空白与标点得到，因此「除控制字符外其实一样」的多个写法会合并成一个变体，原始写法都留在 `content` 里、车型并入 `vehicles`。需求ID重复的行视为同一条需求的补充行（车型与变体累加）。
+
+解析逻辑（`electron/requirements-parse.ts`）是纯函数，回归测试直接跑 `testdatas/需求分析表.xlsx` 这张真实表格：`npm run test:unit`。
+
+Excel 读取用 SheetJS，但走「Node 读字节 + `XLSX.read(buffer)`」而不是 `XLSX.readFile`——SheetJS 的 ESM 构建里 `readFile` 依赖的文件系统钩子不会自动接上，主进程打包后调用会直接失败。
 
 ## Electron 约定
 

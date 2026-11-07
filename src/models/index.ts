@@ -12,10 +12,21 @@
  * 主进程打包是独立构建，不识别 `@` 别名。
  */
 export type {
-  EntityId,
-  IsoDateTime,
-  EntityBase,
-  KeyValueMap,
-  PageQuery,
-  PageResult,
+  Variant,
+  Requirement,
+  ConfigValue,
+  Configuration,
+  RequirementsColumnMapping,
+  RequirementsParseConfig,
+  RequirementSheetColumn,
+  RequirementSheetProbe,
+  RequirementsParseWarning,
+  RequirementsParseStats,
+  RequirementsParseResult,
+  RequirementsFileInfo,
+  RequirementsSavedState,
+  RequirementsChooseOutcome,
+  RequirementsProbeOutcome,
+  RequirementsPreviewOutcome,
+  RequirementsSaveOutcome
 } from './common'
