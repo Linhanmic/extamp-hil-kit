@@ -4,7 +4,8 @@ import ConfigurationFormDialog from '@/components/ConfigurationFormDialog.vue'
 import ConfigurationTable from '@/components/ConfigurationTable.vue'
 import ConfigValueFormDialog from '@/components/ConfigValueFormDialog.vue'
 import { useConfigsStore } from '@/stores/configs'
-import type { ConfigurationRow, ConfigurationValueRow } from '@/stores/configs'
+import type { ConfigurationValueRow, VariantRefStatus } from '@/stores/configs'
+import { filterConfigurationRows, type IssueFilter } from '@/stores/config-filter'
 import { useRequirementsStore } from '@/stores/requirements'
 
 /**
@@ -20,6 +21,9 @@ const requirementsStore = useRequirementsStore()
 const configKeyFilter = ref('')
 /** 车型筛选（单选，空 = 全部） */
 const vehicleFilter = ref('')
+const itemStatusFilter = ref<IssueFilter>('')
+const valueStatusFilter = ref<IssueFilter>('')
+const variantStatusFilter = ref<'' | VariantRefStatus>('')
 const configurationVisible = ref(false)
 const editingConfiguration = ref<string | null>(null)
 const valueVisible = ref(false)
@@ -44,27 +48,26 @@ const vehicleOptions = computed(() => {
   return names.sort((a, b) => a.localeCompare(b, 'zh-CN'))
 })
 
-/**
- * 过滤：配置键精确匹配整行；车型在配置值级过滤——只保留含该车型的值。
- */
-const filteredRows = computed<ConfigurationRow[]>(() => {
-  let rows = store.rows
-  if (configKeyFilter.value) {
-    rows = rows.filter((row) => row.config_key === configKeyFilter.value)
-  }
-  if (!vehicleFilter.value) return rows
-
-  return rows.flatMap((row) => {
-    const matchedValues = row.values.filter((value) =>
-      value.resolved.vehicles.includes(vehicleFilter.value),
-    )
-    if (!matchedValues.length) return []
-    return [{ ...row, values: matchedValues, valueCount: matchedValues.length }]
-  })
-})
+const filteredRows = computed(() =>
+  filterConfigurationRows(store.rows, {
+    configKey: configKeyFilter.value,
+    vehicle: vehicleFilter.value,
+    itemStatus: itemStatusFilter.value,
+    valueStatus: valueStatusFilter.value,
+    variantStatus: variantStatusFilter.value,
+  }),
+)
 
 const emptyText = computed(() => {
-  if (configKeyFilter.value || vehicleFilter.value) return '未找到匹配的配置项'
+  if (
+    configKeyFilter.value ||
+    vehicleFilter.value ||
+    itemStatusFilter.value ||
+    valueStatusFilter.value ||
+    variantStatusFilter.value
+  ) {
+    return '未找到匹配的配置项'
+  }
   return '该项目还没有配置参数'
 })
 
@@ -128,9 +131,9 @@ async function onRemoveVariant(
         </div>
       </div>
 
-      <!-- 筛选行：配置键下拉 · 车型下拉（均单选；无最近更新） -->
+      <!-- 筛选行：配置键 3 · 车型 2 · 配置项状态 2 · 配置值状态 2 · 变体状态 3 -->
       <div class="mt-3 grid grid-cols-12 items-center gap-2">
-        <div class="col-span-4">
+        <div class="col-span-3">
           <el-select
             v-model="configKeyFilter"
             size="small"
@@ -146,7 +149,7 @@ async function onRemoveVariant(
             />
           </el-select>
         </div>
-        <div class="col-span-3">
+        <div class="col-span-2">
           <el-select
             v-model="vehicleFilter"
             size="small"
@@ -160,6 +163,43 @@ async function onRemoveVariant(
               :label="vehicle"
               :value="vehicle"
             />
+          </el-select>
+        </div>
+        <div class="col-span-2">
+          <el-select
+            v-model="itemStatusFilter"
+            size="small"
+            clearable
+            placeholder="配置项状态：全部"
+            class="w-full"
+          >
+            <el-option label="正常" value="normal" />
+            <el-option label="待处理" value="issue" />
+          </el-select>
+        </div>
+        <div class="col-span-2">
+          <el-select
+            v-model="valueStatusFilter"
+            size="small"
+            clearable
+            placeholder="配置值状态：全部"
+            class="w-full"
+          >
+            <el-option label="正常" value="normal" />
+            <el-option label="待处理" value="issue" />
+          </el-select>
+        </div>
+        <div class="col-span-3">
+          <el-select
+            v-model="variantStatusFilter"
+            size="small"
+            clearable
+            placeholder="关联变体状态：全部"
+            class="w-full"
+          >
+            <el-option label="正常" value="ok" />
+            <el-option label="失效" value="missing" />
+            <el-option label="歧义" value="ambiguous" />
           </el-select>
         </div>
       </div>

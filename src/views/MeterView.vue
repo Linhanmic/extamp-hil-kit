@@ -1,42 +1,126 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import VolumeCurveChart from '@/components/VolumeCurveChart.vue'
 import { useMeterStore } from '@/stores/meter'
+import {
+  buildVolumeCurves,
+  canonicalVolumeValues,
+  VOLUME_LEVELS,
+} from '@/stores/volume-chart'
+import type { VolumeTableRow } from '@/models'
 
 /**
- * 音量表页：展示音量表文件里的「车型 × 音源 × 音量档位」表格。数据由 store 读回，只做展示。
+ * 音量表：0–39 档位表格 + 按音源分组的音量曲线。
+ * 音源类型与车型单选同时作用于两种视图。
  */
 const store = useMeterStore()
-const keyword = ref('')
+const viewMode = ref<'table' | 'chart'>('table')
+const sourceFilter = ref('')
+const vehicleFilter = ref('')
 
-const filteredRows = computed(() => {
-  const query = keyword.value.trim().toLowerCase()
-  if (!query) return store.rows
-  return store.rows.filter(
-    (row) =>
-      row.vehicle.toLowerCase().includes(query) || row.source.toLowerCase().includes(query),
-  )
+const sourceOptions = computed(() => {
+  const sources: string[] = []
+  for (const row of store.rows) {
+    if (!sources.includes(row.source)) sources.push(row.source)
+  }
+  return sources
+})
+
+function rowVehicles(row: VolumeTableRow): string[] {
+  return row.vehicle.split(/[/、,，;；]/).map((vehicle) => vehicle.trim()).filter(Boolean)
+}
+
+const vehicleOptions = computed(() => {
+  const names = new Set<string>()
+  for (const row of store.rows) {
+    for (const vehicle of rowVehicles(row)) names.add(vehicle)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+})
+
+const filteredRows = computed(() =>
+  store.rows.filter((row) => {
+    if (sourceFilter.value && row.source !== sourceFilter.value) return false
+    if (vehicleFilter.value && !rowVehicles(row).includes(vehicleFilter.value)) return false
+    return true
+  }),
+)
+
+const chartGroups = computed(() => {
+  const groups: { source: string; curves: ReturnType<typeof buildVolumeCurves> }[] = []
+  for (const row of filteredRows.value) {
+    let group = groups.find((item) => item.source === row.source)
+    if (!group) {
+      group = { source: row.source, curves: [] }
+      groups.push(group)
+    }
+  }
+  return groups.map((group) => ({
+    source: group.source,
+    curves: buildVolumeCurves(
+      filteredRows.value.filter((row) => row.source === group.source),
+      store.levels,
+    ),
+  }))
 })
 
 const emptyText = computed(() =>
-  keyword.value.trim() ? '未找到匹配的音量表行' : '该项目还没有音量表数据',
+  sourceFilter.value || vehicleFilter.value ? '未找到匹配的音量数据' : '该项目还没有音量表数据',
 )
 </script>
 
+<!--
+  @grid A：标题 6 · 视图切换 6；音源筛选 3 · 车型筛选 3。
+  表格 42 列使用原生表格，横向超出在表格内部滚动。
+-->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-12 flex flex-wrap items-center gap-2">
-        <h1 class="text-lg font-medium text-ink">音量表</h1>
-        <el-tag size="small" type="info" effect="plain">{{ store.rowCount }} 行</el-tag>
-        <el-tag size="small" type="info" effect="plain">{{ store.vehicleCount }} 款车型</el-tag>
+    <div class="w-[calc(11.5/12*100%)]">
+      <div class="grid grid-cols-12 items-center gap-2">
+        <div class="col-span-6">
+          <h1 class="text-lg font-medium text-ink">音量表</h1>
+        </div>
+        <div class="col-span-6 justify-self-end">
+          <el-segmented
+            v-model="viewMode"
+            size="small"
+            :options="[
+              { label: '表格', value: 'table' },
+              { label: '曲线', value: 'chart' },
+            ]"
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- 工具栏 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-7">
-        <el-input v-model="keyword" size="small" clearable placeholder="搜索车型或音源" />
+      <!-- 音源类型 + 车型筛选，均为单选 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-3">
+          <el-select
+            v-model="sourceFilter"
+            size="small"
+            clearable
+            placeholder="音源类型：全部"
+            class="w-full"
+          >
+            <el-option v-for="source in sourceOptions" :key="source" :label="source" :value="source" />
+          </el-select>
+        </div>
+        <div class="col-span-3">
+          <el-select
+            v-model="vehicleFilter"
+            size="small"
+            clearable
+            placeholder="车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
+        </div>
       </div>
     </div>
 
@@ -57,29 +141,54 @@ const emptyText = computed(() =>
       description="文件内容不可用，修正后重试即可。"
     />
 
-    <!-- 列表区 -->
-    <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
-        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取音量表…</p>
-        <el-table
-          v-else-if="filteredRows.length"
-          :data="filteredRows"
-          size="small"
-          max-height="480"
-        >
-          <el-table-column prop="vehicle" label="车型" min-width="120" show-overflow-tooltip />
-          <el-table-column prop="source" label="音源" min-width="100" show-overflow-tooltip />
-          <el-table-column
-            v-for="(level, index) in store.levels"
-            :key="level"
-            :label="level"
-            min-width="72"
-            align="center"
-          >
-            <template #default="{ row }">{{ row.values[index] }}</template>
-          </el-table-column>
-        </el-table>
-        <el-empty v-else :description="emptyText" />
+    <div class="w-[calc(11.5/12*100%)]">
+      <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取音量表…</p>
+      <el-empty v-else-if="!filteredRows.length" :description="emptyText" />
+
+      <!-- 0–39 表格 -->
+      <div v-else-if="viewMode === 'table'" class="overflow-x-auto border border-line">
+        <table class="w-full min-w-max border-collapse text-center text-[11px] text-ink">
+          <thead class="bg-surface-soft">
+            <tr>
+              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">车型</th>
+              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">音源类型</th>
+              <th
+                v-for="level in VOLUME_LEVELS"
+                :key="level"
+                class="border-b border-r border-line px-2 py-2 font-medium last:border-r-0"
+              >
+                {{ level }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in filteredRows" :key="`${row.vehicle}-${row.source}`">
+              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
+                {{ row.vehicle }}
+              </th>
+              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
+                {{ row.source }}
+              </th>
+              <td
+                v-for="(value, level) in canonicalVolumeValues(row, store.levels)"
+                :key="level"
+                class="border-b border-r border-line px-2 py-1.5 whitespace-nowrap last:border-r-0"
+              >
+                {{ value }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 每种音源一个图表；相同数值的车型曲线已合并 -->
+      <div v-else class="flex flex-col gap-3">
+        <VolumeCurveChart
+          v-for="group in chartGroups"
+          :key="group.source"
+          :source="group.source"
+          :curves="group.curves"
+        />
       </div>
     </div>
   </div>

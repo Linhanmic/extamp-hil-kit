@@ -60,6 +60,7 @@ declare module 'vue' {
     SplitResizer: typeof import('./components/layout/SplitResizer.vue')['default']
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
     TheWelcome: typeof import('./components/TheWelcome.vue')['default']
+    VolumeCurveChart: typeof import('./components/VolumeCurveChart.vue')['default']
     WelcomeItem: typeof import('./components/WelcomeItem.vue')['default']
     WindowControls: typeof import('./components/layout/WindowControls.vue')['default']
   }
