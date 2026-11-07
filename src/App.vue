@@ -27,21 +27,32 @@ const visible = reactive({
   secondSidebar: true,
 })
 
-const { sidebarWidth, secondSidebarWidth, panelHeight, resizeSidebar, resizeSecondSidebar, resizePanel } =
-  useLayoutSize()
+const {
+  sidebarUnits,
+  secondSidebarUnits,
+  mainUnits,
+  panelHeightPercent,
+  resizeSidebar,
+  resizeSecondSidebar,
+  resizePanel,
+} = useLayoutSize()
 
+const contentRef = ref<HTMLElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 
-// 外壳是三段可拖拽的像素轨道：左栏 · 分隔条 · 主内容 · 分隔条 · 右栏
-// （区域尺寸由鼠标拖拽决定，因此轨道用像素表达；区域内部的水平布局仍走 12 列栅格）
+// 三栏按设计网格的 12 份分配：左 3 份 · 中 5 份 · 右 4 份（用 fr 表达，缩放窗口时保持比例），
+// 两条 4px 分隔条为固定轨道
 const contentColumns = computed(() => {
   const tracks: string[] = []
-  if (visible.sidebar) tracks.push(`${sidebarWidth.value}px`, '4px')
-  tracks.push('minmax(0, 1fr)')
-  if (visible.secondSidebar) tracks.push('4px', `${secondSidebarWidth.value}px`)
+  if (visible.sidebar) tracks.push(`minmax(0, ${sidebarUnits.value}fr)`, '4px')
+  tracks.push(`minmax(0, ${mainUnits.value}fr)`)
+  if (visible.secondSidebar) tracks.push('4px', `minmax(0, ${secondSidebarUnits.value}fr)`)
   return tracks.join(' ')
 })
 
+const onSidebarResize = (delta: number) => resizeSidebar(delta, contentRef.value?.clientWidth ?? 0)
+const onSecondSidebarResize = (delta: number) =>
+  resizeSecondSidebar(delta, contentRef.value?.clientWidth ?? 0)
 const onPanelResize = (delta: number) => resizePanel(delta, mainRef.value?.clientHeight ?? 0)
 
 // 设计网格：标题栏按钮之外再给一个快捷键，方便设计时随手开关
@@ -61,7 +72,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 <template>
   <!-- Element Plus 全局配置：中文语言包（组件由 vite 插件按需自动导入） -->
   <el-config-provider :locale="zhCn">
-    <!-- 桌面端专属外壳：自定义标题栏 + 可拖拽三栏内容区，铺满窗口 -->
+    <!-- 桌面端专属外壳：自定义标题栏 + 三栏内容区，比例对齐 12 列 / 48 行设计网格 -->
     <div class="flex h-dvh w-full flex-col overflow-hidden bg-surface-page text-ink">
       <AppTitleBar
         v-model:sidebar="visible.sidebar"
@@ -70,12 +81,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         :title="routeTitle"
       />
 
-      <div class="grid min-h-0 flex-1" :style="{ gridTemplateColumns: contentColumns }">
-        <!-- 左栏：宽度可拖拽 -->
+      <div
+        ref="contentRef"
+        class="grid min-h-0 flex-1"
+        :style="{ gridTemplateColumns: contentColumns }"
+      >
+        <!-- 左栏：3 / 12 份 -->
         <AppSidebar v-show="visible.sidebar" />
-        <SplitResizer v-show="visible.sidebar" direction="x" @resize="resizeSidebar" />
+        <SplitResizer v-show="visible.sidebar" direction="x" @resize="onSidebarResize" />
 
-        <!-- 主内容：自适应剩余宽度，内部纵向分为 main_content 与 panel -->
+        <!-- 主内容：5 / 12 份，内部纵向分为 main_content 与 panel -->
         <main ref="mainRef" class="flex min-h-0 min-w-0 flex-col bg-surface">
           <div class="min-h-0 flex-1 overflow-y-auto p-4">
             <RouterView />
@@ -83,11 +98,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
           <!-- panel 上边界：高度可拖拽 -->
           <SplitResizer v-show="visible.panel" direction="y" @resize="onPanelResize" />
-          <AppPanel v-show="visible.panel" :style="{ height: `${panelHeight}px` }" />
+          <!-- panel：48 行中的 15 行 -->
+          <AppPanel v-show="visible.panel" :style="{ height: `${panelHeightPercent}%` }" />
         </main>
 
-        <!-- 右栏：宽度可拖拽 -->
-        <SplitResizer v-show="visible.secondSidebar" direction="x" @resize="resizeSecondSidebar" />
+        <!-- 右栏：4 / 12 份 -->
+        <SplitResizer
+          v-show="visible.secondSidebar"
+          direction="x"
+          @resize="onSecondSidebarResize"
+        />
         <AppSecondSidebar v-show="visible.secondSidebar" />
       </div>
 

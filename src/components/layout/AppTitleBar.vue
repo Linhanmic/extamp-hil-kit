@@ -19,20 +19,21 @@ const emit = defineEmits<{
 
 const { visible: gridVisible, toggle: toggleGrid } = useDesignGrid()
 
-// 12 条弹性轨道 + 1 条固定宽度的窗口控制轨道（3 × 44px），
-// 弹性轨道留给标题与各控件，避免控件与窗口按钮之间出现空档
+// 12 条弹性轨道 + 1 条固定宽度的窗口控制轨道（3 × 44px）。
+// 前 12 条轨道即设计网格的 12 列，控件按份数落在轨道上。
 const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
 </script>
 
 <!--
   @grid A：标题栏是水平组合容器，内部重新建立 12 列。
-  弹性轨道 span 分配：左栏切换 1 · 标题 6 · 设计网格 1 · 主题 2 · 面板切换 1 · 右栏切换 1 = 12
-  第 13 条轨道固定为窗口控制按钮组宽度。
+  按设计网格分配：左栏切换 1 份 · 标题 9 份 · 设计网格 1 份 ·
+  主题 + 面板 + 右栏控制组 1 份（三者共同只占 1 份）；窗口控制为第 13 条定宽轨道。
+  高度取 48 行中的 3 行（6.25dvh）。
   整条为窗口拖动区（-webkit-app-region: drag），交互控件单独标记 no-drag。
 -->
 <template>
   <header
-    class="grid h-9 shrink-0 items-stretch gap-2 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
+    class="grid h-[6.25dvh] shrink-0 items-stretch gap-1 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
     :style="{ gridTemplateColumns: TITLEBAR_COLUMNS }"
   >
     <!-- Column span-1：左栏切换 -->
@@ -43,45 +44,43 @@ const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
       @update:visible="emit('update:sidebar', $event)"
     />
 
-    <!-- Column span-6：当前页面标题（品牌名由左栏承载，这里不重复） -->
-    <div class="col-span-6 flex min-w-0 items-center">
+    <!-- Column span-9：当前页面标题（品牌名由左栏承载，这里不重复） -->
+    <div class="col-span-9 flex min-w-0 items-center">
       <span class="truncate text-[13px] text-ink">工作区 / {{ props.title }}</span>
     </div>
 
     <!-- Column span-1：设计网格覆盖层开关 -->
     <button
       type="button"
-      class="col-span-1 grid size-7 place-items-center justify-self-end self-center rounded text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+      class="col-span-1 grid size-6 place-items-center justify-self-end self-center rounded text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
       :class="{ 'text-primary': gridVisible }"
       :aria-pressed="gridVisible"
       :title="`${gridVisible ? '隐藏' : '显示'}设计网格（12 列 × 48 行，Ctrl+Shift+G）`"
       :aria-label="`${gridVisible ? '隐藏' : '显示'}设计网格`"
       @click="toggleGrid"
     >
-      <svg class="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+      <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
         <rect x="2.4" y="3.6" width="11.2" height="8.8" rx="1.8" />
         <path d="M6.1 3.6v8.8M9.9 3.6v8.8M2.4 7h11.2M2.4 9.2h11.2" />
       </svg>
     </button>
 
-    <!-- Column span-2：主题切换 -->
-    <ThemeSwitcher class="col-span-2 self-center justify-self-end [-webkit-app-region:no-drag]" />
-
-    <!-- Column span-1：面板切换 -->
-    <RegionToggle
-      region="panel"
-      :visible="props.panel"
-      class="col-span-1 grid self-center justify-self-end [-webkit-app-region:no-drag]"
-      @update:visible="emit('update:panel', $event)"
-    />
-
-    <!-- Column span-1：右栏切换 -->
-    <RegionToggle
-      region="secondSidebar"
-      :visible="props.secondSidebar"
-      class="col-span-1 grid self-center justify-self-end [-webkit-app-region:no-drag]"
-      @update:visible="emit('update:secondSidebar', $event)"
-    />
+    <!-- Column span-1：主题切换 + 面板切换 + 右栏切换，三者共同占 1 份 -->
+    <div class="col-span-1 flex items-center justify-end gap-0.5 [-webkit-app-region:no-drag]">
+      <ThemeSwitcher compact />
+      <RegionToggle
+        region="panel"
+        compact
+        :visible="props.panel"
+        @update:visible="emit('update:panel', $event)"
+      />
+      <RegionToggle
+        region="secondSidebar"
+        compact
+        :visible="props.secondSidebar"
+        @update:visible="emit('update:secondSidebar', $event)"
+      />
+    </div>
 
     <!-- 第 13 条轨道（定宽 132px）：窗口控制按钮组 -->
     <WindowControls class="col-start-13" />

@@ -2,6 +2,14 @@
 import { computed } from 'vue'
 import { useTheme, type ThemeMode } from '@/composables/useTheme'
 
+const props = withDefaults(
+  defineProps<{
+    /** 紧凑尺寸：只显示图标，用于标题栏里共同占 1 份栅格的控件组 */
+    compact?: boolean
+  }>(),
+  { compact: false },
+)
+
 const { mode } = useTheme()
 
 const labels: Record<ThemeMode, { label: string; short: string }> = {
@@ -21,19 +29,29 @@ function select(value: ThemeMode) {
 
 <!--
   主题切换是单个原子控件（不在同一行内与其他元素分配宽度），
-  因此按紧凑下拉呈现，宽度受控，不会撑破所在栅格列。
+  紧凑模式只渲染图标，宽度可被 1 份栅格容纳。
 -->
 <template>
   <el-dropdown trigger="click" @command="select">
     <button
       type="button"
-      class="flex h-7 items-center gap-1 rounded px-2 text-xs text-ink-muted transition-colors outline-none hover:bg-surface-soft hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+      class="flex items-center justify-center gap-1 rounded text-ink-muted transition-colors outline-none hover:bg-surface-soft hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+      :class="props.compact ? 'size-6' : 'h-7 px-2 text-xs'"
       :title="`主题：${current.label}`"
+      :aria-label="`主题：${current.label}`"
     >
-      <svg class="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+      <svg
+        :class="props.compact ? 'size-3.5' : 'size-4'"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.2"
+      >
         <template v-if="mode === 'light'">
           <circle cx="8" cy="8" r="3.4" />
-          <path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1" />
+          <path
+            d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1"
+          />
         </template>
         <template v-else-if="mode === 'dark'">
           <path d="M12.6 9.4A5.4 5.4 0 0 1 6.6 3.4a5.6 5.6 0 1 0 6 6z" />
@@ -43,10 +61,12 @@ function select(value: ThemeMode) {
           <path d="M8 3a5 5 0 0 1 0 10z" fill="currentColor" stroke="none" />
         </template>
       </svg>
-      <span class="whitespace-nowrap">{{ current.short }}</span>
-      <svg class="size-3 opacity-60" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
-        <path d="m4 6.5 4 4 4-4" />
-      </svg>
+      <template v-if="!props.compact">
+        <span class="whitespace-nowrap">{{ current.short }}</span>
+        <svg class="size-3 opacity-60" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="m4 6.5 4 4 4-4" />
+        </svg>
+      </template>
     </button>
 
     <template #dropdown>
