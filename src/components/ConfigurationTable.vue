@@ -210,17 +210,17 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
                 </svg>
               </button>
               <span
-                class="min-w-0 break-all text-[12px] font-medium text-ink"
+                class="min-w-0 truncate text-[12px] font-medium text-ink"
                 :title="value.value"
               >
                 {{ value.value }}
               </span>
             </div>
-            <div class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink" :title="joinRequirementNames(value.resolved.refs)">
+            <div class="col-span-3 min-w-0 truncate px-2 py-2 text-[11px] text-ink" :title="joinRequirementNames(value.resolved.refs)">
               {{ joinRequirementNames(value.resolved.refs) }}
             </div>
             <div
-              class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink"
+              class="col-span-3 min-w-0 truncate px-2 py-2 text-[11px] text-ink"
               :title="joinVehicles(value.resolved.vehicles)"
             >
               {{ joinVehicles(value.resolved.vehicles) }}
@@ -280,7 +280,7 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
                   {{ ref.requirement_name }}
                 </span>
               </div>
-              <div class="col-span-3 min-w-0 px-2 py-1.5 text-[11px] text-ink" :title="ref.label">
+              <div class="col-span-3 min-w-0 truncate px-2 py-1.5 text-[11px] text-ink" :title="ref.label">
                 {{ ref.label }}
                 <span v-if="ref.status === 'missing'" class="text-ink-muted">（失效）</span>
                 <span v-else-if="ref.status === 'ambiguous'" class="text-ink-muted">
@@ -288,7 +288,7 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
                 </span>
               </div>
               <div
-                class="col-span-3 min-w-0 px-2 py-1.5 text-[11px] text-ink"
+                class="col-span-3 min-w-0 truncate px-2 py-1.5 text-[11px] text-ink"
                 :title="joinVehicles(ref.vehicles)"
               >
                 {{ joinVehicles(ref.vehicles) }}
