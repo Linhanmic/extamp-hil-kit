@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import SpecTreeNodeItem from '@/components/SpecTreeNodeItem.vue'
+import { buildSpecTree } from '@/spec/tree'
 import { useConceptsStore, type LoadedConceptFile } from '@/stores/concepts'
 import type { Concept } from '@/spec/concept-file'
 import ConceptFormDialog, { type ConceptTarget } from '@/components/ConceptFormDialog.vue'
 
 /**
- * 封装管理：浏览 <项目>/concepts 下的 .cpt 封装文件，结构化增删改查。
- * 保存由对话框完成；本页负责列表、搜索、文件级与封装级删除。
+ * 封装库：扫描 specs 下全部 .cpt，左侧为概念目录树，右侧为选中文件详情。
+ * 概念筛选只匹配封装标题；编辑与删除仍由对话框和 store 完成。
  */
 const store = useConceptsStore()
 const keyword = ref('')
+const selectedPath = ref('')
+const treeOpen = ref(true)
+const collapseVersion = ref(0)
 
 const dialogVisible = ref(false)
-// 对话框入参：fixed=true 时锁定目标文件（编辑 / 向指定文件添加）；false 为新建模式由对话框选文件
 const dialogFixed = ref(false)
 const dialogTarget = ref<ConceptTarget>({ path: '', name: '' })
 const dialogConcepts = ref<Concept[]>([])
@@ -25,39 +29,50 @@ interface ConceptRow {
   index: number
 }
 
-interface FileDisplay {
-  file: LoadedConceptFile
-  rows: ConceptRow[]
-}
-
-const displays = computed<FileDisplay[]>(() =>
-  store.files.map((file) => ({
-    file,
-    rows: file.concepts.map((concept, index) => ({ file, concept, index })),
-  })),
-)
-
-const filteredDisplays = computed(() => {
+const filteredFiles = computed(() => {
   const query = keyword.value.trim().toLowerCase()
-  if (!query) return displays.value
-  return displays.value
-    .map((display) => ({
-      ...display,
-      rows: display.rows.filter(
-        (row) =>
-          row.concept.heading.toLowerCase().includes(query) ||
-          row.concept.steps.some((step) => step.text.toLowerCase().includes(query)),
-      ),
-    }))
-    .filter((display) => display.rows.length || display.file.name.toLowerCase().includes(query))
+  if (!query) return store.files
+  return store.files.filter((file) =>
+    file.concepts.some((concept) => concept.heading.toLowerCase().includes(query)),
+  )
+})
+const tree = computed(() => buildSpecTree(filteredFiles.value))
+const selectedFile = computed(
+  () => filteredFiles.value.find((file) => file.path === selectedPath.value) ?? filteredFiles.value[0] ?? null,
+)
+const selectedRows = computed<ConceptRow[]>(() => {
+  const file = selectedFile.value
+  if (!file) return []
+  const query = keyword.value.trim().toLowerCase()
+  return file.concepts
+    .map((concept, index) => ({ file, concept, index }))
+    .filter((row) => !query || row.concept.heading.toLowerCase().includes(query))
 })
 
+watch(
+  filteredFiles,
+  (files) => {
+    if (!files.some((file) => file.path === selectedPath.value)) {
+      selectedPath.value = files[0]?.path ?? ''
+    }
+  },
+  { immediate: true },
+)
+
+function toggleTree() {
+  if (treeOpen.value) {
+    treeOpen.value = false
+    collapseVersion.value += 1
+  } else {
+    treeOpen.value = true
+  }
+}
+
 const emptyText = computed(() =>
-  keyword.value.trim() ? '未找到匹配的封装' : '该项目还没有封装文件，点右上角「新建封装」开始',
+  keyword.value.trim() ? '未找到匹配的概念' : 'specs 目录下还没有 cpt 文件，点右上角「新建封装」开始',
 )
 
 function openCreate(target?: ConceptTarget) {
-  // 新建模式：fixedTarget 传 null 时由对话框选择目标文件；传 target 则锁定该文件
   dialogFixed.value = Boolean(target)
   dialogTarget.value = target ?? { path: '', name: '' }
   dialogConcepts.value = []
@@ -121,38 +136,38 @@ async function deleteFile(file: LoadedConceptFile) {
 }
 </script>
 
+<!--
+  @grid A：标题 7 · 新建 5；概念文本筛选 4；左侧概念树 3 · 右侧详情 9。
+-->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-7 flex flex-wrap items-center gap-2">
-        <h1 class="text-lg font-medium text-ink">封装管理</h1>
-        <el-tag size="small" type="info" effect="plain">{{ store.fileCount }} 个文件</el-tag>
-        <el-tag size="small" type="info" effect="plain">{{ store.conceptCount }} 个封装</el-tag>
-        <el-tag v-if="store.issueCount" size="small" type="warning" effect="plain">
-          {{ store.issueCount }} 个问题
-        </el-tag>
+    <div class="w-[calc(11.5/12*100%)]">
+      <div class="grid grid-cols-12 items-center gap-2">
+        <div class="col-span-7">
+          <h1 class="text-lg font-medium text-ink">封装库</h1>
+        </div>
+        <div class="col-span-5 justify-self-end">
+          <el-button size="small" type="primary" @click="openCreate()">新建封装</el-button>
+        </div>
       </div>
-      <div class="col-span-5 justify-self-end">
-        <el-button size="small" type="primary" @click="openCreate()">新建封装</el-button>
-      </div>
-    </div>
 
-    <!-- 工具栏 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-7">
-        <el-input v-model="keyword" size="small" clearable placeholder="搜索封装标题或步骤" />
+      <!-- 概念过滤：只匹配封装标题 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-4">
+          <el-input v-model="keyword" size="small" clearable placeholder="概念" />
+        </div>
+        <p class="col-span-8 justify-self-end text-[11px] text-ink-muted">
+          <template v-if="store.duplicates.size">
+            {{ store.duplicates.size }} 个封装标题跨文件重复
+          </template>
+          <template v-else-if="store.conceptCount">封装文件位于项目的 specs 目录</template>
+        </p>
       </div>
-      <p class="col-span-5 justify-self-end text-[11px] text-ink-muted">
-        <template v-if="store.duplicates.size">
-          {{ store.duplicates.size }} 个封装标题跨文件重复
-        </template>
-        <template v-else-if="store.conceptCount">封装文件位于项目的 concepts 目录</template>
-      </p>
     </div>
 
     <el-alert
       v-if="store.error"
+      class="w-[calc(11.5/12*100%)]"
       type="error"
       show-icon
       :closable="false"
@@ -162,6 +177,7 @@ async function deleteFile(file: LoadedConceptFile) {
 
     <el-alert
       v-if="store.duplicates.size"
+      class="w-[calc(11.5/12*100%)]"
       type="warning"
       show-icon
       :closable="false"
@@ -173,49 +189,75 @@ async function deleteFile(file: LoadedConceptFile) {
       "
     />
 
-    <!-- 列表区 -->
-    <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
-        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取封装文件…</p>
-        <div v-else-if="filteredDisplays.length" class="flex flex-col gap-2">
-          <div
-            v-for="display in filteredDisplays"
-            :key="display.file.path"
-            class="rounded-lg border border-line bg-surface p-3"
-          >
-            <!-- 文件头 -->
+    <div class="w-[calc(11.5/12*100%)]">
+      <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取封装文件…</p>
+      <el-empty v-else-if="!filteredFiles.length" :description="emptyText" />
+
+      <div v-else class="grid grid-cols-12 gap-3">
+        <!-- 左：概念目录树 -->
+        <div class="col-span-3">
+          <div class="max-h-[65vh] overflow-y-auto border border-line py-1">
+            <button
+              type="button"
+              class="flex w-full items-center gap-1 px-2 py-1 text-left text-[11px] font-medium text-ink outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+              :title="treeOpen ? '一键折叠全部目录' : '展开概念目录'"
+              @click="toggleTree"
+            >
+              <svg class="size-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path v-if="treeOpen" d="M4 6.5 8 10.5 12 6.5" />
+                <path v-else d="M6.5 4 10.5 8 6.5 12" />
+              </svg>
+              <span>概念</span>
+            </button>
+            <template v-if="treeOpen">
+              <SpecTreeNodeItem
+                v-for="node in tree"
+                :key="`${node.type}-${node.path}`"
+                :node="node"
+                :depth="0"
+                :selected-path="selectedFile?.path ?? ''"
+                :collapse-version="collapseVersion"
+                @select="selectedPath = $event"
+              />
+            </template>
+          </div>
+        </div>
+
+        <!-- 右：选中文件的封装详情 -->
+        <div class="col-span-9 min-w-0">
+          <div v-if="selectedFile" class="border border-line p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <h2 class="text-sm font-medium text-ink">{{ display.file.name }}</h2>
+              <h2 class="min-w-0 truncate text-sm font-medium text-ink" :title="selectedFile.name">
+                {{ selectedFile.name }}
+              </h2>
               <div class="flex items-center gap-1">
                 <el-button
                   size="small"
                   text
                   type="primary"
-                  @click="openCreate({ path: display.file.path, name: display.file.name })"
+                  @click="openCreate({ path: selectedFile.path, name: selectedFile.name })"
                 >
                   添加封装
                 </el-button>
-                <el-button size="small" text type="danger" @click="deleteFile(display.file)">
+                <el-button size="small" text type="danger" @click="deleteFile(selectedFile)">
                   删除文件
                 </el-button>
               </div>
             </div>
 
-            <!-- 文件级解析问题 -->
             <div
-              v-if="display.file.issues.length"
+              v-if="selectedFile.issues.length"
               class="mt-2 rounded-md bg-warning/10 px-2 py-1 text-[11px] text-warning"
             >
-              <p v-for="(issue, i) in display.file.issues" :key="i">
+              <p v-for="(issue, i) in selectedFile.issues" :key="i">
                 <template v-if="issue.conceptHeading">「{{ issue.conceptHeading }}」：</template>
                 {{ issue.message }}
               </p>
             </div>
 
-            <!-- 封装列表 -->
-            <div v-if="display.rows.length" class="mt-2 flex flex-col gap-2">
+            <div v-if="selectedRows.length" class="mt-2 flex flex-col gap-2">
               <div
-                v-for="row in display.rows"
+                v-for="row in selectedRows"
                 :key="row.index"
                 class="rounded-md border border-line px-2 py-2"
               >
@@ -242,36 +284,26 @@ async function deleteFile(file: LoadedConceptFile) {
                   </div>
                 </div>
 
-                <!-- 步骤预览 -->
                 <ul class="mt-1.5 flex flex-col gap-0.5">
                   <li
-                    v-for="(step, sIndex) in row.concept.steps.slice(0, 3)"
+                    v-for="(step, sIndex) in row.concept.steps"
                     :key="sIndex"
-                    class="truncate text-[11px] text-ink-muted"
+                    class="break-all text-[11px] text-ink-muted"
                   >
                     · {{ step.text }}
                     <span v-if="step.table">（含 {{ step.table.rows.length }} 行数据表）</span>
                   </li>
-                  <li
-                    v-if="row.concept.steps.length > 3"
-                    class="text-[11px] text-ink-muted"
-                  >
-                    · 其余 {{ row.concept.steps.length - 3 }} 步…
-                  </li>
                 </ul>
               </div>
             </div>
-            <p v-else-if="keyword.trim()" class="mt-2 text-[11px] text-ink-muted">
-              此文件没有匹配的封装
+            <p v-else class="mt-2 text-[11px] text-ink-muted">
+              {{ keyword.trim() ? '此文件没有匹配的概念' : '此文件还没有封装' }}
             </p>
-            <p v-else class="mt-2 text-[11px] text-ink-muted">此文件还没有封装</p>
           </div>
         </div>
-        <el-empty v-else :description="emptyText" />
       </div>
     </div>
 
-    <!-- 结构化编辑对话框 -->
     <ConceptFormDialog
       v-model="dialogVisible"
       :fixed-target="dialogFixed ? dialogTarget : null"

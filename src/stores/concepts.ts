@@ -15,7 +15,7 @@ export interface LoadedConceptFile {
 export type ConceptSaveResult = { ok: true } | { ok: false; error: string }
 
 /**
- * 封装（Gauge 概念 .cpt）文件：应用启动、切换项目时从 `<项目>/concepts` 读回，
+ * 封装（Gauge 概念 .cpt）文件：应用启动、切换项目时从 `<项目>/specs` 读回，
  * 解析成结构化封装供列表展示与表单编辑，保存时重新生成 .cpt 文本写回。
  *
  * 只读加载 + 按钮触发写回；浏览器环境（无主进程）保持空状态。
@@ -115,7 +115,7 @@ export const useConceptsStore = defineStore('concepts', () => {
   }
 
   /**
-   * 把一组封装整体写回目标文件（相对名或绝对路径均可，主进程会校验落在 concepts 内）。
+   * 把一组封装整体写回目标文件（相对名或绝对路径均可，主进程会校验落在 specs 内）。
    * 新文件（绝对路径不在现有列表里）也走这里。
    */
   async function saveConcepts(targetPath: string, concepts: Concept[]): Promise<ConceptSaveResult> {

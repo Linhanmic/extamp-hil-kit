@@ -2,7 +2,7 @@
 export interface ConceptFileInfo {
   /** 绝对路径 */
   path: string
-  /** 相对 concepts 目录的展示名 */
+  /** 相对 specs 目录的展示名 */
   name: string
 }
 

@@ -1,8 +1,8 @@
 /**
- * 封装文件（主进程侧）：列出、读取、写回与删除 Gauge 项目的 concepts 目录下的 .cpt 文件。
+ * 封装文件（主进程侧）：列出、读取、写回与删除 Gauge 项目的 specs 目录下的 .cpt 文件。
  *
  * 封装（Gauge 概念）的解析与生成在渲染层（src/spec/concept-file.ts），主进程只做文件读写。
- * 读写 / 删除前校验目标路径确实在 <项目>/concepts 之内，避免越界操作。
+ * 读写 / 删除前校验目标路径确实在 <项目>/specs 之内，避免越界操作。
  */
 import { mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -22,24 +22,24 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** 项目 concepts 目录 */
+/** 项目 specs 目录（.cpt 与 .spec 同目录维护） */
 function conceptsDir(projectPath: string): string {
-  return resolve(projectPath, 'concepts')
+  return resolve(projectPath, 'specs')
 }
 
-/** 目标路径是否落在项目 concepts 目录内（读写前的越界防护）；相对路径相对 concepts 目录解析 */
+/** 目标路径是否落在项目 specs 目录内（读写前的越界防护）；相对路径相对 specs 目录解析 */
 function isInsideConceptsDir(projectPath: string, target: string): boolean {
   const base = conceptsDir(projectPath)
   const resolved = isAbsolute(target) ? resolve(target) : resolve(base, target)
   return resolved === base || resolved.startsWith(base + sep)
 }
 
-/** 归一成绝对路径：相对名（如 audio.cpt）落在 concepts 目录下 */
+/** 归一成绝对路径：相对名（如 audio.cpt）落在 specs 目录下 */
 function resolveConceptPath(projectPath: string, target: string): string {
   return isAbsolute(target) ? resolve(target) : resolve(conceptsDir(projectPath), target)
 }
 
-/** 递归收集 concepts 目录下的 .cpt 文件 */
+/** 递归收集 specs 目录下的 .cpt 文件 */
 function listConceptFiles(dir: string): string[] {
   const result: string[] = []
   let entries
@@ -68,7 +68,7 @@ export function registerConceptsIpc() {
 
   handle('concepts:list', () => {
     const project = readWorkspace().current
-    // 没绑定项目或还没有 concepts，都按「没有封装」处理
+    // 没绑定项目或还没有 specs，都按「没有封装」处理
     if (!project) return { files: [] } satisfies ConceptsListOutcome
     try {
       const dir = conceptsDir(project.path)
@@ -85,7 +85,7 @@ export function registerConceptsIpc() {
     const project = readWorkspace().current
     if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies ConceptsReadOutcome
     if (typeof path !== 'string' || !isInsideConceptsDir(project.path, path)) {
-      return { error: '封装文件路径不在项目 concepts 目录内' } satisfies ConceptsReadOutcome
+      return { error: '封装文件路径不在项目 specs 目录内' } satisfies ConceptsReadOutcome
     }
     const target = resolveConceptPath(project.path, path)
     try {
@@ -105,7 +105,7 @@ export function registerConceptsIpc() {
     const project = readWorkspace().current
     if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies ConceptsWriteOutcome
     if (typeof path !== 'string' || !isInsideConceptsDir(project.path, path)) {
-      return { error: '封装文件路径不在项目 concepts 目录内' } satisfies ConceptsWriteOutcome
+      return { error: '封装文件路径不在项目 specs 目录内' } satisfies ConceptsWriteOutcome
     }
     if (typeof text !== 'string') return { error: '封装内容不正确' } satisfies ConceptsWriteOutcome
     const target = resolveConceptPath(project.path, path)
@@ -127,7 +127,7 @@ export function registerConceptsIpc() {
     const project = readWorkspace().current
     if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies ConceptsDeleteOutcome
     if (typeof path !== 'string' || !isInsideConceptsDir(project.path, path)) {
-      return { error: '封装文件路径不在项目 concepts 目录内' } satisfies ConceptsDeleteOutcome
+      return { error: '封装文件路径不在项目 specs 目录内' } satisfies ConceptsDeleteOutcome
     }
     const target = resolveConceptPath(project.path, path)
     try {
