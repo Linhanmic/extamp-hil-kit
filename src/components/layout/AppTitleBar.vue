@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Setting } from '@element-plus/icons-vue'
+import hilLogo from '../../../build/icon.png'
 import { useDesignGrid } from '@/composables/useDesignGrid'
 import RegionToggle from './RegionToggle.vue'
 import WindowControls from './WindowControls.vue'
 
 const props = defineProps<{
-  title: string
   sidebar: boolean
   panel: boolean
   secondSidebar: boolean
@@ -44,9 +44,13 @@ const GRID_PATH =
     class="grid h-[6.25dvh] shrink-0 items-stretch gap-1 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
     :style="{ gridTemplateColumns: TITLEBAR_COLUMNS }"
   >
-    <!-- Column span-8（闸门下 11）：项目名 / 当前页面，左缘留内边距 -->
-    <div class="flex min-w-0 items-center pl-2" :class="props.locked ? 'col-span-11' : 'col-span-8'">
-      <span class="truncate text-[13px] text-ink">{{ props.title }}</span>
+    <!-- Column span-8（闸门下 11）：HIL 图标 + 中文品牌名，垂直居中，不再显示项目/路由 -->
+    <div
+      class="flex min-w-0 items-center gap-2 pl-2"
+      :class="props.locked ? 'col-span-11' : 'col-span-8'"
+    >
+      <img :src="hilLogo" alt="HIL" class="size-6 shrink-0 rounded" />
+      <span class="truncate text-[13px] font-medium text-ink">外置功放 HIL 工具集</span>
     </div>
 
     <!-- Column span-1：项目设置（启动页闸门下隐藏），图标取 Element Plus 的 Setting -->

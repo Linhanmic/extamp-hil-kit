@@ -9,15 +9,7 @@ const { project, clear } = useWorkspace()
 
 <template>
   <aside class="flex min-h-0 flex-col overflow-hidden bg-surface-soft">
-    <!-- 品牌名：高 3/48，占侧栏 3 份中的左侧 2 份，块内文字居中，mono 字体；界面内不显示 Logo -->
-    <div class="flex h-[6.25dvh] shrink-0 items-center border-b border-line">
-      <span
-        class="block w-2/3 text-center font-mono text-sm font-bold leading-tight text-black dark:text-white"
-      >
-        External Amplifier<br />HIL Kit
-      </span>
-    </div>
-
+    <!-- 品牌已移至标题栏，侧栏从导航开始 -->
     <!-- 纵向导航列表；顺序定义见 src/config/navigation.ts，每一项是水平组合 -->
     <nav class="flex shrink-0 flex-col gap-0.5 p-2">
       <!-- @grid B：导航项是「图标 + 文字」组合，整项占满所在列，内部只用统一 gap -->

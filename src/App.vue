@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppPanel from './components/layout/AppPanel.vue'
@@ -22,10 +21,6 @@ import { useSlotMapStore } from './stores/slotMap'
 import { useSnapshotStore } from './stores/snapshot'
 import { useSpecsStore } from './stores/specs'
 import LaunchView from './views/LaunchView.vue'
-
-const route = useRoute()
-
-const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '首页')
 
 const { project, ready, load } = useWorkspace()
 const hasProject = computed(() => project.value !== null)
@@ -71,11 +66,6 @@ watch(
 
 // 标题栏的项目设置入口
 const settingsVisible = ref(false)
-
-// 未选项目时标题栏显示「启动」，选定后显示「项目名 / 页面名」
-const titlebarTitle = computed(() =>
-  hasProject.value ? `${project.value?.name} / ${routeTitle.value}` : '启动',
-)
 
 // 三块区域的显隐状态：右栏默认收起，需要时从标题栏展开
 const visible = reactive({
@@ -123,7 +113,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         v-model:sidebar="visible.sidebar"
         v-model:panel="visible.panel"
         v-model:second-sidebar="visible.secondSidebar"
-        :title="titlebarTitle"
         :locked="!hasProject"
         @settings="settingsVisible = true"
       />

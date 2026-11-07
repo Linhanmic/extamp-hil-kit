@@ -29,7 +29,7 @@ const { recents, busy, error, choose, openPath } = useWorkspace()
         <div class="col-span-12 flex justify-center pb-1">
           <img
             :src="appIcon"
-            alt="External Amplifier HIL Kit"
+            alt="外置功放 HIL 工具集"
             class="size-16 rounded-[18px] shadow-lg shadow-black/20"
           />
         </div>
