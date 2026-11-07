@@ -4,8 +4,8 @@ import type { SnapshotDocument } from '@/models'
 import { useAsyncData } from '@/composables/useAsyncData'
 
 /**
- * 扬声器快照数据：应用启动、切换项目时从项目设置指向的「扬声器快照目录」读回来，
- * 列出目录下所有快照文件与通道对应关系。只做展示，没有写回。加载骨架复用 useAsyncData。
+ * 扬声器快照数据：应用启动、切换项目时从项目设置指向的目录读取统一的 `snapshot.ini`，
+ * 每个车型分节作为一组快照，展示适用车型与通道对应关系。只做展示，没有写回。
  */
 export const useSnapshotStore = defineStore('snapshot', () => {
   const data = useAsyncData<SnapshotDocument>(

@@ -4,13 +4,16 @@ export interface SnapshotChannel {
   speaker: string
 }
 
-/** 扬声器快照目录里的一个文件 */
+/** snapshot.ini 中的一个快照分节：[适用车型] + 逐行扬声器 */
 export interface SnapshotFile {
+  /** 分节名称，作为左侧快照名称 */
   name: string
+  /** 分节名按 / 等分隔出的适用车型 */
+  vehicles: string[]
   channels: SnapshotChannel[]
 }
 
-/** 扬声器快照目录的读取结果（见「config/扬声器快照/」下的 txt 文件） */
+/** snapshot.ini 的读取结果 */
 export interface SnapshotDocument {
   files: SnapshotFile[]
 }

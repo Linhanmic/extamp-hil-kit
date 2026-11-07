@@ -1,40 +1,34 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useSnapshotStore } from '@/stores/snapshot'
 
 /**
- * 快照页：列出扬声器快照目录下的所有快照文件，展示每个文件的通道对应关系。
- * 数据由 store 读回，只做展示。
+ * 快照：统一读取目录下 snapshot.ini。
+ * 左侧为 INI 分节名称，右侧为选中分节的适用车型与通道扬声器。
  */
 const store = useSnapshotStore()
-const keyword = ref('')
+const selectedIndex = ref(0)
 
-const filteredFiles = computed(() => {
-  const query = keyword.value.trim().toLowerCase()
-  if (!query) return store.files
-  return store.files.filter((file) => file.name.toLowerCase().includes(query))
-})
+const selectedFile = computed(() => store.files[selectedIndex.value] ?? store.files[0] ?? null)
 
-const emptyText = computed(() =>
-  keyword.value.trim() ? '未找到匹配的快照文件' : '该项目还没有扬声器快照',
+watch(
+  () => store.files,
+  () => {
+    selectedIndex.value = 0
+  },
 )
 </script>
 
+<!-- @grid A：标题 12；左侧快照列表 3 · 右侧文件详情 9 -->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-12 flex flex-wrap items-center gap-2">
-        <h1 class="text-lg font-medium text-ink">快照</h1>
-        <el-tag size="small" type="info" effect="plain">{{ store.fileCount }} 个文件</el-tag>
-        <el-tag size="small" type="info" effect="plain">{{ store.channelCount }} 个通道</el-tag>
-      </div>
-    </div>
-
-    <!-- 工具栏 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-7">
-        <el-input v-model="keyword" size="small" clearable placeholder="搜索快照文件名" />
+    <div class="w-[calc(11.5/12*100%)]">
+      <div class="grid grid-cols-12 items-center gap-2">
+        <div class="col-span-12 flex flex-wrap items-center gap-2">
+          <h1 class="text-lg font-medium text-ink">快照</h1>
+          <el-tag size="small" type="info" effect="plain">{{ store.fileCount }} 个快照</el-tag>
+          <el-tag size="small" type="info" effect="plain">{{ store.channelCount }} 个通道</el-tag>
+        </div>
       </div>
     </div>
 
@@ -52,36 +46,56 @@ const emptyText = computed(() =>
       show-icon
       :closable="false"
       :title="store.error"
-      description="目录不可用，修正后重试即可。"
+      description="snapshot.ini 不可用，修正后重试即可。"
     />
 
-    <!-- 列表区 -->
-    <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
-        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取扬声器快照…</p>
-        <div v-else-if="filteredFiles.length" class="flex flex-col gap-2">
-          <div
-            v-for="file in filteredFiles"
-            :key="file.name"
-            class="rounded-lg border border-line bg-surface p-3"
-          >
-            <h2 class="text-sm font-medium text-ink">{{ file.name }}</h2>
-            <div v-if="file.channels.length" class="mt-2 flex flex-col gap-1">
-              <div
-                v-for="channel in file.channels"
-                :key="channel.channel"
-                class="grid grid-cols-12 items-center gap-2 rounded-md bg-surface px-2 py-1"
-              >
-                <span class="col-span-3 text-[11px] font-medium text-ink">
-                  {{ channel.channel }}
-                </span>
-                <span class="col-span-9 text-[11px] text-ink-muted">{{ channel.speaker }}</span>
-              </div>
-            </div>
-            <p v-else class="mt-2 text-[11px] text-ink-muted">（空文件）</p>
+    <div class="w-[calc(11.5/12*100%)]">
+      <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取扬声器快照…</p>
+      <el-empty v-else-if="!store.hasData" description="snapshot.ini 中还没有快照" />
+
+      <div v-else class="grid grid-cols-12 gap-3">
+        <!-- 左：快照分节列表 -->
+        <div class="col-span-3">
+          <div class="flex max-h-[60vh] flex-col overflow-y-auto border border-line">
+            <button
+              v-for="(file, index) in store.files"
+              :key="`${file.name}-${index}`"
+              type="button"
+              class="border-b border-line px-3 py-2 text-left text-[11px] break-all outline-none last:border-b-0 hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-primary/40"
+              :class="selectedIndex === index ? 'bg-surface-soft text-primary' : 'text-ink'"
+              @click="selectedIndex = index"
+            >
+              {{ file.name }}
+            </button>
           </div>
         </div>
-        <el-empty v-else :description="emptyText" />
+
+        <!-- 右：车型与通道 -->
+        <div class="col-span-9 min-w-0">
+          <div v-if="selectedFile" class="border border-line">
+            <div class="border-b border-line bg-surface-soft px-3 py-2">
+              <h2 class="text-[13px] font-medium break-all text-ink">{{ selectedFile.name }}</h2>
+            </div>
+            <div class="border-b border-line px-3 py-2 text-[11px] break-all text-ink">
+              适用车型：{{ selectedFile.vehicles.join('/') || '—' }}
+            </div>
+            <div
+              v-for="channel in selectedFile.channels"
+              :key="channel.channel"
+              class="grid grid-cols-12 items-center border-b border-line/60 last:border-b-0"
+            >
+              <p class="col-span-3 px-3 py-2 text-[11px] font-medium text-ink">
+                {{ channel.channel }}
+              </p>
+              <p class="col-span-9 min-w-0 break-all px-3 py-2 text-[11px] text-ink">
+                {{ channel.speaker }}
+              </p>
+            </div>
+            <p v-if="!selectedFile.channels.length" class="px-3 py-3 text-[11px] text-ink-muted">
+              该分节没有扬声器
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

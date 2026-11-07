@@ -17,8 +17,8 @@ import type {
   SlotMappingPlan,
   SlotMappingLoadOutcome,
   SlotMappingScenario,
-  SnapshotChannel,
   SnapshotDocument,
+  SnapshotFile,
   SnapshotLoadOutcome,
   VolumeTableDocument,
   VolumeTableLoadOutcome,
@@ -191,15 +191,35 @@ export function parseSlotMappingFileText(text: string): {
 /* 快照                                                               */
 /* ------------------------------------------------------------------ */
 
-/** 解析快照文件里的一行：`通道N对应扬声器名称`，拿不到通道号时按行序兜底 */
-export function parseSnapshotText(text: string): SnapshotChannel[] {
-  const channels: SnapshotChannel[] = []
-  readLines(text).forEach((line, index) => {
-    const match = line.match(/^通道\s*(\d+)\s*(?:对应|[:：=])?\s*(.*)$/)
-    if (match) channels.push({ channel: `通道${match[1]}`, speaker: match[2] })
-    else channels.push({ channel: `通道${index + 1}`, speaker: line })
-  })
-  return channels
+/** 解析 snapshot.ini：每个 [适用车型] 分节一组，扬声器按非空行从通道 1 递增 */
+export function parseSnapshotIniText(text: string): SnapshotFile[] {
+  const files: SnapshotFile[] = []
+  let current: SnapshotFile | null = null
+
+  for (const line of readLines(text)) {
+    const section = line.match(/^\[(.*)\]$/)
+    if (section) {
+      const name = section[1]?.trim() ?? ''
+      if (!name) {
+        current = null
+        continue
+      }
+      const vehicles = name
+        .split(/[/、,，;；]/)
+        .map((vehicle) => vehicle.trim())
+        .filter(Boolean)
+      current = { name, vehicles, channels: [] }
+      files.push(current)
+      continue
+    }
+    if (!current) continue
+
+    // 行序就是通道号；兼容「通道N对应扬声器」写法，展示对应后的名称
+    const speaker = line.replace(/^通道\s*\d+\s*对应\s*/, '').trim() || line
+    current.channels.push({ channel: `通道${current.channels.length + 1}`, speaker })
+  }
+
+  return files
 }
 
 /* ------------------------------------------------------------------ */
@@ -269,28 +289,16 @@ export function readSlotMapping(projectPath: string, dirPath = ''): SlotMappingL
   return { document: { plans } satisfies SlotMappingDocument }
 }
 
-/** 读取扬声器快照目录下的所有 txt 文件 */
+/** 读取扬声器快照目录下统一的 snapshot.ini */
 export function readSnapshotDir(projectPath: string, dirPath = ''): SnapshotLoadOutcome {
   const target = resolveProjectPath(projectPath, dirPath)
   if (!target) return { unconfigured: true }
 
-  let names: string[]
   try {
-    names = readdirSync(target).filter((name) => /\.txt$/i.test(name)).sort()
+    const files = parseSnapshotIniText(readFileSync(join(target, 'snapshot.ini'), 'utf8'))
+    return { document: { files } satisfies SnapshotDocument }
   } catch (error) {
     if (isMissing(error)) return { document: { files: [] } }
-    return { error: `扬声器快照目录无法读取（${target}）：${message(error)}` }
+    return { error: `扬声器快照文件无法读取（${join(target, 'snapshot.ini')}）：${message(error)}` }
   }
-
-  const files = names.map((name) => {
-    let channels: SnapshotChannel[] = []
-    try {
-      channels = parseSnapshotText(readFileSync(join(target, name), 'utf8'))
-    } catch (error) {
-      if (!isMissing(error)) throw error
-    }
-    return { name, channels }
-  })
-
-  return { document: { files } satisfies SnapshotDocument }
 }

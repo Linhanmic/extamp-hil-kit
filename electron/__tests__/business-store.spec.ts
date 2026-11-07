@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   parseOutputText,
   parseSlotMappingFileText,
-  parseSnapshotText,
+  parseSnapshotIniText,
   parseVolumeTableText,
   readOutput,
   readSlotMapping,
@@ -79,14 +79,31 @@ describe('parseVolumeTableText', () => {
   })
 })
 
-describe('parseSnapshotText', () => {
-  it('解析「通道N对应名称」，拿不到通道号时按行序兜底', () => {
-    const text = ['通道1对应左前低音', '通道2:左前高音', '没有通道前缀'].join('\n')
+describe('parseSnapshotIniText', () => {
+  it('按车型分节，扬声器按非空行从通道 1 递增', () => {
+    const text = [
+      '[SC6H/HTHE_HTBU/SF海外]',
+      '通道1对应左前低音',
+      '',
+      '左前高音',
+      '[YU]',
+      '通道1对应中置',
+    ].join('\n')
 
-    expect(parseSnapshotText(text)).toEqual([
-      { channel: '通道1', speaker: '左前低音' },
-      { channel: '通道2', speaker: '左前高音' },
-      { channel: '通道3', speaker: '没有通道前缀' },
+    expect(parseSnapshotIniText(text)).toEqual([
+      {
+        name: 'SC6H/HTHE_HTBU/SF海外',
+        vehicles: ['SC6H', 'HTHE_HTBU', 'SF海外'],
+        channels: [
+          { channel: '通道1', speaker: '左前低音' },
+          { channel: '通道2', speaker: '左前高音' },
+        ],
+      },
+      {
+        name: 'YU',
+        vehicles: ['YU'],
+        channels: [{ channel: '通道1', speaker: '中置' }],
+      },
     ])
   })
 })
@@ -111,6 +128,30 @@ describe('读取器', () => {
       document: { levels: [], rows: [] },
     })
     expect(readSnapshotDir(project, 'config/不存在目录')).toEqual({ document: { files: [] } })
+  })
+
+  it('快照只读取目录下统一的 snapshot.ini', () => {
+    const project = temporaryProject()
+    const dir = join(project, 'config', '扬声器快照')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, 'snapshot.ini'),
+      ['[SC6H/YU2]', '通道1对应左前低音', '', '左前高音'].join('\n'),
+      'utf8',
+    )
+    writeFileSync(join(dir, '旧快照.txt'), '通道1对应不应读取', 'utf8')
+
+    const outcome = readSnapshotDir(project, 'config/扬声器快照')
+
+    expect(outcome.document?.files).toHaveLength(1)
+    expect(outcome.document?.files[0]).toMatchObject({
+      name: 'SC6H/YU2',
+      vehicles: ['SC6H', 'YU2'],
+      channels: [
+        { channel: '通道1', speaker: '左前低音' },
+        { channel: '通道2', speaker: '左前高音' },
+      ],
+    })
   })
 
   it('SLOT 映射按目录读取 txt，解析车型、音源与 SLOT', () => {
