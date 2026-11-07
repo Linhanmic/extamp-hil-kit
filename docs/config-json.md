@@ -18,6 +18,7 @@
 
 - `configurations` 的数组顺序就是页面展示顺序；`config_key` 全文件唯一，作为配置项主键。
 - 同一配置项下 `config_value[].value` 唯一。配置值的身份是 `config_key + value`，不另设 ID。
+- 配置值**不重复写 `config_key`**：归属由所在的配置项唯一确定。模型里的 `ConfigValue.config_key` 保留（便于在内存与界面里定位所属配置项），读写时由存储层按所属项补齐与去掉。
 - `relay_variants` **只存引用** `{ requirement_id, variant_key }`，配置值的适用车型通过引用解析得到，变体内容与车型以 `requirements.json` 为准。
 - `manual_vehicles` 是在页面直接填写的车型（不来自任何变体），用来覆盖「特殊配置项没有对应需求」的情况。
 - 配置值的**生效车型 = 关联变体的 `vehicles` ∪ `manual_vehicles`**，由读取方计算，不落盘。
@@ -29,6 +30,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "外置功放 HIL 配置参数",
+  "description": "配置参数页手工维护的数据文件：<Gauge 项目>/.hil-kit/config.json。结构约定见 docs/config-json.md。",
   "type": "object",
   "required": ["schemaVersion", "createdAt", "updatedAt", "configurations"],
   "additionalProperties": false,
@@ -70,14 +72,9 @@
     },
     "configValue": {
       "type": "object",
-      "required": ["config_key", "value", "relay_variants", "manual_vehicles"],
+      "required": ["value", "relay_variants", "manual_vehicles"],
       "additionalProperties": false,
       "properties": {
-        "config_key": {
-          "type": "string",
-          "minLength": 1,
-          "description": "冗余字段，与所属配置项的 config_key 相同；保留是为了与 src/models/common.ts 的 ConfigValue 一致，读写不需要字段映射"
-        },
         "value": {
           "type": "string",
           "minLength": 1,
@@ -129,7 +126,6 @@
       "config_key": "扬声器配置",
       "config_value": [
         {
-          "config_key": "扬声器配置",
           "value": "14扬声器",
           "relay_variants": [
             { "requirement_id": "SwRS_AMP_Handeshake_001", "variant_key": "变体1" }
@@ -137,7 +133,6 @@
           "manual_vehicles": []
         },
         {
-          "config_key": "扬声器配置",
           "value": "10扬声器",
           "relay_variants": [],
           "manual_vehicles": ["SC6H", "YU2"]
@@ -148,7 +143,6 @@
       "config_key": "功放型号",
       "config_value": [
         {
-          "config_key": "功放型号",
           "value": "AMP-A",
           "relay_variants": [
             { "requirement_id": "SwRS_AMP_Handeshake_001", "variant_key": "" }
@@ -166,7 +160,7 @@
 - **只存变体引用，不存变体快照**：需求表会重新导入，快照会和 `requirements.json` 打架。引用 `(requirement_id, variant_key)` 后，需求一更新，配置值的车型自动跟着变；引用不到的变体明确标记失效，比悄悄用旧数据好。
 - **车型不落盘**：`vehicles` 是可计算出来的值（关联变体车型 ∪ 手工车型），按 [data-model.md](data-model.md) 的「派生字段」约定不进文件。需要车型清单时从变体侧汇总。
 - **`variant_key` 可以是空串**：需求表里「整行都写 `●`、没有变体描述」的情况会合并成一个 `key` 为空串的变体，它是合法变体，不是缺字段。
-- **`configValue.config_key` 是冗余字段**：与 `Variant.requirement_id` 同理，保留它是为了落盘结构与 `src/models/common.ts` 的模型逐字段对应，读写不需要做字段映射。
+- **配置值不落 `config_key`**：归属由所在的配置项决定，重复写一份只会带来「内层与外层不一致」的风险。模型里保留 `ConfigValue.config_key`，是为了在内存与界面里不靠外层上下文就能定位所属配置项；存储层读取时按所属项补齐、写入时去掉，落盘结构与模型因此不是逐字段对应。
 - **车型名来源**：从 `requirements.json` 各变体的 `vehicles` 汇总去重，或用户在输入框里直接填；两边都用需求表的归一化写法，避免「`SC6H` 与 `SC6H `」这种同一车型的两个写法。手工输入的车型不做去引号 / 下划线换算以外的猜测，只做 trim。
 - **与 tauri-app 的差异**：那边配置项叫 `config_item`、配置值与需求变体解耦、靠 CSV/Excel 导入并全量替换，还有一张变体 × 配置项的映射表；本仓库沿用 `config_key` 命名、配置值与变体是直接引用、只做页面手工维护，映射所需的信息（哪个变体对应哪个配置值）由 `relay_variants` 本身承载，不再单开映射表。
-- **与现有模型的差异（实现时同步）**：`src/models/common.ts` 里 `ConfigValue.relay_variants` 是 `Variant[]`、另有 `vehicles: string[]`。按本文件，`relay_variants` 改为 `VariantRef[]`（`{ requirement_id, variant_key }`），`vehicles` 改为 `manual_vehicles`，生效车型由 store 层计算。
+- **与现有模型的差异（实现时同步）**：`src/models/common.ts` 里 `ConfigValue.relay_variants` 是 `Variant[]`、另有 `vehicles: string[]`。按本文件，`relay_variants` 改为 `VariantRef[]`（`{ requirement_id, variant_key }`），`vehicles` 改为 `manual_vehicles`，生效车型由 store 层计算；`config_key` 留在模型里但不落盘（见上一条）。

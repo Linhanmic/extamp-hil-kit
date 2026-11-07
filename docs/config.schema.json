@@ -46,14 +46,9 @@
     },
     "configValue": {
       "type": "object",
-      "required": ["config_key", "value", "relay_variants", "manual_vehicles"],
+      "required": ["value", "relay_variants", "manual_vehicles"],
       "additionalProperties": false,
       "properties": {
-        "config_key": {
-          "type": "string",
-          "minLength": 1,
-          "description": "冗余字段，与所属配置项的 config_key 相同；保留是为了与 src/models/common.ts 的 ConfigValue 一致，读写不需要字段映射"
-        },
         "value": {
           "type": "string",
           "minLength": 1,
