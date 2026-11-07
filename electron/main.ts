@@ -4,6 +4,7 @@ import { registerBusinessIpc } from './business'
 import { registerConfigsIpc } from './configs'
 import { registerRequirementsIpc } from './requirements'
 import { registerSettingsIpc } from './settings'
+import { registerSpecsIpc } from './specs'
 import { registerWorkspaceIpc } from './workspace'
 
 // vite-plugin-electron 在开发模式下注入该变量；生产构建下为空，改为加载本地文件
@@ -109,6 +110,7 @@ if (!app.requestSingleInstanceLock()) {
     registerRequirementsIpc()
     registerConfigsIpc()
     registerBusinessIpc()
+    registerSpecsIpc()
     registerSettingsIpc()
     createWindow()
 

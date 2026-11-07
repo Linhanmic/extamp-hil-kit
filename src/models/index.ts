@@ -66,3 +66,11 @@ export type {
   SnapshotDocument,
   SnapshotLoadOutcome,
 } from './snapshot'
+export type {
+  SpecFileInfo,
+  SpecFileContent,
+  SpecsListOutcome,
+  SpecsReadOutcome,
+  SpecsSavedState,
+  SpecsWriteOutcome,
+} from './spec'

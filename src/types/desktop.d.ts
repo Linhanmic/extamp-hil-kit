@@ -16,6 +16,9 @@ import type {
   SettingsSaveOutcome,
   SlotMappingLoadOutcome,
   SnapshotLoadOutcome,
+  SpecsListOutcome,
+  SpecsReadOutcome,
+  SpecsWriteOutcome,
   VolumeTableLoadOutcome,
 } from '@/models'
 
@@ -91,6 +94,14 @@ export interface DesktopBridge {
   snapshot: {
     /** 读取当前项目扬声器快照目录下的所有快照文件 */
     load: () => Promise<SnapshotLoadOutcome>
+  }
+  specs: {
+    /** 列出当前项目 specs 目录下的 .spec 文件 */
+    list: () => Promise<SpecsListOutcome>
+    /** 读取一个 spec 文件的原文 */
+    read: (path: string) => Promise<SpecsReadOutcome>
+    /** 整份写回 spec 文件（更新场景标签后保存） */
+    write: (path: string, text: string) => Promise<SpecsWriteOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */

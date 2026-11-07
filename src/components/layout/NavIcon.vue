@@ -52,6 +52,12 @@ defineProps<{
       <circle cx="8" cy="9.2" r="2.1" />
     </template>
 
+    <!-- 规格：标签 -->
+    <template v-else-if="name === 'spec'">
+      <path d="M2.6 7.9V3.4a.8.8 0 0 1 .8-.8h4.5l5.5 5.5-4.5 4.5z" stroke-linejoin="round" />
+      <circle cx="5.6" cy="5.6" r="0.9" />
+    </template>
+
     <!-- 需求：文档 -->
     <template v-else>
       <path d="M4.2 2.6h5L12 5.4v8H4.2z" stroke-linejoin="round" />

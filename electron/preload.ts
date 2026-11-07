@@ -55,6 +55,11 @@ contextBridge.exposeInMainWorld('desktop', {
   snapshot: {
     load: () => ipcRenderer.invoke('snapshot:load'),
   },
+  specs: {
+    list: () => ipcRenderer.invoke('specs:list'),
+    read: (path: string) => ipcRenderer.invoke('specs:read', path),
+    write: (path: string, text: string) => ipcRenderer.invoke('specs:write', path, text),
+  },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),
     save: (settings: ProjectSettings) => ipcRenderer.invoke('settings:save', settings),

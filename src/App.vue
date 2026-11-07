@@ -19,6 +19,7 @@ import { useRequirementsStore } from './stores/requirements'
 import { useSettingsStore } from './stores/settings'
 import { useSlotMapStore } from './stores/slotMap'
 import { useSnapshotStore } from './stores/snapshot'
+import { useSpecsStore } from './stores/specs'
 import LaunchView from './views/LaunchView.vue'
 
 const route = useRoute()
@@ -36,6 +37,7 @@ const outputStore = useOutputStore()
 const meterStore = useMeterStore()
 const slotMapStore = useSlotMapStore()
 const snapshotStore = useSnapshotStore()
+const specsStore = useSpecsStore()
 watch(
   () => project.value?.path,
   (path) => {
@@ -47,6 +49,7 @@ watch(
       void meterStore.load()
       void slotMapStore.load()
       void snapshotStore.load()
+      void specsStore.load()
       return
     }
     settingsStore.clear()
@@ -56,6 +59,7 @@ watch(
     meterStore.clear()
     slotMapStore.clear()
     snapshotStore.clear()
+    specsStore.clear()
   },
   { immediate: true },
 )
