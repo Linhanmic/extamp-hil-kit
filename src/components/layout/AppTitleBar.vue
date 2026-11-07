@@ -15,16 +15,21 @@ const emit = defineEmits<{
   'update:panel': [value: boolean]
   'update:secondSidebar': [value: boolean]
 }>()
+
+// 12 条轨道：前 11 条按 1fr 均分，最后一条固定为窗口控制按钮组的实际宽度（3 × 44px），
+// 避免控件列过宽导致按钮与前面的布局按钮之间出现空档
+const TITLEBAR_COLUMNS = 'repeat(11, minmax(0, 1fr)) 132px'
 </script>
 
 <!--
   @grid A：标题栏是水平组合容器，内部重新建立 12 列。
+  span 分配：左栏切换 1 · 标题 6 · 主题 2 · 面板切换 1 · 右栏切换 1 · 窗口控制 1（定宽轨道）
   整条为窗口拖动区（-webkit-app-region: drag），交互控件单独标记 no-drag。
-  右侧窗口控制按钮组右缘与窗口边缘贴合，因此行内只留左侧内边距。
 -->
 <template>
   <header
-    class="grid h-9 shrink-0 grid-cols-12 items-stretch gap-2 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
+    class="grid h-9 shrink-0 items-stretch gap-2 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
+    :style="{ gridTemplateColumns: TITLEBAR_COLUMNS }"
   >
     <!-- Column span-1：左栏切换 -->
     <RegionToggle
@@ -34,15 +39,13 @@ const emit = defineEmits<{
       @update:visible="emit('update:sidebar', $event)"
     />
 
-    <!-- Column span-5：当前页面标题（品牌标识由左栏承载，这里不重复） -->
-    <div class="col-span-5 flex min-w-0 items-center">
+    <!-- Column span-6：当前页面标题（品牌名由左栏承载，这里不重复） -->
+    <div class="col-span-6 flex min-w-0 items-center">
       <span class="truncate text-[13px] text-ink">工作区 / {{ props.title }}</span>
     </div>
 
     <!-- Column span-2：主题切换 -->
-    <ThemeSwitcher
-      class="col-span-2 self-center justify-self-end [-webkit-app-region:no-drag]"
-    />
+    <ThemeSwitcher class="col-span-2 self-center justify-self-end [-webkit-app-region:no-drag]" />
 
     <!-- Column span-1：面板切换 -->
     <RegionToggle
@@ -60,7 +63,7 @@ const emit = defineEmits<{
       @update:visible="emit('update:secondSidebar', $event)"
     />
 
-    <!-- Column span-2：窗口控制（内部为 B 方案按钮组） -->
-    <WindowControls />
+    <!-- Column span-1（定宽轨道）：窗口控制按钮组 -->
+    <WindowControls class="col-span-1" />
   </header>
 </template>

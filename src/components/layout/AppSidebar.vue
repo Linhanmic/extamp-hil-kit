@@ -8,14 +8,14 @@ const navItems = [
 </script>
 
 <template>
-  <aside class="flex min-h-0 flex-col overflow-hidden border-r border-line bg-surface-soft">
-    <!-- @grid B：品牌行是「标识 + 名称」组合，整组占满所在列，内部只用统一 gap -->
-    <div class="flex items-center gap-2 border-b border-line px-3 py-2.5">
+  <aside class="flex min-h-0 flex-col overflow-hidden bg-surface-soft">
+    <!-- 品牌名：界面内不显示 Logo，HIL 标识仅作为应用桌面图标 -->
+    <div class="flex min-w-0 items-center border-b border-line px-3 py-2.5">
       <span
-        class="grid size-7 shrink-0 place-items-center rounded-md bg-primary text-[10px] font-semibold tracking-tight text-white"
-        >HIL</span
+        class="truncate font-brand text-[13px] font-black tracking-tight text-black dark:text-white"
       >
-      <span class="truncate text-sm font-medium">extamp-hil-kit</span>
+        External Amplifier HIL Kit
+      </span>
     </div>
 
     <!-- 纵向导航列表；每一项是水平组合，见 RouterLink 上的注释 -->

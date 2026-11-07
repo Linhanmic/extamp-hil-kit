@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | 容器（桌面外壳） | `h-dvh w-full` | 铺满窗口，不设最大宽度、不设内边距 |
 | 容器（独立内容页 / 弹窗内容） | `mx-auto w-full max-w-7xl px-6` | 需要居中阅读感的页面才用，最大 1280px、左右 24px |
-| 行（页面级） | `grid grid-cols-12 gap-0` | 12 条等宽轨道，区域之间贴合，用 1px 分隔线划分 |
+| 行（页面级，可拖拽外壳） | 内联 `grid-template-columns`：`${左栏px} 4px 1fr 4px ${右栏px}` | **唯一例外**：三块区域宽度由鼠标拖拽决定，轨道必须是像素精确的。4px 轨道是可拖拽分隔条，初始值与上下限见 `src/composables/useLayoutSize.ts` |
 | 行（组件级） | `grid grid-cols-12 gap-2` / `gap-3` | 组件内部按比例分配空间时使用 |
 | 列 | `col-span-N` | N ∈ 1…12，一行内所有 span 之和不得超过 12；桌面端不写断点前缀 |
 
@@ -64,7 +64,7 @@
 
 - 间距**只由 `gap` 提供**，禁止给单个子元素写不同 `margin` 来模拟列间距。
 - 同一行内 `gap` 必须一致，按行级别区分：
-  - **页面级行 `gap-0`**：左栏、中列、右栏之间直接贴合，用 1px 分隔线（`border-r` / `border-l`）划分；中列内部的 `main_content` 与 `panel` 之间同样贴合，用 `border-t` 划分。桌面 IDE 式外壳不留沟槽。
+  - **外壳三栏 `gap-0`**：左栏、中列、右栏之间贴合；区域边界由 4px 宽的可拖拽分隔条（`SplitResizer`）占据，分隔条自己绘制那 1px 线，悬停/拖拽时变主题色。中列内部的 `main_content` 与 `panel` 同样由一条 4px 水平分隔条划分。
   - **卡片级行 `gap-3`**（12px）：卡片内部的分组行。
   - **微组件行 `gap-1`～`gap-2`**：工具栏、标签组、列表行等紧凑控件行。
 - 纵向间距在纵向容器上用 `gap-*` / `space-y-*` 表达，不要靠零散 margin 拼接。
@@ -174,26 +174,27 @@
 
 ## 9. 当前壳层的栅格映射
 
-页面级（`src/App.vue`，Row `grid grid-cols-12 gap-0`，区域之间 1px 分隔线）：
+页面级（`src/App.vue`）——外壳三栏是**可拖拽的像素轨道**，用内联 `grid-template-columns` 表达，不使用 `col-span`：
 
-| 区块 | span | 侧栏收起时的补齐 |
-| --- | --- | --- |
-| 左栏 sidebar | `col-span-2` | — |
-| 主内容 main | `col-span-7` | `col-span-9` / `10` / `12` |
-| 右栏 second sidebar | `col-span-3` | — |
+| 区块 | 轨道 | 初始值 | 拖拽上下限 |
+| --- | --- | --- | --- |
+| 左栏 sidebar | `${sidebarWidth}px` | 240px | 180–420px |
+| 分隔条（拖拽热区 + 1px 线） | `4px` | — | — |
+| 主内容 main | `minmax(0, 1fr)` | 自适应 | — |
+| 分隔条 | `4px` | — | — |
+| 右栏 second sidebar | `${secondSidebarWidth}px` | 360px | 240–560px |
 
-主内容列内部的 `main_content` 与 `panel` 是**同一列内的上下分段**（纵向），不占用水平栅格：`main_content` 用 `flex-1`，`panel` 占列高 34%，两者贴合、以 `border-t` 分隔。
+主内容列内部的 `main_content` 与 `panel` 是**同一列内的上下分段**（纵向）：`main_content` 用 `flex-1`，`panel` 高度为可拖拽的 `${panelHeight}px`（初始 300px，下限 120px，上限取主内容区高度减 200px），两者之间是 4px 水平分隔条。区域收起时其轨道与分隔条一并消失，主内容自动占满。
 
 组件级：
 
 | 组件 | 容器 | 方案 | span 分配 |
 | --- | --- | --- | --- |
-| 标题栏（AppTitleBar） | 水平 Row | A | 左栏按钮 1 · 标题 5 · 主题 2 · 面板按钮 1 · 右栏按钮 1 · 窗口控制 2 |
-| └ 窗口控制按钮组 | 按钮组 | B | 整组占 span-2，三个按钮定宽、内部间距 0，右缘贴窗口边缘 |
-| 工具栏（App.vue） | 水平 Row | A | 左栏按钮 1 · 面包屑 6 · 主题 3 · 面板按钮 1 · 右栏按钮 1 |
+| 标题栏（AppTitleBar） | 水平 Row | A | 左栏按钮 1 · 标题 6 · 主题 2 · 面板按钮 1 · 右栏按钮 1 · 窗口控制 1（末列为 132px 定宽轨道） |
+| └ 窗口控制按钮组 | 按钮组 | B | 整组占满末列，三个按钮定宽 44px、内部间距 0，右缘贴窗口边缘 |
 | 面板标签栏（AppPanel） | 水平 Row | A | 标签组 8 · 占位说明 4（`justify-self-end`） |
-| 品牌行（AppSidebar） | 水平 Row | A | 标识 2 · 名称 10 |
-| 导航项（AppSidebar） | 水平 Row | A | 图标 2 · 文字 10 |
+| 品牌行（AppSidebar） | 单行文字 | 原子 | 品牌名整体占满所在列，超出截断 |
+| 导航项（AppSidebar） | 图标 + 文字 | B | 整项占满列，内部统一 `gap` |
 | 任务列表头（AppSidebar） | 水平 Row | A | 标题 8 · 计数 4（`justify-self-end`） |
 | 快捷卡片网格（AppSecondSidebar） | 瓦片 Row | A | 每卡 `col-span-6` |
 | 插件行（AppSecondSidebar） | 水平 Row | A | 名称 8 · 状态 4 |

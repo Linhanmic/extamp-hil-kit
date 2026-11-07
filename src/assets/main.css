@@ -17,6 +17,11 @@
   --color-line: var(--el-border-color-light, #e4e7ed);
   --color-ink: var(--el-text-color-primary, #303133);
   --color-ink-muted: var(--el-text-color-secondary, #909399);
+
+  /* 品牌字标字体：Windows 自带 Bahnschrift（等宽与几何感强），
+     缺失时依次回退到 Segoe UI 变量字重与系统 UI 字体 */
+  --font-brand:
+    'Bahnschrift', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
 }
 
 /* 基础样式放进 base 层，组件里的工具类才能覆盖它们。

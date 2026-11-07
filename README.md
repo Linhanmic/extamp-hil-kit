@@ -5,16 +5,17 @@
 ## 目录结构
 
 ```
+build/                  应用图标与图标生成脚本（icon.png / icon.ico / icon.svg）
 electron/               Electron 主进程侧（不参与渲染进程打包）
-  main.ts               窗口创建、生命周期、单实例锁、外链交系统浏览器
-  preload.ts            通过 contextBridge 暴露只读运行环境信息
+  main.ts               窗口创建、无边框配置、窗口控制 IPC、生命周期、单实例锁
+  preload.ts            contextBridge 暴露只读环境信息与窗口控制 API
 src/                    渲染进程（Vue 应用）
-  App.vue               壳层：自定义标题栏 + 三栏内容区，12 列栅格
+  App.vue               壳层：自定义标题栏 + 可拖拽三栏内容区
   components/
     layout/             壳层组件：AppTitleBar、WindowControls、AppSidebar、AppPanel、
-                        AppSecondSidebar、RegionToggle
+                        AppSecondSidebar、RegionToggle、SplitResizer
     ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
-  composables/          useTheme 等组合式函数
+  composables/          useTheme（主题）、useLayoutSize（可拖拽区域尺寸）
   views/                路由页面
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
   router/               file:// 协议下自动切到 hash history
@@ -45,9 +46,11 @@ npm run lint        # oxlint + eslint
 
 ## 界面规范
 
-- 布局与栅格：见 [docs/grid-system.md](docs/grid-system.md)，所有水平布局必须走 `grid-cols-12` + `col-span-*`。
+- 布局与栅格：见 [docs/grid-system.md](docs/grid-system.md)。区域内部的所有水平布局必须走 `grid-cols-12` + `col-span-*`；外壳三栏是拖拽出来的像素轨道，属于文档中写明的唯一例外。
+- 可拖拽：左栏宽度、右栏宽度、面板高度均由 `SplitResizer` + `useLayoutSize` 控制，拖动上下限写在 `useLayoutSize.ts`；分隔条同时充当 1px 分隔线。
 - 桌面端专属：不做移动端适配，不写断点前缀。
 - 主题：`html.dark` 单一开关，同时驱动 Tailwind `dark:` 变体、Element Plus 深色变量与页面设计令牌。
+- 品牌：界面内不显示 Logo，品牌名以 `font-brand`（Bahnschrift → Segoe UI 回退）黑色粗体显示在左栏顶部；HIL 标识只作为应用图标（`build/icon.ico`，黑色圆角底 + 白色字标），由 `build/generate-icon.py` 生成。
 
 ## 编辑器与类型
 

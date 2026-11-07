@@ -21,11 +21,11 @@ const close = () => void window.desktop?.window.close()
 </script>
 
 <!--
-  @grid B：三个固定尺寸的窗口控制按钮，整组作为一个单元占满所在列，
-  内部间距为 0（按钮自带宽度），右缘与窗口边缘贴合。
+  @grid B：三个固定尺寸的窗口控制按钮，整组作为一个单元占满所在列（标题栏末列定宽 132px），
+  内部间距为 0，右缘与窗口边缘贴合。
 -->
 <template>
-  <div class="col-span-2 flex h-full justify-self-end">
+  <div class="flex h-full w-full">
     <button
       type="button"
       class="grid h-full w-11 place-items-center text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-black/[0.06] hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40 dark:hover:bg-white/10"

@@ -1,5 +1,5 @@
 <template>
-  <section class="flex min-h-0 flex-col overflow-hidden border-t border-line bg-surface">
+  <section class="flex min-h-0 flex-col overflow-hidden bg-surface">
     <!-- @grid A：面板标签栏是「标签组 + 右侧说明」的水平组合容器 -->
     <header
       class="grid h-9 shrink-0 grid-cols-12 items-center gap-2 border-b border-line bg-surface-soft px-2 text-xs"

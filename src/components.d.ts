@@ -30,6 +30,7 @@ declare module 'vue' {
     RegionToggle: typeof import('./components/layout/RegionToggle.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SplitResizer: typeof import('./components/layout/SplitResizer.vue')['default']
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
     TheWelcome: typeof import('./components/TheWelcome.vue')['default']
     WelcomeItem: typeof import('./components/WelcomeItem.vue')['default']

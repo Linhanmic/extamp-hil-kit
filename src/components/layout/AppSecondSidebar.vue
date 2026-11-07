@@ -4,9 +4,7 @@ const plugins = ['PDF', '演示文稿', '电子表格', 'Word 文档']
 </script>
 
 <template>
-  <aside
-    class="flex min-h-0 flex-col overflow-y-auto border-l border-line bg-surface-soft"
-  >
+  <aside class="flex min-h-0 flex-col overflow-y-auto bg-surface-soft">
     <!-- 单个标题：原子元素，直接对齐所在列轨道，不单独分配 span -->
     <header class="px-4 py-3 text-sm font-medium">新面板</header>
 

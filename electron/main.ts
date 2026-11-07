@@ -39,6 +39,8 @@ function createWindow() {
     backgroundColor: '#141414',
     autoHideMenuBar: true,
     title: 'extamp-hil-kit',
+    // 应用图标：黑底白 HIL，同时用于任务栏与窗口
+    icon: join(import.meta.dirname, '../build/icon.ico'),
     webPreferences: {
       preload: join(import.meta.dirname, 'preload.cjs'),
       contextIsolation: true,
