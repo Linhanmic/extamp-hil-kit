@@ -9,9 +9,10 @@ electron/               Electron 主进程侧（不参与渲染进程打包）
   main.ts               窗口创建、生命周期、单实例锁、外链交系统浏览器
   preload.ts            通过 contextBridge 暴露只读运行环境信息
 src/                    渲染进程（Vue 应用）
-  App.vue               三栏壳层：左栏 / 中列(main_content + panel) / 右栏，12 列栅格
+  App.vue               壳层：自定义标题栏 + 三栏内容区，12 列栅格
   components/
-    layout/             壳层区域组件：AppSidebar、AppPanel、AppSecondSidebar、RegionToggle
+    layout/             壳层组件：AppTitleBar、WindowControls、AppSidebar、AppPanel、
+                        AppSecondSidebar、RegionToggle
     ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
   composables/          useTheme 等组合式函数
   views/                路由页面
@@ -36,6 +37,7 @@ npm run lint        # oxlint + eslint
 
 ## Electron 约定
 
+- 窗口为 **无边框**（`frame: false`），标题栏与最小化 / 最大化 / 关闭按钮全部由渲染层自绘：`AppTitleBar.vue` 整条为拖动区（`-webkit-app-region: drag`），控件标记 `no-drag`；`WindowControls.vue` 经 `window.desktop.window` 走 IPC 调用主进程，最大化状态通过 `window:maximized-change` 事件回传，用于切换最大化 / 还原图标。
 - 主进程跟随 `package.json` 的 `type: module` 输出 ESM（`dist-electron/main.js`）；预加载脚本在 `sandbox: true` 下必须是 CommonJS，因此单独构建为 `dist-electron/preload.cjs`。
 - 渲染进程通过 `contextIsolation: true` + `nodeIntegration: false` 隔离，Node 能力只经 `contextBridge` 暴露。
 - 生产环境用 `file://` 加载 `dist/index.html`，`vite.config.ts` 里 `base: './'` 保证资源相对路径；路由在 `file:` 协议下自动切换为 hash history。

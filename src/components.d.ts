@@ -14,6 +14,7 @@ declare module 'vue' {
     AppPanel: typeof import('./components/layout/AppPanel.vue')['default']
     AppSecondSidebar: typeof import('./components/layout/AppSecondSidebar.vue')['default']
     AppSidebar: typeof import('./components/layout/AppSidebar.vue')['default']
+    AppTitleBar: typeof import('./components/layout/AppTitleBar.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
@@ -32,5 +33,6 @@ declare module 'vue' {
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
     TheWelcome: typeof import('./components/TheWelcome.vue')['default']
     WelcomeItem: typeof import('./components/WelcomeItem.vue')['default']
+    WindowControls: typeof import('./components/layout/WindowControls.vue')['default']
   }
 }
