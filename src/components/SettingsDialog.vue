@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { DEFAULT_PROJECT_SETTINGS } from '@/config/settings-defaults'
 import SettingsPathField from '@/components/SettingsPathField.vue'
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useSettingsStore } from '@/stores/settings'
 import type { ProjectSettings, SettingsPickKind } from '@/models'
 
@@ -118,6 +119,21 @@ async function submit() {
       />
 
       <el-alert v-if="store.error" type="warning" :closable="false" show-icon :title="store.error" />
+
+      <!-- 外观：应用级偏好，即点即生效，不写进项目设置文件 -->
+      <div class="rounded-lg border border-line bg-surface-soft p-3">
+        <p class="text-[11px] font-medium text-ink">外观</p>
+        <p class="mt-1 mb-2 text-[11px] text-ink-muted">
+          界面主题跟随系统、浅色或深色；存在本机，切换后立即生效，与当前项目无关。
+        </p>
+        <!-- @grid A：标签 3 · 控件 9，与下面各组的行对齐一致 -->
+        <div class="grid grid-cols-12 items-center gap-2">
+          <span class="col-span-3 text-[11px] text-ink-muted">主题</span>
+          <div class="col-span-9">
+            <ThemeSwitcher />
+          </div>
+        </div>
+      </div>
 
       <!-- 数据文件 -->
       <div class="rounded-lg border border-line bg-surface-soft p-3">

@@ -27,7 +27,7 @@ src/                    渲染进程（Vue 应用）
   components/
     layout/             壳层组件：AppTitleBar、WindowControls、AppSidebar、AppPanel、
                         AppSecondSidebar、RegionToggle、SplitResizer、DesignGrid、NavIcon
-    ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
+    ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色），入口在「项目设置」弹窗的「外观」分组
     RequirementImportDialog.vue / RequirementTable.vue   需求导入弹窗与需求表
     ConfigurationFormDialog / ConfigurationTable / ConfigValueFormDialog  配置项与配置值维护
     ConceptFormDialog.vue / SettingsDialog.vue / SettingsPathField.vue    封装表单、项目设置与路径字段
@@ -170,10 +170,10 @@ Excel 读取用 SheetJS，但走「Node 读字节 + `XLSX.read(buffer)`」而不
 ## 界面规范
 
 - 布局与栅格：见 [docs/grid-system.md](docs/grid-system.md)。区域内部的所有水平布局必须走 `grid-cols-12` + `col-span-*`；外壳三栏按设计网格份数分配（左 3 · 中 5 · 右 4，两侧栏用份数百分比、主内容 `1fr` 吃剩余空间），属于文档中写明的唯一例外。纵向对齐 48 行：标题栏 3/48（`6.25dvh`）、面板 15/48。
-- 区域显隐：左栏与面板默认展开，右栏默认收起；收展任一区域只改变主内容宽度，不影响其他区域的宽度。
+- 区域显隐：左栏与面板默认展开，右栏默认收起；收展任一区域只改变主内容宽度，不影响其他区域的宽度。三个开关成组排在标题栏右侧（左栏 · 面板 · 右栏），图标是「窗口框 + 分隔线」的静态轮廓（分隔线靠左 / 靠下 / 靠右分别对应三个区域），不随展开收起变化。
 - 可拖拽：左栏宽度、右栏宽度、面板高度均由 `SplitResizer` + `useLayoutSize` 控制，拖动上下限写在 `useLayoutSize.ts`；分隔条同时充当 1px 分隔线。
 - 桌面端专属：不做移动端适配，不写断点前缀。
-- 主题：`html.dark` 单一开关，同时驱动 Tailwind `dark:` 变体、Element Plus 深色变量与页面设计令牌。
+- 主题：`html.dark` 单一开关，同时驱动 Tailwind `dark:` 变体、Element Plus 深色变量与页面设计令牌；切换入口在「项目设置」弹窗的「外观」分组，存在本机、即点即生效。
 - 设计网格：`DesignGrid.vue` 提供覆盖全窗口的 12 列 × 48 行等距网格线，`fixed inset-0`、`z-index 9999`、`pointer-events: none`；标题栏按钮或 `Ctrl + Shift + G` 开关，默认关闭。
 - 品牌：界面内不显示 Logo。左栏顶部是品牌名 `External Amplifier HIL Kit`，高 3/48、占侧栏 3 份中的左侧 2 份（即 2/12 窗口宽）、块内文字居中，`font-mono` 粗体黑色（暗色主题转白），两行显示。HIL 标识只作为应用图标（`build/icon.ico`，黑色圆角底 + 白色字标），由 `build/generate-icon.py` 生成。
 

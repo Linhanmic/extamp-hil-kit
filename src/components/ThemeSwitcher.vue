@@ -2,14 +2,6 @@
 import { computed } from 'vue'
 import { useTheme, type ThemeMode } from '@/composables/useTheme'
 
-const props = withDefaults(
-  defineProps<{
-    /** 紧凑尺寸：只显示图标，用于标题栏里共同占 1 份栅格的控件组 */
-    compact?: boolean
-  }>(),
-  { compact: false },
-)
-
 const { mode } = useTheme()
 
 const labels: Record<ThemeMode, { label: string; short: string }> = {
@@ -28,20 +20,19 @@ function select(value: ThemeMode) {
 </script>
 
 <!--
-  主题切换是单个原子控件（不在同一行内与其他元素分配宽度），
-  紧凑模式只渲染图标，宽度可被 1 份栅格容纳。
+  主题切换：单个原子控件，放在「项目设置」弹窗的「外观」分组里。
+  悬浮态与标题栏图标按钮一致（hover:bg-surface），弹窗卡片底色是 surface-soft，悬浮时看得出来。
 -->
 <template>
   <el-dropdown trigger="click" @command="select">
     <button
       type="button"
-      class="flex items-center justify-center gap-1 rounded text-ink-muted transition-colors outline-none hover:bg-surface-soft hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
-      :class="props.compact ? 'size-6' : 'h-7 px-2 text-xs'"
+      class="flex h-8 items-center justify-center gap-1.5 rounded px-2.5 text-xs text-ink-muted transition-colors outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
       :title="`主题：${current.label}`"
       :aria-label="`主题：${current.label}`"
     >
       <svg
-        :class="props.compact ? 'size-3.5' : 'size-4'"
+        class="size-4"
         viewBox="0 0 16 16"
         fill="none"
         stroke="currentColor"
@@ -61,12 +52,10 @@ function select(value: ThemeMode) {
           <path d="M8 3a5 5 0 0 1 0 10z" fill="currentColor" stroke="none" />
         </template>
       </svg>
-      <template v-if="!props.compact">
-        <span class="whitespace-nowrap">{{ current.short }}</span>
-        <svg class="size-3 opacity-60" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
-          <path d="m4 6.5 4 4 4-4" />
-        </svg>
-      </template>
+      <span class="whitespace-nowrap">{{ current.short }}</span>
+      <svg class="size-3 opacity-60" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="m4 6.5 4 4 4-4" />
+      </svg>
     </button>
 
     <template #dropdown>
