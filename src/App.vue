@@ -1,94 +1,44 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import HelloWorld from './components/HelloWorld.vue'
-import ThemeSwitcher from './components/ThemeSwitcher.vue'
+import AppSidebar from './components/layout/AppSidebar.vue'
+import AppPanel from './components/layout/AppPanel.vue'
+import AppSecondSidebar from './components/layout/AppSecondSidebar.vue'
+
+const route = useRoute()
+
+const routeTitle = computed(() => {
+  const name = route.name
+  if (name === 'home') return '首页'
+  if (name === 'about') return '关于'
+  return String(name ?? '')
+})
 </script>
 
 <template>
   <!-- Element Plus 全局配置：中文语言包（组件由 vite 插件按需自动导入） -->
   <el-config-provider :locale="zhCn">
-    <header>
-      <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+    <!-- 应用壳层：左栏 ｜ 中列（main_content + panel）｜ 右栏 -->
+    <div class="flex h-dvh overflow-hidden bg-surface-page text-ink">
+      <AppSidebar />
 
-      <div class="wrapper">
-        <HelloWorld msg="You did it!" />
-
-        <nav>
-          <RouterLink to="/">Home</RouterLink>
-          <RouterLink to="/about">About</RouterLink>
-        </nav>
-
-        <div class="mt-4 flex w-full justify-center lg:justify-start">
-          <ThemeSwitcher />
+      <main class="flex min-w-0 flex-1 flex-col bg-surface">
+        <!-- main_content -->
+        <div class="flex min-h-0 flex-1 flex-col">
+          <div class="flex h-10 shrink-0 items-center border-b border-line px-3">
+            <span class="text-xs text-ink-muted">工作区 / {{ routeTitle }}</span>
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto p-4">
+            <RouterView />
+          </div>
         </div>
-      </div>
-    </header>
 
-    <RouterView />
+        <!-- panel -->
+        <AppPanel class="h-[34%] min-h-32 shrink-0" />
+      </main>
+
+      <AppSecondSidebar />
+    </div>
   </el-config-provider>
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
-}
-</style>

@@ -11,6 +11,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppPanel: typeof import('./components/layout/AppPanel.vue')['default']
+    AppSecondSidebar: typeof import('./components/layout/AppSecondSidebar.vue')['default']
+    AppSidebar: typeof import('./components/layout/AppSidebar.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElSegmented: typeof import('element-plus/es')['ElSegmented']
