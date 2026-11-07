@@ -254,10 +254,10 @@ function formatTime(value: string): string {
     </div>
 
     <template #footer>
-      <div class="flex items-center justify-between gap-2">
-        <span v-if="dirty" class="text-[11px] text-ink-muted">列映射已修改，需要重新预览</span>
+      <div class="flex items-center justify-end gap-2">
+        <span v-if="dirty" class="mr-auto text-[11px] text-ink-muted">列映射已修改，需要重新预览</span>
         <div class="flex items-center gap-2">
-          <el-button @click="visible = false">关闭</el-button>
+          <el-button type="danger" @click="visible = false">关闭</el-button>
           <el-button :loading="busy" :disabled="!file" @click="preview">预览</el-button>
           <el-button
             type="primary"
