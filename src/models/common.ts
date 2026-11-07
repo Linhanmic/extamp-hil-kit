@@ -43,6 +43,7 @@ export interface RequirementSheetColumn {
   index: number// 列号（1 基）
   letter: string// Excel 列字母，如 A、AE
   header: string// 表头文本，空串表示该列没有表头
+  isPlatform: boolean// 表头含「平台」的列：解析时整列忽略，不进车型清单
   applicableCells: number// 数据区里以「●」开头的单元格数
   notApplicableCells: number// 数据区里「—」的单元格数
   textCells: number// 数据区里没有「●」标记的非空单元格数（功能安全这类列就靠它区分）
@@ -89,7 +90,8 @@ export interface RequirementsFileInfo {
 /** 一次导入落盘后的摘要 */
 export interface RequirementsSavedState {
   filePath: string// 落盘的数据文件绝对路径
-  importedAt: string// 导入时间（ISO 8601 UTC）
+  createdAt: string// 首次导入时间（ISO 8601 UTC），后续每次导入保持不变
+  updatedAt: string// 最近一次导入时间（ISO 8601 UTC）
   requirementCount: number
   variantCount: number
 }

@@ -43,6 +43,13 @@ const previewRows = computed(() =>
 function setColumn(field: keyof RequirementsColumnMapping, value: string | number) {
   updateMapping({ [field]: value })
 }
+
+// 落盘时间按本地时间展示，ISO 存的是 UTC
+function formatTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
 </script>
 
 <!--
@@ -165,7 +172,7 @@ function setColumn(field: keyof RequirementsColumnMapping, value: string | numbe
                 v-for="column in vehicleOptions"
                 :key="column.letter"
                 :value="column.letter"
-                :label="`${column.letter} · ${column.header || '无表头'}`"
+                :label="`${column.letter} · ${column.header || '无表头'}${column.isPlatform ? '（平台列，忽略）' : ''}`"
               />
             </el-select>
           </div>
@@ -178,6 +185,11 @@ function setColumn(field: keyof RequirementsColumnMapping, value: string | numbe
           · 车型列单元格：<code class="text-ink">●</code> 适用，<code class="text-ink">●变体N</code>
           或 <code class="text-ink">●差异描述</code> 适用并带变体，<code class="text-ink">—</code>
           不适用
+        </p>
+        <p class="mt-1 text-[11px] text-ink-muted">
+          · 表头含「平台」的列整列忽略；一个表头写多款车型时用
+          <code class="text-ink">/</code> <code class="text-ink">、</code>
+          <code class="text-ink">;</code> 分隔
         </p>
 
         <!-- @grid B：按钮组整组占一列，内部只用一个统一 gap -->
@@ -285,8 +297,12 @@ function setColumn(field: keyof RequirementsColumnMapping, value: string | numbe
         show-icon
         :closable="false"
         :title="`已导入 ${saved.requirementCount} 条需求 / ${saved.variantCount} 个变体`"
-        :description="saved.filePath"
-      />
+      >
+        <p class="text-[11px] break-all">{{ saved.filePath }}</p>
+        <p class="text-[11px]">
+          首次导入 {{ formatTime(saved.createdAt) }} · 最近更新 {{ formatTime(saved.updatedAt) }}
+        </p>
+      </el-alert>
     </template>
   </div>
 </template>

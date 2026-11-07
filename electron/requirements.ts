@@ -87,7 +87,7 @@ export function registerRequirementsIpc() {
 
     try {
       const result = parseFile(config)
-      const saved = writeRequirements(project.path, config, result)
+      const saved = writeRequirements(project.path, result)
       return { saved } satisfies RequirementsSaveOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies RequirementsSaveOutcome

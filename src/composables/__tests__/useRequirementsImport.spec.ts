@@ -38,6 +38,7 @@ function installBridge(overrides: Partial<DesktopRequirements> = {}) {
             index: 1,
             letter: 'A',
             header: '需求ID',
+            isPlatform: false,
             applicableCells: 0,
             notApplicableCells: 0,
             textCells: 0,
@@ -46,6 +47,7 @@ function installBridge(overrides: Partial<DesktopRequirements> = {}) {
             index: 7,
             letter: 'G',
             header: 'MA16D平台',
+            isPlatform: true,
             applicableCells: 4,
             notApplicableCells: 0,
             textCells: 0,
@@ -60,7 +62,8 @@ function installBridge(overrides: Partial<DesktopRequirements> = {}) {
     save: vi.fn<DesktopRequirements['save']>(async () => ({
       saved: {
         filePath: 'E:\\project\\.hil-kit\\requirements.json',
-        importedAt: '2026-01-01T00:00:00.000Z',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:05:00.000Z',
         requirementCount: 1,
         variantCount: 1,
       },

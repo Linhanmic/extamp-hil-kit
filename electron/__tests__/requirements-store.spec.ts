@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { RequirementsParseConfig } from '../../src/models/common'
+import type { RequirementsParseResult } from '../../src/models/common'
 import { parseRequirements, probeSheet } from '../requirements-parse'
 import { readSheetTable } from '../requirements-sheet'
 import { requirementsFilePath, writeRequirements } from '../requirements-store'
@@ -23,44 +23,81 @@ afterEach(() => {
     rmSync(temporaryDirs.pop() as string, { recursive: true, force: true })
 })
 
-function sampleConfig(): RequirementsParseConfig {
-  const probe = probeSheet(readSheetTable(SAMPLE_FILE, SAMPLE_SHEET)).probe!
-  return {
-    filePath: SAMPLE_FILE,
-    sheetName: SAMPLE_SHEET,
-    ...probe.mapping,
-  }
+function parsedSample(): RequirementsParseResult {
+  const table = readSheetTable(SAMPLE_FILE, SAMPLE_SHEET)
+  return parseRequirements(table, probeSheet(table).probe!.mapping)
+}
+
+interface StoredPayload {
+  schemaVersion: number
+  createdAt: string
+  updatedAt: string
+  requirements: { id: string; variants: unknown[] }[]
+}
+
+function readPayload(path: string): StoredPayload {
+  return JSON.parse(readFileSync(path, 'utf8')) as StoredPayload
 }
 
 describe('writeRequirements', () => {
-  it('写到项目目录的 .hil-kit/requirements.json 并返回摘要', () => {
+  it('写到项目目录的 .hil-kit/requirements.json，只有结构版本、时间与需求数据', () => {
     const project = temporaryProject()
-    const config = sampleConfig()
-    const result = parseRequirements(readSheetTable(config.filePath, config.sheetName), config)
+    const result = parsedSample()
 
-    const saved = writeRequirements(project, config, result)
+    const saved = writeRequirements(project, result)
 
     expect(saved.filePath).toBe(requirementsFilePath(project))
     expect(saved.filePath.endsWith(join('.hil-kit', 'requirements.json'))).toBe(true)
+    expect(saved.createdAt).toBe(saved.updatedAt)
     expect(saved.requirementCount).toBe(4)
-    expect(saved.variantCount).toBe(result.stats.variantCount)
+    expect(saved.variantCount).toBe(68)
 
-    const payload = JSON.parse(readFileSync(saved.filePath, 'utf8')) as {
-      version: number
-      importedAt: string
-      source: RequirementsParseConfig
-      vehicles: string[]
-      requirements: unknown[]
-    }
-    expect(payload.version).toBe(1)
-    expect(payload.importedAt).toBe(saved.importedAt)
-    expect(payload.source).toMatchObject({
-      sheetName: SAMPLE_SHEET,
-      headerRow: 2,
-      detailCol: 'E',
-      vehicleStartCol: 'G',
-    })
-    expect(payload.vehicles).toHaveLength(25)
+    const payload = readPayload(saved.filePath)
+    // 车型全集、来源路径、列配置都不落盘：车型可从变体汇总
+    expect(Object.keys(payload).sort()).toEqual([
+      'createdAt',
+      'requirements',
+      'schemaVersion',
+      'updatedAt',
+    ])
+    expect(payload.schemaVersion).toBe(1)
+    expect(payload.createdAt).toBe(saved.createdAt)
+    expect(payload.updatedAt).toBe(saved.updatedAt)
     expect(payload.requirements).toHaveLength(4)
+  })
+
+  it('再次导入是更新：保留 createdAt，刷新 updatedAt，数据整体替换', () => {
+    const project = temporaryProject()
+    const first = writeRequirements(project, parsedSample())
+
+    // 改写首次导入时间与旧数据，模拟「上次导入是以前、且数据已过期」
+    const stored = readPayload(first.filePath)
+    stored.createdAt = '2020-01-01T00:00:00.000Z'
+    stored.updatedAt = '2020-01-01T00:00:00.000Z'
+    stored.requirements = [{ id: 'OLD_REQ', variants: [] }]
+    writeFileSync(first.filePath, JSON.stringify(stored, null, 2), 'utf8')
+
+    const second = writeRequirements(project, parsedSample())
+    const payload = readPayload(first.filePath)
+
+    expect(second.createdAt).toBe('2020-01-01T00:00:00.000Z')
+    expect(second.updatedAt > second.createdAt).toBe(true)
+    expect(payload.createdAt).toBe('2020-01-01T00:00:00.000Z')
+    expect(payload.updatedAt).toBe(second.updatedAt)
+    // 旧数据不残留
+    expect(payload.requirements).toHaveLength(4)
+    expect(payload.requirements.map((item) => item.id)).not.toContain('OLD_REQ')
+  })
+
+  it('已有文件无法解析时按首次导入重新写 createdAt', () => {
+    const project = temporaryProject()
+    const target = requirementsFilePath(project)
+    mkdirSync(join(project, '.hil-kit'), { recursive: true })
+    writeFileSync(target, 'not json at all', 'utf8')
+
+    const saved = writeRequirements(project, parsedSample())
+
+    expect(saved.createdAt).toBe(saved.updatedAt)
+    expect(readPayload(target).schemaVersion).toBe(1)
   })
 })

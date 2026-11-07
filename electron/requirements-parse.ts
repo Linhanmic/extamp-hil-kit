@@ -93,6 +93,13 @@ const NOT_APPLICABLE_MARKS = new Set([
 
 const MAX_WARNINGS = 200
 
+// 表头含「平台」的列是平台列，解析时整列忽略，不进车型清单
+const PLATFORM_KEYWORD = '平台'
+// 一个表头里可以写多款车型（与 tauri-app 的需求表解析规则一致）
+const VEHICLE_SEPARATORS = /[/、,，;；]/
+// 连续这么多个空表头就认为车型列区间结束
+const MAX_EMPTY_HEADERS = 2
+
 type CellMark =
   | { kind: 'blank' }
   | { kind: 'notApplicable' }
@@ -264,6 +271,7 @@ function describeColumns(rows: SheetCell[][], headerRow: number): RequirementShe
       index: column,
       letter: columnIndexToLetter(column),
       header: cellText(rows[headerRow - 1] ?? [], column),
+      isPlatform: cellText(rows[headerRow - 1] ?? [], column).includes(PLATFORM_KEYWORD),
       ...stats,
     })
   }
@@ -293,7 +301,7 @@ export function parseRequirements(
   const dataRows = table.rows.slice(headerRow)
   const lastColumn = table.rows.reduce((widest, row) => Math.max(widest, row.length), 0)
 
-  const vehicles = collectVehicles(table, headerRow, vehicleStartCol, lastColumn)
+  const vehicles = scanVehicleColumns(table, headerRow, vehicleStartCol, lastColumn)
 
   const requirements = new Map<string, Requirement>()
   const variantMaps = new Map<string, Map<string, Variant>>()
@@ -305,7 +313,7 @@ export function parseRequirements(
     mergedRows: 0,
     requirementCount: 0,
     variantCount: 0,
-    vehicleCount: vehicles.length,
+    vehicleCount: vehicles.names.length,
     applicableCells: 0,
     notApplicableCells: 0,
     textCells: 0,
@@ -323,7 +331,7 @@ export function parseRequirements(
     const detail = cellText(row, detailCol)
 
     if (!id) {
-      if (!name && !detail && !hasAnyMark(row, vehicles)) {
+      if (!name && !detail && !hasAnyMark(row, vehicles.columns)) {
         stats.blankRows++
         return
       }
@@ -346,8 +354,8 @@ export function parseRequirements(
     const variantMap = variantMaps.get(id) as Map<string, Variant>
     let applicableInRow = 0
 
-    for (const vehicle of vehicles) {
-      const mark = classifyCell(row[vehicle.index - 1])
+    for (const column of vehicles.columns) {
+      const mark = classifyCell(row[column.index - 1])
       if (mark.kind === 'blank') continue
       if (mark.kind === 'notApplicable') {
         stats.notApplicableCells++
@@ -358,7 +366,7 @@ export function parseRequirements(
       applicableInRow++
       if (!mark.marked) {
         stats.textCells++
-        warn(rowNumber, `${vehicle.name} 列的单元格没有以「●」开头，已按变体描述处理`)
+        warn(rowNumber, `${columnLabel(column)} 列的单元格没有以「●」开头，已按变体描述处理`)
       }
 
       const key = variantKey(mark.text)
@@ -370,7 +378,10 @@ export function parseRequirements(
         stats.variantCount++
       }
       if (mark.text && !variant.content.includes(mark.text)) variant.content.push(mark.text)
-      if (!variant.vehicles.includes(vehicle.name)) variant.vehicles.push(vehicle.name)
+      // 一个车型列的表头可以写多款车型，单元格对这几款都成立
+      for (const name of column.names) {
+        if (!variant.vehicles.includes(name)) variant.vehicles.push(name)
+      }
     }
 
     if (!applicableInRow) {
@@ -381,7 +392,7 @@ export function parseRequirements(
   stats.requirementCount = requirements.size
 
   return {
-    vehicles: vehicles.map((vehicle) => vehicle.name),
+    vehicles: vehicles.names,
     requirements: [...requirements.values()],
     stats,
     warnings,
@@ -390,39 +401,81 @@ export function parseRequirements(
 
 interface VehicleColumn {
   index: number
-  name: string
+  names: string[]
+}
+
+interface VehicleScan {
+  columns: VehicleColumn[]
+  /** 表头含「平台」的列：不是车型列，解析时整列忽略 */
+  platformColumns: number[]
+  /** 全部车型名，按首次出现顺序去重 */
+  names: string[]
 }
 
 /**
- * 车型列：从起始列到最右列，表头为空但数据区有标记的列同样算，
- * 名字退回「列AE」这种写法；同名表头追加列号区分，避免合并变体时车型混淆。
+ * 扫描车型列：从车型起始列向右读表头。
+ *
+ * - 空表头：单个跳过、继续向右；连续 2 个空表头则停止扫描（右侧是备注之类的杂物列）。
+ * - 表头含「平台」：记入平台列，**不算车型列**，该列在解析时整列忽略。
+ * - 其余非空表头：按 `/、,，;；` 拆成多个车型名并归一化。
  */
-function collectVehicles(
+function scanVehicleColumns(
   table: SheetTable,
   headerRow: number,
   vehicleStartCol: number,
   lastColumn: number,
-): VehicleColumn[] {
+): VehicleScan {
   const headerRowCells = table.rows[headerRow - 1] ?? []
-  const seen = new Set<string>()
-  const vehicles: VehicleColumn[] = []
+  const columns: VehicleColumn[] = []
+  const platformColumns: number[] = []
+  const names: string[] = []
+  let emptyStreak = 0
 
   for (let column = vehicleStartCol; column <= lastColumn; column++) {
     const header = cellText(headerRowCells, column)
-    const hasData = table.rows
-      .slice(headerRow)
-      .some((row) => classifyCell(row[column - 1]).kind !== 'blank')
-    if (!header && !hasData) continue
+    if (!header) {
+      emptyStreak++
+      if (emptyStreak >= MAX_EMPTY_HEADERS) break
+      continue
+    }
+    emptyStreak = 0
 
-    const letter = columnIndexToLetter(column)
-    let name = header || `列${letter}`
-    if (seen.has(name)) name = `${name}（列${letter}）`
-    seen.add(name)
-    vehicles.push({ index: column, name })
+    if (header.includes(PLATFORM_KEYWORD)) {
+      platformColumns.push(column)
+      continue
+    }
+
+    const columnNames = splitVehicleNames(header)
+    if (!columnNames.length) continue
+    columns.push({ index: column, names: columnNames })
+    for (const name of columnNames) {
+      if (!names.includes(name)) names.push(name)
+    }
   }
-  return vehicles
+
+  return { columns, platformColumns, names }
 }
 
-function hasAnyMark(row: SheetCell[], vehicles: VehicleColumn[]): boolean {
-  return vehicles.some((vehicle) => classifyCell(row[vehicle.index - 1]).kind !== 'blank')
+/** 车型名归一化：去引号、去空白（含 NBSP 与全角空格）、下划线换算成连字符 */
+function normalizeVehicleName(raw: string): string {
+  return raw
+    .replace(/["'`＂＇]/g, '')
+    .replace(/\s/g, '')
+    .replace(/_/g, '-')
+}
+
+function splitVehicleNames(header: string): string[] {
+  const parts = header.split(VEHICLE_SEPARATORS).map(normalizeVehicleName).filter(Boolean)
+  // 表头只有分隔符时退回整体归一化
+  if (parts.length) return parts
+  const whole = normalizeVehicleName(header)
+  return whole ? [whole] : []
+}
+
+function columnLabel(column: VehicleColumn): string {
+  return column.names.join('/') || `列${columnIndexToLetter(column.index)}`
+}
+
+function hasAnyMark(row: SheetCell[], columns: VehicleColumn[]): boolean {
+  return columns.some((column) => classifyCell(row[column.index - 1]).kind !== 'blank')
 }
