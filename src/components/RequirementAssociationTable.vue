@@ -12,11 +12,17 @@ import {
  * 展开后是各变体的内容、适用车型与实际关联情况。
  * 映射开关只决定是否检查关联完整性，不改写需求或配置数据。
  */
-const props = defineProps<{ requirements: Requirement[] }>()
+const props = defineProps<{
+  requirements: Requirement[]
+  /** 展开区按变体关联状态过滤；空串显示全部 */
+  variantStatus?: '' | 'linked' | 'unlinked'
+}>()
 
 const configsStore = useConfigsStore()
 const openIds = ref(new Set<string>())
-const excludedIds = ref(new Set<string>())
+const excludedIds = defineModel<Set<string>>('excludedIds', {
+  default: () => new Set<string>(),
+})
 
 const associations = computed(() => {
   const map = new Map<string, ReturnType<typeof analyzeRequirementAssociation>>()
@@ -64,6 +70,13 @@ function setParticipating(id: string, value: string | number | boolean) {
 
 function joinVehicles(vehicles: string[]): string {
   return vehicles.length ? vehicles.join('/') : '—'
+}
+
+function visibleVariants(requirement: Requirement) {
+  if (!props.variantStatus) return requirement.variants
+  const association = associations.value.get(requirement.id)!
+  const keys = props.variantStatus === 'linked' ? association.linkedKeys : association.unlinkedKeys
+  return requirement.variants.filter((variant) => keys.includes(variant.key))
 }
 </script>
 
@@ -156,7 +169,7 @@ function joinVehicles(vehicles: string[]): string {
           </div>
         </div>
         <div
-          v-for="variant in requirement.variants"
+          v-for="variant in visibleVariants(requirement)"
           :key="variant.key"
           class="grid grid-cols-12 items-center gap-0 border-b border-line/30"
         >
