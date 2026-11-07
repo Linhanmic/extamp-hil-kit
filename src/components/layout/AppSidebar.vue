@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import ThemeSwitcher from '../ThemeSwitcher.vue'
 
 const navItems = [
   { label: '首页', to: '/', icon: 'home' },
@@ -9,7 +8,7 @@ const navItems = [
 </script>
 
 <template>
-  <aside class="hidden w-60 shrink-0 flex-col border-r border-line bg-surface-soft lg:flex">
+  <aside class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-line bg-surface-soft">
     <!-- 品牌 -->
     <div class="flex items-center gap-2 border-b border-line px-3 py-2.5">
       <span
@@ -64,11 +63,6 @@ const navItems = [
       >
         占位区域<br />任务 / 工程分组待接入
       </div>
-    </div>
-
-    <!-- 底部：主题切换 -->
-    <div class="flex justify-center border-t border-line p-2">
-      <ThemeSwitcher />
     </div>
   </aside>
 </template>

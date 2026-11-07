@@ -1,5 +1,7 @@
 <template>
-  <section class="flex min-h-0 flex-col border-t border-line bg-surface">
+  <section
+    class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-line bg-surface"
+  >
     <!-- 面板标签栏（占位，尚未接入具体功能） -->
     <header
       class="flex h-9 shrink-0 items-center justify-between border-b border-line bg-surface-soft px-2"

@@ -4,7 +4,9 @@ const plugins = ['PDF', '演示文稿', '电子表格', 'Word 文档']
 </script>
 
 <template>
-  <aside class="hidden w-72 shrink-0 flex-col overflow-y-auto border-l border-line bg-surface-soft xl:flex">
+  <aside
+    class="flex min-h-0 flex-col overflow-y-auto rounded-lg border border-line bg-surface-soft"
+  >
     <!-- 新建面板（占位） -->
     <header class="px-4 py-3 text-sm font-medium">新面板</header>
     <div class="grid grid-cols-2 gap-2 px-3">
