@@ -66,12 +66,8 @@ async function onImported() {
     <div class="w-[calc(11.5/12*100%)]">
       <!-- 标题行 -->
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-6 flex items-center gap-2">
-          <h1 class="text-lg font-medium text-ink">需求</h1>
-          <el-tag size="small" type="info" effect="plain">
-            {{ store.requirementCount }} 个需求
-          </el-tag>
-          <el-tag size="small" type="info" effect="plain"> {{ store.variantCount }} 个变体 </el-tag>
+        <div class="col-span-6 flex items-center">
+          <h1 class="text-lg font-medium text-ink">软件需求</h1>
         </div>
         <div v-if="available" class="col-span-6 justify-self-end">
           <el-button size="small" type="primary" @click="importVisible = true">导入 Excel</el-button>

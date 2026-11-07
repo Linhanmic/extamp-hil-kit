@@ -8,9 +8,9 @@ import {
 } from '@/stores/requirement-association'
 
 /**
- * 需求关联表：首层为需求名称 · 变体数量 · 关联状态 · 处理，
+ * 需求关联表：首层为需求名称 · 变体数量 · 关联状态 · 映射，
  * 展开后是各变体的内容、适用车型与实际关联情况。
- * 处理开关只决定是否检查关联完整性，不改写需求或配置数据。
+ * 映射开关只决定是否检查关联完整性，不改写需求或配置数据。
  */
 const props = defineProps<{ requirements: Requirement[] }>()
 
@@ -68,15 +68,15 @@ function joinVehicles(vehicles: string[]): string {
 </script>
 
 <template>
-  <!-- @grid A：首层与展开明细统一 12 列，需求 6 · 数量 2 · 状态 2 · 处理 2 -->
+  <!-- @grid A：首层与展开明细统一 12 列，需求 6 · 数量 1 · 状态 2 · 映射 3 -->
   <div class="min-w-0 border border-line">
     <div
       class="grid grid-cols-12 items-center gap-0 border-b border-line bg-surface-soft text-[11px] font-medium text-ink"
     >
       <div class="col-span-6 px-3 py-2">需求名称</div>
-      <div class="col-span-2 px-2 py-2 text-center">变体数量</div>
+      <div class="col-span-1 px-2 py-2 text-center">变体数量</div>
       <div class="col-span-2 px-2 py-2 text-center">关联状态</div>
-      <div class="col-span-2 px-2 py-2 text-center">处理</div>
+      <div class="col-span-3 px-2 py-2 text-center">映射</div>
     </div>
 
     <template v-for="requirement in requirements" :key="requirement.id">
@@ -106,7 +106,7 @@ function joinVehicles(vehicles: string[]): string {
             {{ requirement.name }}
           </span>
         </div>
-        <div class="col-span-2 flex items-center justify-center px-2 py-2">
+        <div class="col-span-1 flex items-center justify-center px-2 py-2">
           <el-tag size="small" type="info" effect="plain">
             {{ requirement.variants.length }}
           </el-tag>
@@ -120,13 +120,13 @@ function joinVehicles(vehicles: string[]): string {
             {{ statusLabels[associations.get(requirement.id)!.status] }}
           </el-tag>
         </div>
-        <div class="col-span-2 flex items-center justify-center px-2 py-2">
+        <div class="col-span-3 flex items-center justify-center px-2 py-2">
           <el-segmented
             :model-value="excludedIds.has(requirement.id) ? 'skip' : 'participate'"
             size="small"
             :options="[
-              { label: '参与', value: 'participate' },
-              { label: '不参与', value: 'skip' },
+              { label: '参与参数映射', value: 'participate' },
+              { label: '不参与参数映射', value: 'skip' },
             ]"
             @update:model-value="setParticipating(requirement.id, $event)"
           />
