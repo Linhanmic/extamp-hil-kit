@@ -10,10 +10,20 @@ import DesignGrid from './components/layout/DesignGrid.vue'
 import SplitResizer from './components/layout/SplitResizer.vue'
 import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
+import { useWorkspace } from './composables/useWorkspace'
+import LaunchView from './views/LaunchView.vue'
 
 const route = useRoute()
 
 const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '首页')
+
+const { project, ready, load } = useWorkspace()
+const hasProject = computed(() => project.value !== null)
+
+// 未选项目时标题栏显示「启动」，选定后显示「项目名 / 页面名」
+const titlebarTitle = computed(() =>
+  hasProject.value ? `${project.value?.name} / ${routeTitle.value}` : '启动',
+)
 
 // 三块区域的显隐状态
 const visible = reactive({
@@ -60,23 +70,31 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  load()
+  window.addEventListener('keydown', onKeydown)
+})
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <!-- Element Plus 全局配置：中文语言包（组件由 vite 插件按需自动导入） -->
   <el-config-provider :locale="zhCn">
-    <!-- 桌面端专属外壳：自定义标题栏 + 三栏内容区，比例对齐 12 列 / 48 行设计网格 -->
+    <!-- 桌面端专属外壳：自定义标题栏 + 启动页闸门 + 三栏内容区 -->
     <div class="flex h-dvh w-full flex-col overflow-hidden bg-surface-page text-ink">
       <AppTitleBar
         v-model:sidebar="visible.sidebar"
         v-model:panel="visible.panel"
         v-model:second-sidebar="visible.secondSidebar"
-        :title="routeTitle"
+        :title="titlebarTitle"
+        :locked="!hasProject"
       />
 
+      <!-- 闸门：未选择 Gauge 项目时停在启动页 -->
+      <LaunchView v-if="ready && !hasProject" />
+
       <div
+        v-else-if="hasProject"
         ref="contentRef"
         class="grid min-h-0 flex-1"
         :style="{ gridTemplateColumns: contentColumns }"
@@ -104,6 +122,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           @resize="onSecondSidebarResize"
         />
         <AppSecondSidebar v-show="visible.secondSidebar" />
+      </div>
+
+      <!-- 读取工作区期间的占位，避免启动页闪一下又跳走 -->
+      <div v-else class="grid min-h-0 flex-1 place-items-center text-xs text-ink-muted">
+        正在读取工作区…
       </div>
 
       <!-- 设计辅助层：12 列 48 行网格，位于最顶层且不拦截交互 -->

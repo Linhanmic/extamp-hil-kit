@@ -9,6 +9,8 @@ const props = defineProps<{
   sidebar: boolean
   panel: boolean
   secondSidebar: boolean
+  /** 启动页闸门状态：未选项目时隐藏区域控件，只保留标题与设计网格开关 */
+  locked?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -36,17 +38,21 @@ const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
     class="grid h-[6.25dvh] shrink-0 items-stretch gap-1 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
     :style="{ gridTemplateColumns: TITLEBAR_COLUMNS }"
   >
-    <!-- Column span-1：左栏切换 -->
+    <!-- Column span-1：左栏切换（启动页闸门下隐藏） -->
     <RegionToggle
+      v-if="!props.locked"
       region="sidebar"
       :visible="props.sidebar"
       class="col-span-1 grid self-center justify-self-start [-webkit-app-region:no-drag]"
       @update:visible="emit('update:sidebar', $event)"
     />
 
-    <!-- Column span-9：当前页面标题（品牌名由左栏承载，这里不重复） -->
-    <div class="col-span-9 flex min-w-0 items-center">
-      <span class="truncate text-[13px] text-ink">工作区 / {{ props.title }}</span>
+    <!-- Column span-9（闸门下 11）：项目名 / 当前页面 -->
+    <div
+      class="flex min-w-0 items-center"
+      :class="props.locked ? 'col-span-11 pl-2' : 'col-span-9'"
+    >
+      <span class="truncate text-[13px] text-ink">{{ props.title }}</span>
     </div>
 
     <!-- Column span-1：设计网格覆盖层开关 -->
@@ -65,8 +71,11 @@ const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
       </svg>
     </button>
 
-    <!-- Column span-1：主题切换 + 面板切换 + 右栏切换，三者共同占 1 份 -->
-    <div class="col-span-1 flex items-center justify-end gap-0.5 [-webkit-app-region:no-drag]">
+    <!-- Column span-1：主题切换 + 面板切换 + 右栏切换，三者共同占 1 份（闸门下隐藏） -->
+    <div
+      v-if="!props.locked"
+      class="col-span-1 flex items-center justify-end gap-0.5 [-webkit-app-region:no-drag]"
+    >
       <ThemeSwitcher compact />
       <RegionToggle
         region="panel"

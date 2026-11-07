@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { NAV_ITEMS } from '@/config/navigation'
+import { useWorkspace } from '@/composables/useWorkspace'
 import NavIcon from './NavIcon.vue'
+
+const { project, clear } = useWorkspace()
 </script>
 
 <template>
@@ -41,6 +44,21 @@ import NavIcon from './NavIcon.vue'
       >
         占位区域<br />任务 / 工程分组待接入
       </div>
+    </div>
+
+    <!-- @grid A：项目栏是「项目名 + 切换」组合，8 / 4 分配 -->
+    <div class="grid shrink-0 grid-cols-12 items-center gap-2 border-t border-line px-3 py-2">
+      <span class="col-span-8 truncate text-[11px] text-ink-muted" :title="project?.path">
+        {{ project?.name }}
+      </span>
+      <button
+        type="button"
+        class="col-span-4 justify-self-end rounded px-1.5 py-1 text-[11px] text-ink-muted transition-colors outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+        title="切换 Gauge 项目"
+        @click="clear"
+      >
+        切换
+      </button>
     </div>
   </aside>
 </template>

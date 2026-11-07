@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 
-// 渲染进程不直接接触 Node：只通过 contextBridge 暴露只读环境信息与窗口控制
+// 渲染进程不直接接触 Node：只通过 contextBridge 暴露只读环境信息、窗口控制与工作区操作
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
   versions: {
@@ -18,5 +18,11 @@ contextBridge.exposeInMainWorld('desktop', {
       ipcRenderer.on('window:maximized-change', listener)
       return () => ipcRenderer.off('window:maximized-change', listener)
     },
+  },
+  workspace: {
+    current: () => ipcRenderer.invoke('workspace:current'),
+    choose: () => ipcRenderer.invoke('workspace:choose'),
+    open: (dir: string) => ipcRenderer.invoke('workspace:open', dir),
+    clear: () => ipcRenderer.invoke('workspace:clear'),
   },
 })

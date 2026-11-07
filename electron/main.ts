@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
+import { registerWorkspaceIpc } from './workspace'
 
 // vite-plugin-electron 在开发模式下注入该变量；生产构建下为空，改为加载本地文件
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
@@ -100,6 +101,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     registerWindowControls()
+    registerWorkspaceIpc()
     createWindow()
 
     app.on('activate', () => {

@@ -8,16 +8,18 @@
 build/                  应用图标与图标生成脚本（icon.png / icon.ico / icon.svg）
 electron/               Electron 主进程侧（不参与渲染进程打包）
   main.ts               窗口创建、无边框配置、窗口控制 IPC、生命周期、单实例锁
-  preload.ts            contextBridge 暴露只读环境信息与窗口控制 API
+  preload.ts            contextBridge 暴露窗口控制、工作区选择等受限 API
+  workspace.ts          Gauge 项目目录选择、校验与持久化（userData/workspace.json）
 src/                    渲染进程（Vue 应用）
-  App.vue               壳层：自定义标题栏 + 可拖拽三栏内容区
+  App.vue               壳层：标题栏 + 启动页闸门 + 可拖拽三栏内容区
   components/
     layout/             壳层组件：AppTitleBar、WindowControls、AppSidebar、AppPanel、
                         AppSecondSidebar、RegionToggle、SplitResizer、DesignGrid、NavIcon
     ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
-  composables/          useTheme（主题）、useLayoutSize（可拖拽区域尺寸）、useDesignGrid（设计网格）
+  composables/          useTheme（主题）、useLayoutSize（区域尺寸）、useDesignGrid（设计网格）、
+                        useWorkspace（Gauge 项目选择与持久化）
   config/navigation.ts  侧栏导航项与顺序（路由与侧栏共用同一份定义）
-  views/                路由页面（FeatureView 为导航项的占位页）
+  views/                LaunchView（启动页）、FeatureView（导航项占位页）、Home/About
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
   router/               由 NAV_ITEMS 生成导航路由；file:// 协议下自动切到 hash history
 docs/grid-system.md     12 列栅格设计规范（页面级 + 组件级 A/B/C 方案）
@@ -36,6 +38,15 @@ npm run preview     # 仅预览渲染进程（浏览器内调试）
 npm run test:unit   # Vitest 单元测试
 npm run lint        # oxlint + eslint
 ```
+
+## 启动流程（Gauge 项目闸门）
+
+应用启动时读取 `userData/workspace.json`：
+
+- **未绑定项目** → 停在启动页（`views/LaunchView.vue`），只显示标题栏与居中卡片，三栏主界面不渲染；必须选择项目才能进入。
+- **选择项目** → 打开系统目录选择器，校验目录是否包含 `manifest.json` 或 `.gauge`（Gauge 项目标记）。校验失败会就地提示错误、继续停在启动页。
+- **绑定成功** → 写入 `workspace.json`（含最近 5 个项目），标题栏显示「项目名 / 页面名」，侧栏底部显示当前项目与「切换」入口。
+- **路径失效** → 每次读取都会过滤掉已不存在的目录；当前项目失效时自动回到启动页。
 
 ## Electron 约定
 
