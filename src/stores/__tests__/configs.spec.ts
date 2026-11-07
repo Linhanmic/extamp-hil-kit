@@ -192,10 +192,10 @@ describe('useConfigsStore 读取与派生', () => {
     expect(store.rows[0]?.issueCount).toBe(1)
   })
 
-  it('变体标签按需求内的序号给出，空 key 显示为无变体差异', async () => {
+  it('变体标签取变体内容的第一条文本，空内容显示为无变体差异', async () => {
     const { store } = await storeWithData({ document: configsDocument() })
 
-    expect(store.rows[0]?.values[0]?.resolved.refs[0]?.label).toBe('变体2')
+    expect(store.rows[0]?.values[0]?.resolved.refs[0]?.label).toBe('变体1')
     expect(store.rows[1]?.values[0]?.resolved.refs[0]?.label).toBe('无变体差异')
   })
 

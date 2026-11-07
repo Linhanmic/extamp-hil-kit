@@ -58,18 +58,13 @@ function joinVehicles(vehicles: string[]): string {
   return vehicles.length ? vehicles.join('、') : '—'
 }
 
-function joinRefs(
-  refs: { requirement_name: string; label: string; status: string }[],
-): string {
-  if (!refs.length) return '—'
-  return refs
-    .map((ref) => {
-      const base = `${ref.requirement_name} · ${ref.label}`
-      if (ref.status === 'missing') return `${base}（失效）`
-      if (ref.status === 'ambiguous') return `${base}（同名需求歧义）`
-      return base
-    })
-    .join('、')
+/** 关联需求列只列需求名称（去重），变体内容在展开明细里展示 */
+function joinRequirementNames(refs: { requirement_name: string }[]): string {
+  const names: string[] = []
+  for (const ref of refs) {
+    if (!names.includes(ref.requirement_name)) names.push(ref.requirement_name)
+  }
+  return names.length ? names.join('、') : '—'
 }
 </script>
 
@@ -221,8 +216,8 @@ function joinRefs(
                 {{ value.value }}
               </span>
             </div>
-            <div class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink" :title="joinRefs(value.resolved.refs)">
-              {{ joinRefs(value.resolved.refs) }}
+            <div class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink" :title="joinRequirementNames(value.resolved.refs)">
+              {{ joinRequirementNames(value.resolved.refs) }}
             </div>
             <div
               class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink"

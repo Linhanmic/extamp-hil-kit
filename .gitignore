@@ -51,3 +51,6 @@ __screenshots__/
 # 临时原型与冒烟脚本
 docs/.proto-smoke.*
 docs/config-display-prototype.html
+
+# 本地工具记忆缓存
+.workbuddy/

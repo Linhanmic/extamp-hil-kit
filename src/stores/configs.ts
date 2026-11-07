@@ -6,6 +6,7 @@ import type {
   ConfigsDocument,
   Requirement,
   SpecialVehicleRule,
+  Variant,
   VariantRef,
 } from '@/models'
 import { useRequirementsStore } from './requirements'
@@ -17,7 +18,7 @@ export type VariantRefStatus = 'ok' | 'ambiguous' | 'missing'
 export interface ResolvedVariantRef {
   requirement_name: string
   variant_key: string
-  /** 展示用标签：变体序号、原始变体键，或「无变体差异」 */
+  /** 展示用标签：变体键对应变体列表的第一个变体内容文本；无内容时显示「无变体差异」 */
   label: string
   status: VariantRefStatus
   vehicles: string[]
@@ -92,9 +93,12 @@ export const useConfigsStore = defineStore('configs', () => {
     return map
   })
 
-  function refLabel(variantKey: string, index: number): string {
-    if (variantKey === '') return '无变体差异'
-    return index >= 0 ? `变体${index + 1}` : variantKey
+  /** 展示用标签：变体键包含变体列表的第一个变体内容文本；无内容时显示「无变体差异」 */
+
+  function variantLabel(variant: Variant | undefined, fallbackKey: string): string {
+    // variant_key 只用于内部合并相同变体，界面展示原始内容文本
+    if (variant) return variant.content[0]?.trim() || '无变体差异'
+    return fallbackKey || '无变体差异'
   }
 
   function resolveRef(ref: VariantRef): ResolvedVariantRef {
@@ -102,7 +106,7 @@ export const useConfigsStore = defineStore('configs', () => {
     if (candidates.length > 1) {
       return {
         ...ref,
-        label: refLabel(ref.variant_key, -1),
+        label: variantLabel(undefined, ref.variant_key),
         status: 'ambiguous',
         vehicles: [],
       }
@@ -115,7 +119,7 @@ export const useConfigsStore = defineStore('configs', () => {
     if (!requirement || index < 0) {
       return {
         ...ref,
-        label: refLabel(ref.variant_key, -1),
+        label: variantLabel(undefined, ref.variant_key),
         status: 'missing',
         vehicles: [],
       }
@@ -124,7 +128,7 @@ export const useConfigsStore = defineStore('configs', () => {
     const variant = requirement.variants[index]
     return {
       ...ref,
-      label: refLabel(ref.variant_key, index),
+      label: variantLabel(variant, ref.variant_key),
       status: 'ok',
       vehicles: variant?.vehicles ?? [],
     }
@@ -238,9 +242,9 @@ export const useConfigsStore = defineStore('configs', () => {
       requirement_name: requirement.name,
       requirement_id: requirement.id,
       duplicate: (requirementsByName.value.get(requirement.name)?.length ?? 0) > 1,
-      variants: requirement.variants.map((variant, index) => ({
+      variants: requirement.variants.map((variant) => ({
         variant_key: variant.key,
-        label: refLabel(variant.key, index),
+        label: variantLabel(variant, variant.key),
         vehicles: variant.vehicles,
       })),
     })),

@@ -64,12 +64,12 @@ watch(requirementIndex, () => {
 })
 
 function refLabel(ref: VariantRef): string {
-  if (ref.variant_key === '') return '无变体差异'
+  // variant_key 仅内部合并用，展示变体内容文本（requirementOptions 已按 content[0] 给出）
   const option = store.requirementOptions.find(
     (item) => item.requirement_name === ref.requirement_name,
   )
-  const index = option?.variants.findIndex((variant) => variant.variant_key === ref.variant_key)
-  return index !== undefined && index >= 0 ? `变体${index + 1}` : ref.variant_key
+  const variant = option?.variants.find((item) => item.variant_key === ref.variant_key)
+  return variant?.label ?? (ref.variant_key || '无变体差异')
 }
 
 function addRef() {
