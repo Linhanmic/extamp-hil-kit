@@ -164,7 +164,8 @@ async function save() {
     width="560px"
     destroy-on-close
   >
-    <div class="flex flex-col gap-3">
+    <!-- 内容高度封顶：变体/规则再多也不把弹窗越撑越长，超出后内部滚动，底部按钮固定 -->
+    <div class="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pr-1">
       <!-- @grid A：标签 3 列 + 控件 9 列 -->
       <div class="grid grid-cols-12 items-center gap-2">
         <label class="col-span-3 text-[11px] text-ink-muted">配置值</label>
@@ -186,26 +187,44 @@ async function save() {
           <p v-if="refs.length" class="text-[11px] text-ink-muted">{{ refs.length }} 条</p>
         </div>
 
-        <!-- 已选：按需求分组 -->
-        <div v-if="refs.length" class="mt-2 flex flex-col gap-2">
-          <div
-            v-for="group in groupedRefs"
-            :key="group.name"
-            class="rounded-md border border-line/60 bg-surface px-2 py-1.5"
-          >
-            <p class="text-[11px] font-medium text-ink">{{ group.name }}</p>
-            <div class="mt-1 flex flex-wrap items-center gap-1">
-              <el-tag
-                v-for="ref in group.refs"
-                :key="`${ref.requirement_name}-${ref.variant_key}`"
-                size="small"
-                type="info"
-                effect="plain"
-                closable
-                @close="removeRef(ref)"
-              >
-                {{ refLabel(ref) }}
-              </el-tag>
+        <!-- 已选：按需求分组，超高内部滚动；需求名与长变体名截断，悬停看全文 -->
+        <div v-if="refs.length" class="mt-2 max-h-44 overflow-y-auto pr-1">
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="group in groupedRefs"
+              :key="group.name"
+              class="rounded-md border border-line/60 bg-surface px-2 py-1.5"
+            >
+              <p class="truncate text-[11px] font-medium text-ink" :title="group.name">
+                {{ group.name }}
+              </p>
+              <div class="mt-1 flex flex-wrap items-center gap-1">
+                <span
+                  v-for="ref in group.refs"
+                  :key="`${ref.requirement_name}-${ref.variant_key}`"
+                  class="inline-flex max-w-full items-center gap-1 rounded border border-line bg-surface-soft px-1.5 py-0.5 text-[11px] text-ink"
+                  :title="`${ref.requirement_name} · ${refLabel(ref)}`"
+                >
+                  <span class="max-w-44 truncate">{{ refLabel(ref) }}</span>
+                  <button
+                    type="button"
+                    class="grid size-3.5 shrink-0 place-items-center rounded-full text-ink-muted outline-none hover:bg-line hover:text-ink focus-visible:ring-1 focus-visible:ring-primary/40"
+                    :aria-label="`移除 ${refLabel(ref)}`"
+                    @click="removeRef(ref)"
+                  >
+                    <svg
+                      class="size-2.5"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    >
+                      <path d="m4 4 8 8M12 4l-8 8" />
+                    </svg>
+                  </button>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -274,16 +293,22 @@ async function save() {
           </p>
         </div>
 
-        <div v-if="specialRules.length" class="mt-2 flex flex-wrap items-center gap-1">
+        <div
+          v-if="specialRules.length"
+          class="mt-2 flex max-h-24 flex-wrap items-center gap-1 overflow-y-auto pr-1"
+        >
           <el-tag
             v-for="rule in specialRules"
             :key="`${rule.match}-${rule.text}`"
             size="small"
             effect="plain"
             closable
+            :title="specialLabel(rule)"
             @close="removeSpecialRule(rule)"
           >
-            {{ specialLabel(rule) }}
+            <span class="inline-block max-w-40 truncate align-middle">
+              {{ specialLabel(rule) }}
+            </span>
           </el-tag>
         </div>
 
