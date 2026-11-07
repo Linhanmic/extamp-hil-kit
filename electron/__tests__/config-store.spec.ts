@@ -32,13 +32,16 @@ function sampleConfigurations(): Configuration[] {
           config_key: '扬声器配置',
           value: '14扬声器',
           relay_variants: [{ requirement_name: '功放握手', variant_key: '变体1' }],
-          vehicles: [],
+          special_vehicles: [],
         },
         {
           config_key: '扬声器配置',
           value: '10扬声器',
           relay_variants: [],
-          vehicles: ['SC6H', 'YU2'],
+          special_vehicles: [
+            { match: 'starts_with', text: 'SC6H' },
+            { match: 'contains', text: 'YU2' },
+          ],
         },
       ],
     },
@@ -49,7 +52,7 @@ function sampleConfigurations(): Configuration[] {
           config_key: '功放型号',
           value: 'AMP-A',
           relay_variants: [{ requirement_name: '功放握手', variant_key: '' }],
-          vehicles: [],
+          special_vehicles: [],
         },
       ],
     },
@@ -62,7 +65,11 @@ interface StoredPayload {
   updatedAt: string
   configurations: {
     config_key: string
-    config_value: { value: string; relay_variants: unknown[]; vehicles: string[] }[]
+    config_value: {
+      value: string
+      relay_variants: unknown[]
+      special_vehicles: { match: string; text: string }[]
+    }[]
   }[]
 }
 
@@ -89,15 +96,18 @@ describe('writeConfigs', () => {
       'schemaVersion',
       'updatedAt',
     ])
-    expect(payload.schemaVersion).toBe(1)
+    expect(payload.schemaVersion).toBe(2)
     expect(payload.configurations).toHaveLength(2)
     // 归属由所在配置项确定，配置值不重复存 config_key
     expect(Object.keys(payload.configurations[0]!.config_value[0]!).sort()).toEqual([
       'relay_variants',
+      'special_vehicles',
       'value',
-      'vehicles',
     ])
-    expect(payload.configurations[0]!.config_value[1]!.vehicles).toEqual(['SC6H', 'YU2'])
+    expect(payload.configurations[0]!.config_value[1]!.special_vehicles).toEqual([
+      { match: 'starts_with', text: 'SC6H' },
+      { match: 'contains', text: 'YU2' },
+    ])
   })
 
   it('再次保存是更新：保留 createdAt，刷新 updatedAt，配置整体替换', () => {
@@ -131,7 +141,7 @@ describe('writeConfigs', () => {
     const saved = writeConfigs(project, sampleConfigurations())
 
     expect(saved.createdAt).toBe(saved.updatedAt)
-    expect(readPayload(target).schemaVersion).toBe(1)
+    expect(readPayload(target).schemaVersion).toBe(2)
   })
 })
 
@@ -145,7 +155,7 @@ describe('readConfigs', () => {
     expect(outcome.error).toBeUndefined()
     expect(outcome.empty).toBeUndefined()
     expect(outcome.document).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
     })
@@ -159,7 +169,46 @@ describe('readConfigs', () => {
       config_key: '功放型号',
       value: 'AMP-A',
       relay_variants: [{ requirement_name: '功放握手', variant_key: '' }],
-      vehicles: [],
+      special_vehicles: [],
+    })
+  })
+
+  it('v1 的 vehicles 字符串按 contains 迁到 special_vehicles', () => {
+    const project = temporaryProject()
+    const target = configsFilePath(project)
+    mkdirSync(join(project, '.hil-kit'), { recursive: true })
+    writeFileSync(
+      target,
+      JSON.stringify({
+        schemaVersion: 1,
+        createdAt: '2020-01-01T00:00:00.000Z',
+        updatedAt: '2020-01-01T00:00:00.000Z',
+        configurations: [
+          {
+            config_key: '功放型号',
+            config_value: [
+              {
+                value: 'AMP-A',
+                relay_variants: [],
+                vehicles: ['SC6H', ' YU2 '],
+              },
+            ],
+          },
+        ],
+      }),
+      'utf8',
+    )
+
+    const outcome = readConfigs(project)
+    expect(outcome.error).toBeUndefined()
+    expect(outcome.document?.schemaVersion).toBe(2)
+    expect(outcome.document?.configurations[0]?.config_value[0]).toMatchObject({
+      value: 'AMP-A',
+      config_key: '功放型号',
+      special_vehicles: [
+        { match: 'contains', text: 'SC6H' },
+        { match: 'contains', text: ' YU2 ' },
+      ],
     })
   })
 
@@ -177,15 +226,15 @@ describe('readConfigs', () => {
 
     writeFileSync(
       target,
-      JSON.stringify({ schemaVersion: 2, createdAt: 'x', updatedAt: 'y', configurations: [] }),
+      JSON.stringify({ schemaVersion: 3, createdAt: 'x', updatedAt: 'y', configurations: [] }),
       'utf8',
     )
-    expect(readConfigs(project).error).toMatch(/版本 2 不受支持/)
+    expect(readConfigs(project).error).toMatch(/版本 3 不受支持/)
 
     writeFileSync(
       target,
       JSON.stringify({
-        schemaVersion: 1,
+        schemaVersion: 2,
         createdAt: 'x',
         updatedAt: 'y',
         configurations: [{ config_key: '功放型号', config_value: [{ value: 'AMP-A' }] }],
@@ -197,7 +246,7 @@ describe('readConfigs', () => {
 })
 
 describe('normalizeConfigurations', () => {
-  it('去首尾空白，车型与变体引用去重去空', () => {
+  it('去首尾空白，特殊车型与变体引用去重去空', () => {
     const normalized = normalizeConfigurations([
       {
         config_key: ' 扬声器配置 ',
@@ -209,7 +258,11 @@ describe('normalizeConfigurations', () => {
               { requirement_name: ' 功放握手 ', variant_key: '变体1' },
               { requirement_name: '功放握手', variant_key: '变体1' },
             ],
-            vehicles: ['SC6H', ' SC6H ', '', 'YU2'],
+            special_vehicles: [
+              { match: 'starts_with', text: 'SC6H' },
+              { match: 'starts_with', text: ' SC6H ' },
+              { match: 'contains', text: 'YU2' },
+            ],
           },
         ],
       },
@@ -220,7 +273,10 @@ describe('normalizeConfigurations', () => {
     expect(normalized[0]?.config_value[0]?.relay_variants).toEqual([
       { requirement_name: '功放握手', variant_key: '变体1' },
     ])
-    expect(normalized[0]?.config_value[0]?.vehicles).toEqual(['SC6H', 'YU2'])
+    expect(normalized[0]?.config_value[0]?.special_vehicles).toEqual([
+      { match: 'starts_with', text: 'SC6H' },
+      { match: 'contains', text: 'YU2' },
+    ])
     // 配置值的 config_key 跟着配置项走
     expect(normalized[0]?.config_value[0]?.config_key).toBe('扬声器配置')
   })
@@ -234,7 +290,7 @@ describe('normalizeConfigurations', () => {
             config_key: key,
             value,
             relay_variants: [{ requirement_name: requirementName, variant_key: '' }],
-            vehicles: [],
+            special_vehicles: [],
           },
         ],
       }) satisfies Configuration
@@ -252,8 +308,8 @@ describe('normalizeConfigurations', () => {
         {
           config_key: '甲',
           config_value: [
-            { config_key: '甲', value: 'v', relay_variants: [], vehicles: [] },
-            { config_key: '甲', value: ' v ', relay_variants: [], vehicles: [] },
+            { config_key: '甲', value: 'v', relay_variants: [], special_vehicles: [] },
+            { config_key: '甲', value: ' v ', relay_variants: [], special_vehicles: [] },
           ],
         },
       ]),
@@ -261,6 +317,24 @@ describe('normalizeConfigurations', () => {
     expect(() => normalizeConfigurations([configuration('甲', 'v', '  ')])).toThrow(
       /没有需求名称的变体引用/,
     )
+  })
+
+  it('特殊车型参数为空时拒绝', () => {
+    expect(() =>
+      normalizeConfigurations([
+        {
+          config_key: '甲',
+          config_value: [
+            {
+              config_key: '甲',
+              value: 'v',
+              relay_variants: [],
+              special_vehicles: [{ match: 'starts_with', text: '  ' }],
+            },
+          ],
+        },
+      ]),
+    ).toThrow(/空的特殊车型参数/)
   })
 })
 

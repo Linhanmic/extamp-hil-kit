@@ -18,12 +18,20 @@ export interface VariantRef {
   requirement_name: string//关联需求名称，对应需求数据里 requirements[].name
   variant_key: string//关联变体的内容键，空串表示该需求「无变体差异」的那一支
 }
+/** 特殊车型配置的匹配方式 */
+export type SpecialVehicleMatch = 'starts_with' | 'contains'
+/** 特殊车型配置规则：以指定前缀开头，或名称包含指定关键字 */
+export interface SpecialVehicleRule {
+  match: SpecialVehicleMatch
+  text: string
+}
 /** 配置值 */
 export interface ConfigValue {
   config_key: string//配置值所属配置键，便于在内存与界面里定位所属配置项；落盘时不写，读取时按所属配置项补齐
   value: string//配置值
   relay_variants: VariantRef[]//配置值关联的需求变体引用，通过它们得到配置值对应的车型，部分特殊配置此项为空
-  vehicles: string[]//配置值自身携带、页面直接填写的车型（不来自需求变体）；生效车型由读取方合并关联变体的车型计算
+  /** 特殊车型配置规则（前缀 / 包含）；生效车型由读取方按规则匹配并合并关联变体车型 */
+  special_vehicles: SpecialVehicleRule[]
 }
 /** 配置 */
 export interface Configuration {

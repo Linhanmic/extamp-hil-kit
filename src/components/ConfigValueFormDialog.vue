@@ -2,11 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { useConfigsStore } from '@/stores/configs'
 import type { ConfigValueInput, ConfigurationValueRow } from '@/stores/configs'
-import type { VariantRef } from '@/models'
+import type { SpecialVehicleMatch, SpecialVehicleRule, VariantRef } from '@/models'
 
 /**
- * 新增 / 编辑配置值：配置值 + 关联的需求变体 + 直接填写的车型。
- * 生效车型由 store 合并计算（关联变体解析出的车型 ∪ 特殊车型配置），这里只负责录入。
+ * 新增 / 编辑配置值：配置值 + 关联的需求变体 + 特殊车型规则。
+ * 生效车型由 store 合并计算（关联变体车型 ∪ 规则命中的需求车型），这里只负责录入。
  */
 const props = defineProps<{
   configKey: string
@@ -18,10 +18,12 @@ const store = useConfigsStore()
 
 const text = ref('')
 const refs = ref<VariantRef[]>([])
-const vehicles = ref<string[]>([])
-const vehicleInput = ref('')
+const specialRules = ref<SpecialVehicleRule[]>([])
+const specialMatch = ref<SpecialVehicleMatch>('starts_with')
+const specialText = ref('')
 const requirementIndex = ref<number | null>(null)
-const variantIndex = ref<number | null>(null)
+/** 同一需求下可多选变体 */
+const variantIndices = ref<number[]>([])
 const error = ref('')
 
 const chosenRequirement = computed(() => {
@@ -29,25 +31,36 @@ const chosenRequirement = computed(() => {
   return index === null ? null : (store.requirementOptions[index] ?? null)
 })
 const variantChoices = computed(() => chosenRequirement.value?.variants ?? [])
-const chosenVariant = computed(() => {
-  const index = variantIndex.value
-  return index === null ? null : (variantChoices.value[index] ?? null)
+
+/** 已选变体按需求分组，避免一长串「需求 · 变体」标签难读 */
+const groupedRefs = computed(() => {
+  const groups: { name: string; refs: VariantRef[] }[] = []
+  const byName = new Map<string, VariantRef[]>()
+  for (const ref of refs.value) {
+    const list = byName.get(ref.requirement_name)
+    if (list) list.push(ref)
+    else {
+      byName.set(ref.requirement_name, [ref])
+      groups.push({ name: ref.requirement_name, refs: byName.get(ref.requirement_name)! })
+    }
+  }
+  return groups
 })
 
 watch(visible, (open) => {
   if (!open) return
   text.value = props.configValue?.value ?? ''
   refs.value = (props.configValue?.relay_variants ?? []).map((ref) => ({ ...ref }))
-  vehicles.value = [...(props.configValue?.vehicles ?? [])]
-  vehicleInput.value = ''
+  specialRules.value = (props.configValue?.special_vehicles ?? []).map((rule) => ({ ...rule }))
+  specialMatch.value = 'starts_with'
+  specialText.value = ''
   requirementIndex.value = null
-  variantIndex.value = null
+  variantIndices.value = []
   error.value = ''
 })
 
-// 换了需求就把变体重置到第一个：空 key（无变体差异）也是合法选项，不能靠空值判断未选
 watch(requirementIndex, () => {
-  variantIndex.value = variantChoices.value.length ? 0 : null
+  variantIndices.value = []
 })
 
 function refLabel(ref: VariantRef): string {
@@ -61,22 +74,26 @@ function refLabel(ref: VariantRef): string {
 
 function addRef() {
   const requirement = chosenRequirement.value
-  const variant = chosenVariant.value
-  if (!requirement || !variant) return
+  if (!requirement || !variantIndices.value.length) return
 
-  const exists = refs.value.some(
-    (ref) =>
-      ref.requirement_name === requirement.requirement_name &&
-      ref.variant_key === variant.variant_key,
-  )
-  if (!exists) {
-    refs.value = [
-      ...refs.value,
-      { requirement_name: requirement.requirement_name, variant_key: variant.variant_key },
-    ]
+  const next = [...refs.value]
+  for (const index of variantIndices.value) {
+    const variant = variantChoices.value[index]
+    if (!variant) continue
+    const exists = next.some(
+      (ref) =>
+        ref.requirement_name === requirement.requirement_name &&
+        ref.variant_key === variant.variant_key,
+    )
+    if (!exists) {
+      next.push({
+        requirement_name: requirement.requirement_name,
+        variant_key: variant.variant_key,
+      })
+    }
   }
-  requirementIndex.value = null
-  variantIndex.value = null
+  refs.value = next
+  variantIndices.value = []
 }
 
 function removeRef(ref: VariantRef) {
@@ -88,31 +105,26 @@ function removeRef(ref: VariantRef) {
   )
 }
 
-/** 特殊车型配置的输入建议：需求数据里的车型，排除已经加进来的 */
-function fetchVehicleSuggestions(query: string, callback: (items: { value: string }[]) => void) {
-  const keyword = query.trim().toLowerCase()
-  callback(
-    store.vehicleOptions
-      .filter((vehicle) => !vehicles.value.includes(vehicle))
-      .filter((vehicle) => !keyword || vehicle.toLowerCase().includes(keyword))
-      .map((vehicle) => ({ value: vehicle })),
+function specialLabel(rule: SpecialVehicleRule): string {
+  return rule.match === 'starts_with' ? `以 ${rule.text} 开头` : `包含 ${rule.text}`
+}
+
+function addSpecialRule() {
+  const value = specialText.value.trim()
+  if (!value) return
+  const exists = specialRules.value.some(
+    (rule) => rule.match === specialMatch.value && rule.text === value,
   )
+  if (!exists) {
+    specialRules.value = [...specialRules.value, { match: specialMatch.value, text: value }]
+  }
+  specialText.value = ''
 }
 
-/** 回车或「添加」都走这里：输入框里的文字必须显式入列，不能靠控件的隐藏提交语义 */
-function addVehicle(name: string) {
-  const vehicle = name.trim()
-  if (!vehicle) return
-  if (!vehicles.value.includes(vehicle)) vehicles.value = [...vehicles.value, vehicle]
-  vehicleInput.value = ''
-}
-
-function removeVehicle(name: string) {
-  vehicles.value = vehicles.value.filter((vehicle) => vehicle !== name)
-}
-
-function onVehicleSelect(item: Record<string, unknown>) {
-  addVehicle(typeof item.value === 'string' ? item.value : '')
+function removeSpecialRule(rule: SpecialVehicleRule) {
+  specialRules.value = specialRules.value.filter(
+    (item) => !(item.match === rule.match && item.text === rule.text),
+  )
 }
 
 async function save() {
@@ -121,13 +133,13 @@ async function save() {
     error.value = '配置值不能为空'
     return
   }
-  // 输入框里还没回车 / 点添加的车型，保存时一并收下，别让输入白丢
-  addVehicle(vehicleInput.value)
+  // 输入框里还没点添加的特殊车型参数，保存时一并收下
+  addSpecialRule()
 
   const input: ConfigValueInput = {
     value: text.value,
     relay_variants: refs.value,
-    vehicles: vehicles.value,
+    special_vehicles: specialRules.value,
   }
   const result = props.configValue
     ? await store.updateConfigValue(props.configKey, props.configValue.value, input)
@@ -142,8 +154,8 @@ async function save() {
 </script>
 
 <!--
-  @grid A：配置值行标签 3 + 控件 9；变体选择行需求 4 · 变体 4 · 按钮 4；
-  车型输入行输入 9 · 按钮 3。区块说明压缩为一行短提示，去掉长段解释。
+  @grid A：配置值行标签 3 + 控件 9；变体选择行需求 5 · 变体 5 · 按钮 2；
+  特殊车型行类型 4 · 参数 5 · 按钮 3。已选变体按需求分组，需求名一行、变体标签一行。
 -->
 <template>
   <el-dialog
@@ -174,24 +186,34 @@ async function save() {
           <p v-if="refs.length" class="text-[11px] text-ink-muted">{{ refs.length }} 条</p>
         </div>
 
-        <div v-if="refs.length" class="mt-2 flex flex-wrap items-center gap-1">
-          <el-tag
-            v-for="ref in refs"
-            :key="`${ref.requirement_name}-${ref.variant_key}`"
-            size="small"
-            type="info"
-            effect="plain"
-            closable
-            @close="removeRef(ref)"
+        <!-- 已选：按需求分组 -->
+        <div v-if="refs.length" class="mt-2 flex flex-col gap-2">
+          <div
+            v-for="group in groupedRefs"
+            :key="group.name"
+            class="rounded-md border border-line/60 bg-surface px-2 py-1.5"
           >
-            {{ ref.requirement_name }} · {{ refLabel(ref) }}
-          </el-tag>
+            <p class="text-[11px] font-medium text-ink">{{ group.name }}</p>
+            <div class="mt-1 flex flex-wrap items-center gap-1">
+              <el-tag
+                v-for="ref in group.refs"
+                :key="`${ref.requirement_name}-${ref.variant_key}`"
+                size="small"
+                type="info"
+                effect="plain"
+                closable
+                @close="removeRef(ref)"
+              >
+                {{ refLabel(ref) }}
+              </el-tag>
+            </div>
+          </div>
         </div>
 
         <template v-if="store.requirementOptions.length">
-          <!-- @grid A：需求 4 · 变体 4 · 添加 4 -->
+          <!-- @grid A：需求 5 · 变体 5 · 添加 2 -->
           <div class="mt-2 grid grid-cols-12 items-center gap-2">
-            <div class="col-span-4">
+            <div class="col-span-5">
               <el-select
                 v-model="requirementIndex"
                 size="small"
@@ -207,24 +229,34 @@ async function save() {
                 />
               </el-select>
             </div>
-            <div class="col-span-4">
+            <div class="col-span-5">
               <el-select
-                v-model="variantIndex"
+                v-model="variantIndices"
                 size="small"
                 class="w-full"
-                placeholder="选择变体"
+                multiple
+                collapse-tags
+                collapse-tags-tooltip
+                :max-collapse-tags="2"
+                placeholder="选择变体（可多选）"
                 :disabled="!variantChoices.length"
               >
                 <el-option
                   v-for="(variant, index) in variantChoices"
                   :key="variant.variant_key || 'default'"
                   :value="index"
-                  :label="`${variant.label} · ${variant.vehicles.length} 车型`"
+                  :label="variant.label"
                 />
               </el-select>
             </div>
-            <div class="col-span-4 flex justify-end">
-              <el-button size="small" :disabled="!chosenVariant" @click="addRef">添加</el-button>
+            <div class="col-span-2 flex justify-end">
+              <el-button
+                size="small"
+                :disabled="!chosenRequirement || !variantIndices.length"
+                @click="addRef"
+              >
+                添加
+              </el-button>
             </div>
           </div>
         </template>
@@ -237,45 +269,45 @@ async function save() {
       <div class="rounded-lg border border-line bg-surface-soft p-3">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[11px] font-medium text-ink">特殊车型配置</p>
-          <p v-if="vehicles.length" class="text-[11px] text-ink-muted">{{ vehicles.length }} 款</p>
+          <p v-if="specialRules.length" class="text-[11px] text-ink-muted">
+            {{ specialRules.length }} 条
+          </p>
         </div>
-        <p class="mt-1 text-[11px] text-ink-muted">
-          两种形式：1、车型名称以 xx 开头；2、车型名称包含 xxx
-        </p>
 
-        <div v-if="vehicles.length" class="mt-2 flex flex-wrap items-center gap-1">
+        <div v-if="specialRules.length" class="mt-2 flex flex-wrap items-center gap-1">
           <el-tag
-            v-for="vehicle in vehicles"
-            :key="vehicle"
+            v-for="rule in specialRules"
+            :key="`${rule.match}-${rule.text}`"
             size="small"
             effect="plain"
             closable
-            @close="removeVehicle(vehicle)"
+            @close="removeSpecialRule(rule)"
           >
-            {{ vehicle }}
+            {{ specialLabel(rule) }}
           </el-tag>
         </div>
-        <p v-else class="mt-2 text-[11px] text-ink-muted">尚未填写</p>
 
-        <!-- @grid A：输入 9 列 + 添加按钮 3 列 -->
+        <!-- @grid A：类型 4 · 参数 5 · 添加按钮 3 -->
         <div class="mt-2 grid grid-cols-12 items-center gap-2">
-          <div class="col-span-9">
-            <el-autocomplete
-              v-model="vehicleInput"
+          <div class="col-span-4">
+            <el-select v-model="specialMatch" size="small" class="w-full" placeholder="匹配方式">
+              <el-option label="车型名称以xxx开头" value="starts_with" />
+              <el-option label="车型名称包含xxx" value="contains" />
+            </el-select>
+          </div>
+          <div class="col-span-5">
+            <el-input
+              v-model="specialText"
               size="small"
-              class="w-full"
-              :fetch-suggestions="fetchVehicleSuggestions"
-              select-when-unmatched
-              placeholder="输入或选择车型，回车添加"
-              @select="onVehicleSelect"
-              @keyup.enter="addVehicle(vehicleInput)"
+              placeholder="输入参数"
+              @keyup.enter="addSpecialRule"
             />
           </div>
           <div class="col-span-3 flex justify-end">
             <el-button
               size="small"
-              :disabled="!vehicleInput.trim()"
-              @click="addVehicle(vehicleInput)"
+              :disabled="!specialText.trim()"
+              @click="addSpecialRule"
             >
               添加
             </el-button>

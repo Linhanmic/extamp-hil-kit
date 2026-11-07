@@ -37,7 +37,7 @@ const REQUIREMENTS: RequirementsDocument = {
 
 function configsDocument(): ConfigsDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdAt: '2026-11-08T02:10:00.000Z',
     updatedAt: '2026-11-08T03:26:00.000Z',
     configurations: [
@@ -48,9 +48,14 @@ function configsDocument(): ConfigsDocument {
             config_key: '扬声器配置',
             value: '14扬声器',
             relay_variants: [{ requirement_name: '功放握手', variant_key: '变体1' }],
-            vehicles: [],
+            special_vehicles: [],
           },
-          { config_key: '扬声器配置', value: '10扬声器', relay_variants: [], vehicles: ['SC6H'] },
+          {
+            config_key: '扬声器配置',
+            value: '10扬声器',
+            relay_variants: [],
+            special_vehicles: [{ match: 'starts_with', text: 'HF' }],
+          },
           {
             config_key: '扬声器配置',
             value: '8扬声器',
@@ -58,7 +63,7 @@ function configsDocument(): ConfigsDocument {
               { requirement_name: '失联需求', variant_key: '' },
               { requirement_name: '音量控制', variant_key: '变体2' },
             ],
-            vehicles: ['YU2'],
+            special_vehicles: [{ match: 'contains', text: 'DW' }],
           },
         ],
       },
@@ -69,7 +74,7 @@ function configsDocument(): ConfigsDocument {
             config_key: '功放型号',
             value: 'AMP-A',
             relay_variants: [{ requirement_name: '功放握手', variant_key: '' }],
-            vehicles: [],
+            special_vehicles: [],
           },
         ],
       },
@@ -87,7 +92,7 @@ function installBridge(options: { document?: ConfigsDocument | null; saveError?:
   const save = vi.fn<DesktopBridge['configs']['save']>(async (configurations: Configuration[]) => {
     if (options.saveError) return { error: options.saveError }
     stored = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       createdAt: stored?.createdAt ?? '2026-11-08T02:10:00.000Z',
       updatedAt: '2026-11-08T04:00:00.000Z',
       configurations: structuredClone(configurations),
@@ -134,25 +139,47 @@ describe('useConfigsStore 读取与派生', () => {
 
     expect(store.configurationCount).toBe(2)
     expect(store.configValueCount).toBe(4)
-    // EFSS / SC6H / YU2 / HFAF 去重
-    expect(store.vehicleCount).toBe(4)
+    // EFSS / HFAF / QDWS 去重（HF 命中 HFAF，DW 命中 QDWS）
+    expect(store.vehicleCount).toBe(3)
     expect(store.hasData).toBe(true)
     expect(store.loaded).toBe(true)
     expect(store.error).toBe('')
   })
 
-  it('生效车型 = 关联变体解析出的车型 ∪ 手工车型', async () => {
+  it('生效车型 = 关联变体车型 ∪ 特殊规则命中的需求车型', async () => {
     const { store } = await storeWithData({ document: configsDocument() })
     const values = store.rows[0]?.values ?? []
 
     expect(values[0]?.resolved).toMatchObject({
       vehicles: ['EFSS'],
       variantVehicles: ['EFSS'],
-      manualVehicles: [],
+      specialRules: [],
       hasIssue: false,
     })
-    expect(values[1]?.resolved).toMatchObject({ vehicles: ['SC6H'], variantVehicles: [] })
-    expect(values[2]?.resolved).toMatchObject({ vehicles: ['YU2'], manualVehicles: ['YU2'] })
+    expect(values[1]?.resolved).toMatchObject({
+      vehicles: ['HFAF'],
+      variantVehicles: [],
+      specialRules: [{ match: 'starts_with', text: 'HF' }],
+    })
+    expect(values[2]?.resolved).toMatchObject({
+      vehicles: ['QDWS'],
+      specialRules: [{ match: 'contains', text: 'DW' }],
+    })
+  })
+
+  it('特殊车型规则按 starts_with / contains 匹配需求车型', async () => {
+    const { store } = await storeWithData({ document: configsDocument() })
+
+    // 把 10扬声器 的规则改成 contains 'FS'，应命中 EFSS
+    const result = await store.updateConfigValue('扬声器配置', '10扬声器', {
+      value: '10扬声器',
+      relay_variants: [],
+      special_vehicles: [{ match: 'contains', text: 'FS' }],
+    })
+    expect(result.ok).toBe(true)
+    expect(
+      store.rows[0]?.values.find((value) => value.value === '10扬声器')?.resolved.vehicles,
+    ).toEqual(['EFSS'])
   })
 
   it('引用不到的需求标为失效，同名需求标为歧义，都不参与车型合并', async () => {
@@ -172,10 +199,10 @@ describe('useConfigsStore 读取与派生', () => {
     expect(store.rows[1]?.values[0]?.resolved.refs[0]?.label).toBe('无变体差异')
   })
 
-  it('手工车型候选项覆盖需求数据里的车型与已填写的车型', async () => {
+  it('车型候选项取需求车型全集', async () => {
     const { store } = await storeWithData({ document: configsDocument() })
 
-    expect(store.vehicleOptions).toEqual(['HFAF', 'EFSS', 'QDWS', 'SC6H', 'YU2'])
+    expect(store.vehicleOptions).toEqual(['HFAF', 'EFSS', 'QDWS'])
   })
 
   it('没有配置数据时按空状态处理', async () => {
@@ -191,14 +218,14 @@ describe('useConfigsStore 读取与派生', () => {
     const store = useConfigsStore()
     window.desktop = {
       configs: {
-        load: async () => ({ error: '配置参数结构版本 2 不受支持（当前为 1）' }),
+        load: async () => ({ error: '配置参数结构版本 3 不受支持（当前为 2）' }),
       },
     } as unknown as DesktopBridge
 
     await store.load()
 
     expect(store.document).toBeNull()
-    expect(store.error).toBe('配置参数结构版本 2 不受支持（当前为 1）')
+    expect(store.error).toBe('配置参数结构版本 3 不受支持（当前为 2）')
   })
 
   it('切换项目时 clear 会清空', async () => {
@@ -227,10 +254,19 @@ describe('useConfigsStore 编辑', () => {
     const { store, bridge } = await storeWithData({ document: configsDocument() })
 
     expect(await store.addConfiguration('扬声器配置')).toMatchObject({ ok: false })
-    expect(await store.addConfigValue('扬声器配置', { value: '  ', relay_variants: [], vehicles: [] }))
-      .toMatchObject({ ok: false })
     expect(
-      await store.addConfigValue('扬声器配置', { value: '14扬声器', relay_variants: [], vehicles: [] }),
+      await store.addConfigValue('扬声器配置', {
+        value: '  ',
+        relay_variants: [],
+        special_vehicles: [],
+      }),
+    ).toMatchObject({ ok: false })
+    expect(
+      await store.addConfigValue('扬声器配置', {
+        value: '14扬声器',
+        relay_variants: [],
+        special_vehicles: [],
+      }),
     ).toMatchObject({ ok: false })
     expect(bridge.save).not.toHaveBeenCalled()
   })
@@ -248,19 +284,23 @@ describe('useConfigsStore 编辑', () => {
     expect(store.rows.map((row) => row.config_key)).toEqual(['扬声器配置', '功放型号'])
   })
 
-  it('修改配置值连同变体引用与手工车型一起写回', async () => {
+  it('修改配置值连同变体引用与特殊车型一起写回', async () => {
     const { store } = await storeWithData({ document: configsDocument() })
 
     const result = await store.updateConfigValue('扬声器配置', '10扬声器', {
       value: '10扬声器（改）',
       relay_variants: [{ requirement_name: '功放握手', variant_key: '变体1' }],
-      vehicles: ['YU2'],
+      special_vehicles: [{ match: 'contains', text: 'QD' }],
     })
 
     expect(result.ok).toBe(true)
     expect(store.rows[0]?.values[1]).toMatchObject({
       value: '10扬声器（改）',
-      resolved: { vehicles: ['EFSS', 'YU2'], variantVehicles: ['EFSS'], manualVehicles: ['YU2'] },
+      resolved: {
+        vehicles: ['EFSS', 'QDWS'],
+        variantVehicles: ['EFSS'],
+        specialRules: [{ match: 'contains', text: 'QD' }],
+      },
     })
   })
 

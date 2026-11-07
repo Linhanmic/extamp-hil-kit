@@ -7,8 +7,8 @@
   "additionalProperties": false,
   "properties": {
     "schemaVersion": {
-      "const": 1,
-      "description": "结构版本，结构变更时递增"
+      "const": 2,
+      "description": "结构版本；v2 起特殊车型为 special_vehicles 规则，v1 的 vehicles 字符串按 contains 迁移"
     },
     "createdAt": {
       "type": "string",
@@ -46,7 +46,7 @@
     },
     "configValue": {
       "type": "object",
-      "required": ["value", "relay_variants", "vehicles"],
+      "required": ["value", "relay_variants", "special_vehicles"],
       "additionalProperties": false,
       "properties": {
         "value": {
@@ -60,11 +60,26 @@
           "uniqueItems": true,
           "description": "关联的需求变体引用，配置值通过它们得到适用车型；不存变体内容与车型快照"
         },
-        "vehicles": {
+        "special_vehicles": {
           "type": "array",
-          "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 },
-          "description": "配置值自身携带、页面直接填写的车型（不来自需求变体）；由关联变体解析出的车型不重复存储，生效车型由读取方合并计算。车型名沿用需求表的归一化写法（去引号、去空白、下划线换成连字符）"
+          "items": { "$ref": "#/$defs/specialVehicleRule" },
+          "description": "特殊车型配置规则（以…开头 / 包含…）；生效车型 = 关联变体车型 ∪ 规则命中的需求车型"
+        }
+      }
+    },
+    "specialVehicleRule": {
+      "type": "object",
+      "required": ["match", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "match": {
+          "enum": ["starts_with", "contains"],
+          "description": "starts_with=车型以 text 开头；contains=车型名称包含 text"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "匹配参数，首尾空白在写入前去掉"
         }
       }
     },

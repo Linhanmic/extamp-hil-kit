@@ -1,6 +1,13 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { ConfigValue, Configuration, ConfigsDocument, Requirement, VariantRef } from '@/models'
+import type {
+  ConfigValue,
+  Configuration,
+  ConfigsDocument,
+  Requirement,
+  SpecialVehicleRule,
+  VariantRef,
+} from '@/models'
 import { useRequirementsStore } from './requirements'
 
 /** 变体引用的解析状态：正常 / 同名需求歧义 / 找不到需求或变体 */
@@ -18,10 +25,10 @@ export interface ResolvedVariantRef {
 
 /** 解析后的配置值：生效车型、车型来源与引用状态 */
 export interface ResolvedConfigValue {
-  /** 生效车型 = 关联变体解析出的车型 ∪ 手工填写的车型 */
+  /** 生效车型 = 关联变体解析出的车型 ∪ 特殊车型规则命中的需求车型 */
   vehicles: string[]
   variantVehicles: string[]
-  manualVehicles: string[]
+  specialRules: SpecialVehicleRule[]
   refs: ResolvedVariantRef[]
   /** 存在失效或歧义的变体引用 */
   hasIssue: boolean
@@ -44,7 +51,7 @@ export interface ConfigurationRow {
 export interface ConfigValueInput {
   value: string
   relay_variants: VariantRef[]
-  vehicles: string[]
+  special_vehicles: SpecialVehicleRule[]
 }
 
 export type SaveResult = { ok: true } | { ok: false; error: string }
@@ -123,6 +130,32 @@ export const useConfigsStore = defineStore('configs', () => {
     }
   }
 
+  /** 需求车型全集：特殊车型规则的匹配范围（精确车型全集来自需求，不拿规则反推） */
+  const requirementVehicleUniverse = computed(() => {
+    const names: string[] = []
+    const push = (vehicle: string) => {
+      const name = vehicle.trim()
+      if (name && !names.includes(name)) names.push(name)
+    }
+    for (const requirement of requirementsStore.document?.requirements ?? []) {
+      for (const variant of requirement.variants) variant.vehicles.forEach(push)
+    }
+    return names
+  })
+
+  function matchSpecialVehicles(rules: SpecialVehicleRule[]): string[] {
+    const result: string[] = []
+    for (const vehicle of requirementVehicleUniverse.value) {
+      const matched = rules.some((rule) =>
+        rule.match === 'starts_with'
+          ? vehicle.startsWith(rule.text)
+          : vehicle.includes(rule.text),
+      )
+      if (matched) result.push(vehicle)
+    }
+    return result
+  }
+
   function resolveValue(value: ConfigValue): ResolvedConfigValue {
     const refs = value.relay_variants.map(resolveRef)
 
@@ -133,21 +166,18 @@ export const useConfigsStore = defineStore('configs', () => {
       }
     }
 
-    const manualVehicles: string[] = []
-    for (const vehicle of value.vehicles) {
-      const name = vehicle.trim()
-      if (name && !manualVehicles.includes(name)) manualVehicles.push(name)
-    }
+    const specialRules = value.special_vehicles
+    const matchedSpecial = matchSpecialVehicles(specialRules)
 
     const vehicles = [...variantVehicles]
-    for (const vehicle of manualVehicles) {
+    for (const vehicle of matchedSpecial) {
       if (!vehicles.includes(vehicle)) vehicles.push(vehicle)
     }
 
     return {
       vehicles,
       variantVehicles,
-      manualVehicles,
+      specialRules,
       refs,
       hasIssue: refs.some((ref) => ref.status !== 'ok'),
     }
@@ -184,18 +214,20 @@ export const useConfigsStore = defineStore('configs', () => {
     return names.size
   })
 
-  /** 手工填写车型的候选项：需求数据里的车型 + 已经手工填过的车型 */
+  /** 车型候选项：需求车型全集（spec 求值的全集也用它） */
   const vehicleOptions = computed(() => {
-    const names: string[] = []
-    const push = (vehicle: string) => {
-      const name = vehicle.trim()
-      if (name && !names.includes(name)) names.push(name)
-    }
-    for (const requirement of requirementsStore.document?.requirements ?? []) {
-      for (const variant of requirement.variants) variant.vehicles.forEach(push)
-    }
-    for (const configuration of configurations.value) {
-      for (const value of configuration.config_value) value.vehicles.forEach(push)
+    const names = [...requirementVehicleUniverse.value]
+    // 没有需求数据时，特殊规则里的 text 也作为候选提示（不参与生效车型计算）
+    if (!names.length) {
+      const push = (vehicle: string) => {
+        const name = vehicle.trim()
+        if (name && !names.includes(name)) names.push(name)
+      }
+      for (const configuration of configurations.value) {
+        for (const value of configuration.config_value) {
+          for (const rule of value.special_vehicles) push(rule.text)
+        }
+      }
     }
     return names
   })
@@ -340,7 +372,7 @@ export const useConfigsStore = defineStore('configs', () => {
                   config_key: configKey,
                   value: text,
                   relay_variants: input.relay_variants,
-                  vehicles: input.vehicles,
+                  special_vehicles: input.special_vehicles,
                 },
               ],
             }
@@ -373,7 +405,7 @@ export const useConfigsStore = defineStore('configs', () => {
       config_key: configKey,
       value: text,
       relay_variants: input.relay_variants,
-      vehicles: input.vehicles,
+      special_vehicles: input.special_vehicles,
     }
     return persist(
       configurations.value.map((item) =>

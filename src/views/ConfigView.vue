@@ -186,8 +186,8 @@ async function onRemoveVariant(
       v-if="available && !requirementsStore.hasData && store.hasData"
       type="info"
       :closable="false"
-      title="还没有导入需求，配置值只能手工填写车型"
-      description="导入需求分析表后，配置值可以关联需求变体，适用车型会自动跟着需求数据更新。"
+      title="还没有导入需求，特殊车型规则将没有可匹配的车型"
+      description="导入需求分析表后，特殊车型规则按需求车型匹配，配置值也可以关联需求变体。"
     />
 
     <!-- 列表区：与标题/筛选同宽 11.5/12 -->

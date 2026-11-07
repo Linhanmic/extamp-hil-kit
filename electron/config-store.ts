@@ -15,12 +15,13 @@ import type {
   ConfigsLoadOutcome,
   ConfigsSavedState,
   Configuration,
+  SpecialVehicleRule,
   VariantRef,
 } from '../src/models/common'
 import { resolveProjectPath } from './settings-store'
 
 /** 配置数据的当前结构版本 */
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
 /** 工具集在项目目录下的数据目录 */
 export const DATA_DIR = '.hil-kit'
@@ -37,7 +38,7 @@ export function configsFilePath(projectPath: string, filePath = ''): string {
 interface StoredConfigValue {
   value: string
   relay_variants: VariantRef[]
-  vehicles: string[]
+  special_vehicles: SpecialVehicleRule[]
 }
 
 /** 落盘形态的配置项 */
@@ -75,6 +76,34 @@ export function readConfigs(projectPath: string, filePath = ''): ConfigsLoadOutc
   }
 
   if (!isRecord(raw)) return { error: `配置参数数据结构不正确（${targetPath}）` }
+  // v1 的 vehicles: string[]（精确车型名）迁到 v2 的 special_vehicles 规则
+  if (raw.schemaVersion === 1) {
+    if (
+      typeof raw.createdAt !== 'string' ||
+      typeof raw.updatedAt !== 'string' ||
+      !Array.isArray(raw.configurations) ||
+      !raw.configurations.every(isStoredConfigurationV1)
+    ) {
+      return { error: `配置参数数据结构不正确（${targetPath}）` }
+    }
+    const configurations = (raw.configurations as StoredConfigurationV1[]).map((configuration) => ({
+      config_key: configuration.config_key,
+      config_value: configuration.config_value.map((value) => ({
+        config_key: configuration.config_key,
+        value: value.value,
+        relay_variants: value.relay_variants,
+        special_vehicles: value.vehicles.map((text) => ({ match: 'contains' as const, text })),
+      })),
+    }))
+    return {
+      document: {
+        schemaVersion: SCHEMA_VERSION,
+        createdAt: raw.createdAt,
+        updatedAt: raw.updatedAt,
+        configurations,
+      },
+    }
+  }
   if (raw.schemaVersion !== SCHEMA_VERSION) {
     return {
       error: `配置参数结构版本 ${String(raw.schemaVersion)} 不受支持（当前为 ${SCHEMA_VERSION}）`,
@@ -121,7 +150,27 @@ function isVariantRef(value: unknown): value is VariantRef {
   )
 }
 
-function isStoredConfigValue(value: unknown): value is StoredConfigValue {
+function isSpecialVehicleRule(value: unknown): value is SpecialVehicleRule {
+  if (!isRecord(value)) return false
+  return (
+    (value.match === 'starts_with' || value.match === 'contains') &&
+    typeof value.text === 'string' &&
+    value.text.trim() !== ''
+  )
+}
+
+/** v1 落盘形态：精确车型名数组 */
+interface StoredConfigValueV1 {
+  value: string
+  relay_variants: VariantRef[]
+  vehicles: string[]
+}
+interface StoredConfigurationV1 {
+  config_key: string
+  config_value: StoredConfigValueV1[]
+}
+
+function isStoredConfigValueV1(value: unknown): value is StoredConfigValueV1 {
   if (!isRecord(value)) return false
   return (
     typeof value.value === 'string' &&
@@ -129,6 +178,28 @@ function isStoredConfigValue(value: unknown): value is StoredConfigValue {
     Array.isArray(value.relay_variants) &&
     value.relay_variants.every(isVariantRef) &&
     isStringArray(value.vehicles)
+  )
+}
+
+function isStoredConfigurationV1(value: unknown): value is StoredConfigurationV1 {
+  if (!isRecord(value)) return false
+  return (
+    typeof value.config_key === 'string' &&
+    value.config_key.trim() !== '' &&
+    Array.isArray(value.config_value) &&
+    value.config_value.every(isStoredConfigValueV1)
+  )
+}
+
+function isStoredConfigValue(value: unknown): value is StoredConfigValue {
+  if (!isRecord(value)) return false
+  return (
+    typeof value.value === 'string' &&
+    value.value.trim() !== '' &&
+    Array.isArray(value.relay_variants) &&
+    value.relay_variants.every(isVariantRef) &&
+    Array.isArray(value.special_vehicles) &&
+    value.special_vehicles.every(isSpecialVehicleRule)
   )
 }
 
@@ -168,7 +239,7 @@ export function normalizeConfigurations(configurations: Configuration[]): Config
           config_key: configKey,
           value: text,
           relay_variants: normalizeVariantRefs(value.relay_variants, configKey, text),
-          vehicles: normalizeVehicles(value.vehicles),
+          special_vehicles: normalizeSpecialVehicles(value.special_vehicles, configKey, text),
         }
       }),
     }
@@ -192,13 +263,26 @@ function normalizeVariantRefs(refs: VariantRef[], configKey: string, value: stri
   return result
 }
 
-// 手工填写的车型只做 trim 与去重，不做去引号 / 下划线换算——那是需求表导入时的归一化
-function normalizeVehicles(vehicles: string[]): string[] {
-  const result: string[] = []
-  for (const vehicle of vehicles) {
-    const name = vehicle.trim()
-    if (!name || result.includes(name)) continue
-    result.push(name)
+// 特殊车型规则：text 去首尾空白后不得为空；同 match+text 去重
+function normalizeSpecialVehicles(
+  rules: SpecialVehicleRule[],
+  configKey: string,
+  value: string,
+): SpecialVehicleRule[] {
+  const seen = new Set<string>()
+  const result: SpecialVehicleRule[] = []
+  for (const rule of rules) {
+    const text = rule.text.trim()
+    if (!text) {
+      throw new Error(`配置项「${configKey}」的配置值「${value}」存在空的特殊车型参数`)
+    }
+    if (rule.match !== 'starts_with' && rule.match !== 'contains') {
+      throw new Error(`配置项「${configKey}」的配置值「${value}」存在不支持的特殊车型匹配方式`)
+    }
+    const id = `${rule.match} ${text}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    result.push({ match: rule.match, text })
   }
   return result
 }
@@ -210,7 +294,7 @@ function toStoredConfiguration(configuration: Configuration): StoredConfiguratio
     config_value: configuration.config_value.map((value) => ({
       value: value.value,
       relay_variants: value.relay_variants,
-      vehicles: value.vehicles,
+      special_vehicles: value.special_vehicles,
     })),
   }
 }

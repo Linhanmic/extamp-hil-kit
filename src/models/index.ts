@@ -15,6 +15,8 @@ export type {
   Variant,
   VariantRef,
   Requirement,
+  SpecialVehicleMatch,
+  SpecialVehicleRule,
   ConfigValue,
   Configuration,
   ConfigsDocument,
