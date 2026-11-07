@@ -37,6 +37,7 @@ declare module 'vue' {
     IconTooling: typeof import('./components/icons/IconTooling.vue')['default']
     NavIcon: typeof import('./components/layout/NavIcon.vue')['default']
     RegionToggle: typeof import('./components/layout/RegionToggle.vue')['default']
+    RequirementTable: typeof import('./components/RequirementTable.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SplitResizer: typeof import('./components/layout/SplitResizer.vue')['default']

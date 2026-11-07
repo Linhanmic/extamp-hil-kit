@@ -156,6 +156,8 @@ export function useRequirementsImport() {
       }
       saved.value = outcome.saved
       dirty.value = false
+      // 预览已经落盘，改由 requirements store 展示当前数据，不再挂第二份状态
+      result.value = null
     } finally {
       busy.value = false
     }

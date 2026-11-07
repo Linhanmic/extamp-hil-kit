@@ -25,6 +25,8 @@ export type {
   RequirementsParseResult,
   RequirementsFileInfo,
   RequirementsSavedState,
+  RequirementsDocument,
+  RequirementsLoadOutcome,
   RequirementsChooseOutcome,
   RequirementsProbeOutcome,
   RequirementsPreviewOutcome,

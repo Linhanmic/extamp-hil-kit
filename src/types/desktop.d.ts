@@ -1,5 +1,6 @@
 import type {
   RequirementsChooseOutcome,
+  RequirementsLoadOutcome,
   RequirementsParseConfig,
   RequirementsPreviewOutcome,
   RequirementsProbeOutcome,
@@ -46,6 +47,8 @@ export interface DesktopBridge {
     clear: () => Promise<WorkspaceState>
   }
   requirements: {
+    /** 读取当前项目已保存的需求数据（应用启动、切换项目时用） */
+    load: () => Promise<RequirementsLoadOutcome>
     /** 打开文件选择器挑需求分析表，返回文件路径与工作表名 */
     choose: () => Promise<RequirementsChooseOutcome>
     /** 探测表头行与列位置，用于预填列配置 */

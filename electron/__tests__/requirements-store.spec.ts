@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { RequirementsParseResult } from '../../src/models/common'
 import { parseRequirements, probeSheet } from '../requirements-parse'
 import { readSheetTable } from '../requirements-sheet'
-import { requirementsFilePath, writeRequirements } from '../requirements-store'
+import { readRequirements, requirementsFilePath, writeRequirements } from '../requirements-store'
 
 const SAMPLE_FILE = resolve('testdatas/需求分析表.xlsx')
 const SAMPLE_SHEET = '6、软件需求分析表'
@@ -99,5 +99,61 @@ describe('writeRequirements', () => {
 
     expect(saved.createdAt).toBe(saved.updatedAt)
     expect(readPayload(target).schemaVersion).toBe(1)
+  })
+})
+
+describe('readRequirements', () => {
+  it('读回写入的数据', () => {
+    const project = temporaryProject()
+    const saved = writeRequirements(project, parsedSample())
+
+    const outcome = readRequirements(project)
+
+    expect(outcome.error).toBeUndefined()
+    expect(outcome.empty).toBeUndefined()
+    expect(outcome.document).toMatchObject({
+      schemaVersion: 1,
+      createdAt: saved.createdAt,
+      updatedAt: saved.updatedAt,
+    })
+    expect(outcome.document?.requirements).toHaveLength(4)
+    expect(outcome.document?.requirements[0]?.variants[0]).toMatchObject({
+      key: '变体1',
+      vehicles: ['HFAF', 'EFSS'],
+    })
+  })
+
+  it('文件不存在时按「还没导入」处理', () => {
+    const project = temporaryProject()
+
+    expect(readRequirements(project)).toEqual({ empty: true })
+  })
+
+  it('文件损坏、版本不支持或结构不对时给出错误而不是半份数据', () => {
+    const project = temporaryProject()
+    const target = requirementsFilePath(project)
+    mkdirSync(join(project, '.hil-kit'), { recursive: true })
+
+    writeFileSync(target, 'not json at all', 'utf8')
+    expect(readRequirements(project).error).toMatch(/无法解析/)
+
+    writeFileSync(
+      target,
+      JSON.stringify({ schemaVersion: 2, createdAt: 'x', updatedAt: 'y', requirements: [] }),
+      'utf8',
+    )
+    expect(readRequirements(project).error).toMatch(/版本 2 不受支持/)
+
+    writeFileSync(
+      target,
+      JSON.stringify({
+        schemaVersion: 1,
+        createdAt: 'x',
+        updatedAt: 'y',
+        requirements: [{ id: 'REQ', name: '甲', detail: '乙', variants: [{ key: 'k' }] }],
+      }),
+      'utf8',
+    )
+    expect(readRequirements(project).error).toMatch(/结构不正确/)
   })
 })

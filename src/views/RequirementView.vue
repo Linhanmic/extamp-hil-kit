@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import RequirementTable from '@/components/RequirementTable.vue'
 import { useRequirementsImport } from '@/composables/useRequirementsImport'
+import { useRequirementsStore } from '@/stores/requirements'
 import type { RequirementsColumnMapping } from '@/models'
 
 const {
@@ -23,6 +25,9 @@ const {
   save,
 } = useRequirementsImport()
 
+// 已导入的数据在 App 启动 / 切换项目时读回，这里只做展示
+const store = useRequirementsStore()
+
 const sheets = computed(() => file.value?.sheets ?? [])
 
 // 车型起始列的候选项：探测到的列里挑，标签带上表头便于核对
@@ -32,16 +37,18 @@ const stats = computed(() => result.value?.stats ?? null)
 const warnings = computed(() => result.value?.warnings ?? [])
 const shownWarnings = computed(() => warnings.value.slice(0, 5))
 
-// 表格每行额外带上「涉及的车型数」，避免在模板里算 Set
-const previewRows = computed(() =>
-  (result.value?.requirements ?? []).map((requirement) => ({
-    ...requirement,
-    vehicleCount: new Set(requirement.variants.flatMap((variant) => variant.vehicles)).size,
-  })),
-)
+// 有预览时看预览，否则看已保存的数据——同一时间只出现一张表
+const savedRequirements = computed(() => (result.value ? [] : (store.document?.requirements ?? [])))
+const showSaved = computed(() => !result.value && store.hasData)
 
 function setColumn(field: keyof RequirementsColumnMapping, value: string | number) {
   updateMapping({ [field]: value })
+}
+
+async function importAndSave() {
+  await save()
+  // 落盘后重新读回，让「已保存的需求」立刻反映新数据
+  if (saved.value) await store.load()
 }
 
 // 落盘时间按本地时间展示，ISO 存的是 UTC
@@ -54,13 +61,33 @@ function formatTime(value: string): string {
 
 <!--
   需求导入：选需求分析表 → 识别表头与列 → 预览解析结果 → 写入项目目录。
-  解析、Excel 读取与写文件都在主进程完成，这里只配置与核对。
+  解析、Excel 读取与写文件都在主进程完成，这里只配置与核对；
+  已导入的数据由 requirements store 在应用启动 / 切换项目时读回并展示。
   @grid A：整页纵向堆叠的每一块都是 Row 下整宽 Column（col-span-12）；
   卡片内表单行按 A 方案两两分配 12 列，按钮组按 B 方案整组占一列。
 -->
 <template>
   <div class="flex flex-col gap-3">
-    <h1 class="text-lg font-medium text-ink">需求</h1>
+    <!-- @grid A：标题 + 已保存数据的一句话状态 -->
+    <div class="grid grid-cols-12 items-baseline gap-2">
+      <h1 class="col-span-4 text-lg font-medium text-ink">需求</h1>
+      <p class="col-span-8 justify-self-end text-[11px] text-ink-muted">
+        <template v-if="store.hasData">
+          已保存 {{ store.requirementCount }} 条需求 · {{ store.variantCount }} 个变体 ·
+          {{ store.vehicleCount }} 个车型，最近更新
+          {{ formatTime(store.document?.updatedAt ?? '') }}
+        </template>
+      </p>
+    </div>
+
+    <el-alert
+      v-if="store.error"
+      type="error"
+      show-icon
+      :closable="false"
+      :title="store.error"
+      description="文件内容不可用，重新导入一次即可覆盖。"
+    />
 
     <!-- 非桌面端（浏览器里 npm run preview）时没有主进程能力 -->
     <el-alert
@@ -218,48 +245,10 @@ function formatTime(value: string): string {
         </div>
 
         <div class="mt-2 min-w-0">
-          <p v-if="!previewRows.length" class="text-[11px] text-ink-muted">
+          <p v-if="!result.requirements.length" class="text-[11px] text-ink-muted">
             没有解析出需求，请核对表头行与列配置
           </p>
-          <el-table v-else :data="previewRows" size="small" max-height="260" row-key="id">
-            <el-table-column type="expand">
-              <template #default="{ row }">
-                <div class="px-2 py-1">
-                  <div
-                    v-for="(variant, index) in row.variants"
-                    :key="index"
-                    class="grid grid-cols-12 gap-2 border-b border-line py-1.5 last:border-b-0"
-                  >
-                    <p
-                      class="col-span-5 truncate text-[11px] text-ink-muted"
-                      :title="variant.vehicles.join('、')"
-                    >
-                      {{ variant.vehicles.join('、') }}
-                    </p>
-                    <div class="col-span-7 text-[11px] text-ink">
-                      <p
-                        v-if="variant.content.length"
-                        class="line-clamp-2"
-                        :title="variant.content[0]"
-                      >
-                        {{ variant.content[0] }}
-                      </p>
-                      <p v-else class="text-ink-muted">无变体描述（需求原文直接适用）</p>
-                      <p v-if="variant.content.length > 1" class="text-ink-muted">
-                        另有 {{ variant.content.length - 1 }} 种等价写法
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="id" label="需求ID" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="name" label="需求名称" min-width="120" show-overflow-tooltip />
-            <el-table-column label="变体" width="56">
-              <template #default="{ row }">{{ row.variants.length }}</template>
-            </el-table-column>
-            <el-table-column prop="vehicleCount" label="车型" width="56" />
-          </el-table>
+          <RequirementTable v-else :requirements="result.requirements" />
         </div>
 
         <el-alert
@@ -282,7 +271,13 @@ function formatTime(value: string): string {
         <!-- @grid B：导入按钮组整组占一列 -->
         <div class="mt-2 grid grid-cols-12 items-center gap-2">
           <div class="col-span-12 flex items-center gap-2">
-            <el-button size="small" type="primary" :loading="busy" :disabled="dirty" @click="save">
+            <el-button
+              size="small"
+              type="primary"
+              :loading="busy"
+              :disabled="dirty"
+              @click="importAndSave"
+            >
               导入并保存
             </el-button>
             <span class="text-[11px] text-ink-muted">写入项目目录 .hil-kit/requirements.json</span>
@@ -290,7 +285,28 @@ function formatTime(value: string): string {
         </div>
       </section>
 
-      <!-- ④ 落盘结果 -->
+      <!-- ④ 已保存的需求（没有预览时展示，数据来自应用启动时的读取） -->
+      <section v-if="showSaved" class="rounded-lg border border-line bg-surface-soft p-3">
+        <!-- @grid A：标题 + 时间 -->
+        <div class="grid items-center grid-cols-12 gap-2">
+          <h2 class="col-span-4 text-xs font-medium text-ink">→ 已保存的需求</h2>
+          <p class="col-span-8 justify-self-end text-[11px] text-ink-muted">
+            首次 {{ formatTime(store.document?.createdAt ?? '') }} · 最近更新
+            {{ formatTime(store.document?.updatedAt ?? '') }}
+          </p>
+        </div>
+        <div class="mt-2 min-w-0">
+          <RequirementTable :requirements="savedRequirements" />
+        </div>
+      </section>
+
+      <!-- 读取中 / 还没有数据 -->
+      <p v-else-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的需求…</p>
+      <p v-else-if="store.loaded && !result" class="text-[11px] text-ink-muted">
+        该项目还没有导入过需求，选一张需求分析表导入。
+      </p>
+
+      <!-- ⑤ 落盘结果 -->
       <el-alert
         v-if="saved"
         type="success"

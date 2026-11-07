@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('desktop', {
     clear: () => ipcRenderer.invoke('workspace:clear'),
   },
   requirements: {
+    load: () => ipcRenderer.invoke('requirements:load'),
     choose: () => ipcRenderer.invoke('requirements:choose'),
     probe: (filePath: string, sheetName: string, headerRow?: number) =>
       ipcRenderer.invoke('requirements:probe', filePath, sheetName, headerRow),

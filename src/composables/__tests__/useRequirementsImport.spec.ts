@@ -24,6 +24,7 @@ const CONFIG_RESULT = {
 
 function installBridge(overrides: Partial<DesktopRequirements> = {}) {
   const bridge: DesktopRequirements = {
+    load: vi.fn<DesktopRequirements['load']>(async () => ({ empty: true })),
     choose: vi.fn<DesktopRequirements['choose']>(async () => ({
       file: { filePath: 'E:\\datas\\需求分析表.xlsx', sheets: ['1、封面', '6、软件需求分析表'] },
     })),
@@ -129,6 +130,8 @@ describe('useRequirementsImport', () => {
     expect(flow.saved.value?.filePath).toBe('E:\\project\\.hil-kit\\requirements.json')
     expect(flow.saved.value?.requirementCount).toBe(1)
     expect(flow.error.value).toBe('')
+    // 预览已落盘，交由 requirements store 展示，不再保留第二份状态
+    expect(flow.result.value).toBeNull()
   })
 
   it('修改列配置后旧预览失效', async () => {

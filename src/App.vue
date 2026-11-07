@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import AppSidebar from './components/layout/AppSidebar.vue'
@@ -11,6 +11,7 @@ import SplitResizer from './components/layout/SplitResizer.vue'
 import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
 import { useWorkspace } from './composables/useWorkspace'
+import { useRequirementsStore } from './stores/requirements'
 import LaunchView from './views/LaunchView.vue'
 
 const route = useRoute()
@@ -19,6 +20,17 @@ const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '�
 
 const { project, ready, load } = useWorkspace()
 const hasProject = computed(() => project.value !== null)
+
+// 应用打开（或切换项目）时读回该项目已保存的需求数据
+const requirementsStore = useRequirementsStore()
+watch(
+  () => project.value?.path,
+  (path) => {
+    if (path) void requirementsStore.load()
+    else requirementsStore.clear()
+  },
+  { immediate: true },
+)
 
 // 未选项目时标题栏显示「启动」，选定后显示「项目名 / 页面名」
 const titlebarTitle = computed(() =>

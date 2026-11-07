@@ -9,6 +9,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type {
   RequirementsChooseOutcome,
+  RequirementsLoadOutcome,
   RequirementsParseConfig,
   RequirementsParseResult,
   RequirementsPreviewOutcome,
@@ -17,7 +18,7 @@ import type {
 } from '../src/models/common'
 import { parseRequirements, probeSheet } from './requirements-parse'
 import { listSheets, readSheetTable } from './requirements-sheet'
-import { writeRequirements } from './requirements-store'
+import { readRequirements, writeRequirements } from './requirements-store'
 import { readWorkspace } from './workspace'
 
 const EXCEL_FILTERS: Electron.FileFilter[] = [
@@ -37,6 +38,18 @@ export function registerRequirementsIpc() {
     ipcMain.removeHandler(channel)
     ipcMain.handle(channel, listener)
   }
+
+  handle('requirements:load', () => {
+    const project = readWorkspace().current
+    // 没绑定项目时没有可读的数据，按「还没导入」处理
+    if (!project) return { empty: true } satisfies RequirementsLoadOutcome
+
+    try {
+      return readRequirements(project.path) satisfies RequirementsLoadOutcome
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies RequirementsLoadOutcome
+    }
+  })
 
   handle('requirements:choose', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)

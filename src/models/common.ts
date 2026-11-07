@@ -95,6 +95,19 @@ export interface RequirementsSavedState {
   requirementCount: number
   variantCount: number
 }
+/** requirements.json 的文件结构：结构约定见 docs/requirements-json.md */
+export interface RequirementsDocument {
+  schemaVersion: number
+  createdAt: string
+  updatedAt: string
+  requirements: Requirement[]
+}
+/** 读取已落盘需求数据的结果 */
+export interface RequirementsLoadOutcome {
+  error?: string// 文件存在但结构/版本不可用，需要重新导入
+  empty?: boolean// 该项目还没有导入过需求
+  document?: RequirementsDocument
+}
 /** 选择需求分析表的结果：取消或失败都通过字段回传，不向渲染层抛异常 */
 export interface RequirementsChooseOutcome {
   canceled?: boolean
