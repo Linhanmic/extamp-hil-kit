@@ -134,6 +134,24 @@ describe('useRequirementsImport', () => {
     expect(flow.result.value).toBeNull()
   })
 
+  it('关闭弹窗后清掉一次性的预览与落盘摘要，但保留文件与列配置', async () => {
+    installBridge()
+    const flow = useRequirementsImport()
+    await flow.chooseFile()
+    await flow.preview()
+    await flow.save()
+
+    flow.resetTransient()
+
+    expect(flow.result.value).toBeNull()
+    expect(flow.saved.value).toBeNull()
+    expect(flow.error.value).toBe('')
+    expect(flow.dirty.value).toBe(false)
+    // 文件和列配置保留，下次打开弹窗可以接着用
+    expect(flow.file.value?.filePath).toBe('E:\\datas\\需求分析表.xlsx')
+    expect(flow.mapping.vehicleStartCol).toBe('G')
+  })
+
   it('修改列配置后旧预览失效', async () => {
     installBridge()
     const flow = useRequirementsImport()

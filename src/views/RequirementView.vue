@@ -1,84 +1,84 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import RequirementImportDialog from '@/components/RequirementImportDialog.vue'
 import RequirementTable from '@/components/RequirementTable.vue'
-import { useRequirementsImport } from '@/composables/useRequirementsImport'
 import { useRequirementsStore } from '@/stores/requirements'
-import type { RequirementsColumnMapping } from '@/models'
 
-const {
-  file,
-  fileName,
-  sheetName,
-  mapping,
-  probe,
-  result,
-  saved,
-  error,
-  busy,
-  available,
-  dirty,
-  chooseFile,
-  selectSheet,
-  inspect,
-  updateMapping,
-  preview,
-  save,
-} = useRequirementsImport()
-
-// 已导入的数据在 App 启动 / 切换项目时读回，这里只做展示
+/**
+ * 需求页（参考 tauri-app 的需求管理页）：统计 + 搜索 + 需求表，导入走弹窗。
+ * 数据由 store 在应用启动 / 切换项目时从项目目录读回，导入成功后刷新。
+ */
 const store = useRequirementsStore()
+const importVisible = ref(false)
+const keyword = ref('')
 
-const sheets = computed(() => file.value?.sheets ?? [])
+const available = computed(() => Boolean(window.desktop?.requirements))
 
-// 车型起始列的候选项：探测到的列里挑，标签带上表头便于核对
-const vehicleOptions = computed(() => probe.value?.columns ?? [])
+const filteredRequirements = computed(() => {
+  const query = keyword.value.trim().toLowerCase()
+  const requirements = store.document?.requirements ?? []
+  if (!query) return requirements
+  return requirements.filter(
+    (item) => item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query),
+  )
+})
 
-const stats = computed(() => result.value?.stats ?? null)
-const warnings = computed(() => result.value?.warnings ?? [])
-const shownWarnings = computed(() => warnings.value.slice(0, 5))
+const emptyText = computed(() =>
+  keyword.value.trim() ? '未找到匹配的需求' : '该项目还没有导入需求',
+)
 
-// 有预览时看预览，否则看已保存的数据——同一时间只出现一张表
-const savedRequirements = computed(() => (result.value ? [] : (store.document?.requirements ?? [])))
-const showSaved = computed(() => !result.value && store.hasData)
-
-function setColumn(field: keyof RequirementsColumnMapping, value: string | number) {
-  updateMapping({ [field]: value })
-}
-
-async function importAndSave() {
-  await save()
-  // 落盘后重新读回，让「已保存的需求」立刻反映新数据
-  if (saved.value) await store.load()
-}
-
-// 落盘时间按本地时间展示，ISO 存的是 UTC
-function formatTime(value: string): string {
+// ISO 存 UTC，界面按本地时间展示
+function formatTime(value?: string): string {
+  if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString('zh-CN', { hour12: false })
 }
+
+async function onImported() {
+  await store.load()
+}
 </script>
 
 <!--
-  需求导入：选需求分析表 → 识别表头与列 → 预览解析结果 → 写入项目目录。
-  解析、Excel 读取与写文件都在主进程完成，这里只配置与核对；
-  已导入的数据由 requirements store 在应用启动 / 切换项目时读回并展示。
-  @grid A：整页纵向堆叠的每一块都是 Row 下整宽 Column（col-span-12）；
-  卡片内表单行按 A 方案两两分配 12 列，按钮组按 B 方案整组占一列。
+  @grid A：标题行（标题 + 统计 + 导入按钮）与工具栏（搜索 + 更新时间）都是 Row 下按比例分列，
+  按钮组按 B 方案整组占一列。
 -->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- @grid A：标题 + 已保存数据的一句话状态 -->
-    <div class="grid grid-cols-12 items-baseline gap-2">
-      <h1 class="col-span-4 text-lg font-medium text-ink">需求</h1>
-      <p class="col-span-8 justify-self-end text-[11px] text-ink-muted">
+    <!-- 标题行 -->
+    <div class="grid grid-cols-12 items-center gap-2">
+      <div class="col-span-6 flex items-center gap-2">
+        <h1 class="text-lg font-medium text-ink">需求</h1>
+        <el-tag size="small" type="info" effect="plain">
+          {{ store.requirementCount }} 个需求
+        </el-tag>
+        <el-tag size="small" type="info" effect="plain"> {{ store.variantCount }} 个变体 </el-tag>
+      </div>
+      <div v-if="available" class="col-span-6 justify-self-end">
+        <el-button size="small" type="primary" @click="importVisible = true">导入 Excel</el-button>
+      </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="grid grid-cols-12 items-center gap-2">
+      <div class="col-span-7">
+        <el-input v-model="keyword" size="small" clearable placeholder="搜索需求ID或名称" />
+      </div>
+      <p class="col-span-5 justify-self-end text-[11px] text-ink-muted">
         <template v-if="store.hasData">
-          已保存 {{ store.requirementCount }} 条需求 · {{ store.variantCount }} 个变体 ·
-          {{ store.vehicleCount }} 个车型，最近更新
-          {{ formatTime(store.document?.updatedAt ?? '') }}
+          最近更新 {{ formatTime(store.document?.updatedAt) }}
         </template>
       </p>
     </div>
+
+    <el-alert
+      v-if="!available"
+      type="info"
+      :closable="false"
+      title="需求导入只在桌面端可用"
+      description="解析 Excel 与读写项目目录需要 Electron 主进程，请通过 npm run dev 或安装包启动。"
+    />
 
     <el-alert
       v-if="store.error"
@@ -89,236 +89,18 @@ function formatTime(value: string): string {
       description="文件内容不可用，重新导入一次即可覆盖。"
     />
 
-    <!-- 非桌面端（浏览器里 npm run preview）时没有主进程能力 -->
-    <el-alert
-      v-if="!available"
-      type="info"
-      :closable="false"
-      title="需求导入只在桌面端可用"
-      description="解析 Excel 与写入项目目录需要 Electron 主进程，请通过 npm run dev 或安装包启动。"
-    />
+    <!-- @grid B：列表区整块占一栏 -->
+    <div class="grid grid-cols-12">
+      <div class="col-span-12 min-w-0">
+        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的需求…</p>
+        <RequirementTable
+          v-else-if="filteredRequirements.length"
+          :requirements="filteredRequirements"
+        />
+        <el-empty v-else :description="emptyText" />
+      </div>
+    </div>
 
-    <template v-else>
-      <!-- ① 选表 -->
-      <section class="rounded-lg border border-line bg-surface-soft p-3">
-        <div class="grid grid-cols-12 items-center gap-2">
-          <h2 class="col-span-8 text-xs font-medium text-ink">→ 选择需求分析表</h2>
-          <div class="col-span-4 justify-self-end">
-            <el-button size="small" type="primary" :loading="busy" @click="chooseFile">
-              选择文件
-            </el-button>
-          </div>
-        </div>
-
-        <div v-if="file" class="mt-2 grid grid-cols-12 items-start gap-2">
-          <div class="col-span-12 min-w-0">
-            <p class="truncate text-xs font-medium text-ink" :title="file.filePath">
-              {{ fileName }}
-            </p>
-            <p class="truncate text-[11px] text-ink-muted" :title="file.filePath">
-              {{ file.filePath }}
-            </p>
-          </div>
-
-          <!-- 工作表与表头行 -->
-          <label class="col-span-2 text-[11px] text-ink-muted">工作表</label>
-          <div class="col-span-4">
-            <el-select
-              :model-value="sheetName"
-              size="small"
-              class="w-full"
-              @update:model-value="selectSheet"
-            >
-              <el-option v-for="name in sheets" :key="name" :label="name" :value="name" />
-            </el-select>
-          </div>
-          <label class="col-span-2 text-[11px] text-ink-muted">表头行</label>
-          <div class="col-span-4">
-            <el-input-number
-              :model-value="mapping.headerRow"
-              size="small"
-              :min="1"
-              :max="200"
-              controls-position="right"
-              class="w-full"
-              @update:model-value="setColumn('headerRow', $event ?? 1)"
-            />
-          </div>
-        </div>
-        <p v-else class="mt-2 text-[11px] text-ink-muted">还没有选择文件</p>
-      </section>
-
-      <!-- ② 列配置 -->
-      <section v-if="file" class="rounded-lg border border-line bg-surface-soft p-3">
-        <!-- @grid A：标题 + 重新识别按钮 -->
-        <div class="grid items-center grid-cols-12 gap-2">
-          <h2 class="col-span-8 text-xs font-medium text-ink">→ 列配置</h2>
-          <div class="col-span-4 justify-self-end">
-            <el-button size="small" plain :loading="busy" @click="inspect()">自动识别</el-button>
-          </div>
-        </div>
-
-        <div class="mt-2 grid grid-cols-12 items-center gap-2">
-          <label class="col-span-2 text-[11px] text-ink-muted">需求ID</label>
-          <div class="col-span-4">
-            <el-input
-              :model-value="String(mapping.idCol)"
-              size="small"
-              placeholder="A"
-              @update:model-value="setColumn('idCol', $event)"
-            />
-          </div>
-          <label class="col-span-2 text-[11px] text-ink-muted">需求名称</label>
-          <div class="col-span-4">
-            <el-input
-              :model-value="String(mapping.nameCol)"
-              size="small"
-              placeholder="B"
-              @update:model-value="setColumn('nameCol', $event)"
-            />
-          </div>
-
-          <label class="col-span-2 text-[11px] text-ink-muted">需求详情</label>
-          <div class="col-span-4">
-            <el-input
-              :model-value="String(mapping.detailCol)"
-              size="small"
-              placeholder="E"
-              @update:model-value="setColumn('detailCol', $event)"
-            />
-          </div>
-          <label class="col-span-2 text-[11px] text-ink-muted">车型起始列</label>
-          <div class="col-span-4">
-            <el-select
-              :model-value="String(mapping.vehicleStartCol)"
-              size="small"
-              class="w-full"
-              @update:model-value="setColumn('vehicleStartCol', $event)"
-            >
-              <el-option
-                v-for="column in vehicleOptions"
-                :key="column.letter"
-                :value="column.letter"
-                :label="`${column.letter} · ${column.header || '无表头'}${column.isPlatform ? '（平台列，忽略）' : ''}`"
-              />
-            </el-select>
-          </div>
-        </div>
-
-        <p v-for="note in probe?.notes ?? []" :key="note" class="mt-1.5 text-[11px] text-ink-muted">
-          · {{ note }}
-        </p>
-        <p class="mt-1.5 text-[11px] text-ink-muted">
-          · 车型列单元格：<code class="text-ink">●</code> 适用，<code class="text-ink">●变体N</code>
-          或 <code class="text-ink">●差异描述</code> 适用并带变体，<code class="text-ink">—</code>
-          不适用
-        </p>
-        <p class="mt-1 text-[11px] text-ink-muted">
-          · 表头含「平台」的列整列忽略；一个表头写多款车型时用
-          <code class="text-ink">/</code> <code class="text-ink">、</code>
-          <code class="text-ink">;</code> 分隔
-        </p>
-
-        <!-- @grid B：按钮组整组占一列，内部只用一个统一 gap -->
-        <div class="mt-2 grid grid-cols-12 items-center gap-2">
-          <div class="col-span-12 flex items-center gap-2">
-            <el-button size="small" type="primary" plain :loading="busy" @click="preview">
-              解析预览
-            </el-button>
-            <span v-if="dirty" class="text-[11px] text-ink-muted">配置已修改，需要重新解析</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- 错误 -->
-      <el-alert v-if="error" type="error" :closable="false" :title="error" show-icon />
-
-      <!-- ③ 预览 -->
-      <section v-if="result && stats" class="rounded-lg border border-line bg-surface-soft p-3">
-        <!-- @grid A：标题 + 统计 -->
-        <div class="grid items-center grid-cols-12 gap-2">
-          <h2 class="col-span-5 text-xs font-medium text-ink">→ 预览</h2>
-          <p class="col-span-7 justify-self-end text-[11px] text-ink-muted">
-            需求 {{ stats.requirementCount }} · 变体 {{ stats.variantCount }} · 车型
-            {{ stats.vehicleCount }} · 跳过 {{ stats.skippedRows }} 行
-          </p>
-        </div>
-
-        <div class="mt-2 min-w-0">
-          <p v-if="!result.requirements.length" class="text-[11px] text-ink-muted">
-            没有解析出需求，请核对表头行与列配置
-          </p>
-          <RequirementTable v-else :requirements="result.requirements" />
-        </div>
-
-        <el-alert
-          v-if="warnings.length"
-          type="warning"
-          :closable="false"
-          :title="`${warnings.length} 条提示`"
-          class="mt-2"
-        >
-          <ul class="text-[11px] leading-5">
-            <li v-for="warning in shownWarnings" :key="`${warning.row}-${warning.message}`">
-              第 {{ warning.row }} 行：{{ warning.message }}
-            </li>
-          </ul>
-          <p v-if="warnings.length > shownWarnings.length" class="text-[11px] text-ink-muted">
-            其余 {{ warnings.length - shownWarnings.length }} 条未展示
-          </p>
-        </el-alert>
-
-        <!-- @grid B：导入按钮组整组占一列 -->
-        <div class="mt-2 grid grid-cols-12 items-center gap-2">
-          <div class="col-span-12 flex items-center gap-2">
-            <el-button
-              size="small"
-              type="primary"
-              :loading="busy"
-              :disabled="dirty"
-              @click="importAndSave"
-            >
-              导入并保存
-            </el-button>
-            <span class="text-[11px] text-ink-muted">写入项目目录 .hil-kit/requirements.json</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- ④ 已保存的需求（没有预览时展示，数据来自应用启动时的读取） -->
-      <section v-if="showSaved" class="rounded-lg border border-line bg-surface-soft p-3">
-        <!-- @grid A：标题 + 时间 -->
-        <div class="grid items-center grid-cols-12 gap-2">
-          <h2 class="col-span-4 text-xs font-medium text-ink">→ 已保存的需求</h2>
-          <p class="col-span-8 justify-self-end text-[11px] text-ink-muted">
-            首次 {{ formatTime(store.document?.createdAt ?? '') }} · 最近更新
-            {{ formatTime(store.document?.updatedAt ?? '') }}
-          </p>
-        </div>
-        <div class="mt-2 min-w-0">
-          <RequirementTable :requirements="savedRequirements" />
-        </div>
-      </section>
-
-      <!-- 读取中 / 还没有数据 -->
-      <p v-else-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的需求…</p>
-      <p v-else-if="store.loaded && !result" class="text-[11px] text-ink-muted">
-        该项目还没有导入过需求，选一张需求分析表导入。
-      </p>
-
-      <!-- ⑤ 落盘结果 -->
-      <el-alert
-        v-if="saved"
-        type="success"
-        show-icon
-        :closable="false"
-        :title="`已导入 ${saved.requirementCount} 条需求 / ${saved.variantCount} 个变体`"
-      >
-        <p class="text-[11px] break-all">{{ saved.filePath }}</p>
-        <p class="text-[11px]">
-          首次导入 {{ formatTime(saved.createdAt) }} · 最近更新 {{ formatTime(saved.updatedAt) }}
-        </p>
-      </el-alert>
-    </template>
+    <RequirementImportDialog v-model="importVisible" @imported="onImported" />
   </div>
 </template>

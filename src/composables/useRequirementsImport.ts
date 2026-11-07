@@ -119,6 +119,19 @@ export function useRequirementsImport() {
     resetResult()
   }
 
+  /**
+   * 关掉导入弹窗时清理一次性的结果。
+   *
+   * 文件、工作表与列映射保留，下次打开可以接着用；预览结果、落盘摘要与错误清掉，
+   * 避免重新打开时还挂着上一次的「已导入」提示。
+   */
+  function resetTransient() {
+    result.value = null
+    saved.value = null
+    error.value = ''
+    dirty.value = false
+  }
+
   async function preview() {
     const api = window.desktop?.requirements
     const current = config.value
@@ -180,6 +193,7 @@ export function useRequirementsImport() {
     selectSheet,
     inspect,
     updateMapping,
+    resetTransient,
     preview,
     save,
   }
