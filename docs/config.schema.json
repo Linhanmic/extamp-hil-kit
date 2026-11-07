@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "外置功放 HIL 配置参数",
+  "description": "配置参数页手工维护的数据文件：<Gauge 项目>/.hil-kit/config.json。结构约定见 docs/config-json.md。",
+  "type": "object",
+  "required": ["schemaVersion", "createdAt", "updatedAt", "configurations"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "结构版本，结构变更时递增"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "首次保存时间，ISO 8601 UTC；后续保存不变"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "最近一次保存时间，ISO 8601 UTC"
+    },
+    "configurations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/configuration" },
+      "description": "按页面展示顺序排列；config_key 全文件唯一"
+    }
+  },
+  "$defs": {
+    "configuration": {
+      "type": "object",
+      "required": ["config_key", "config_value"],
+      "additionalProperties": false,
+      "properties": {
+        "config_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "配置项名称，全文件唯一，作为配置项主键；首尾空白在写入前去掉"
+        },
+        "config_value": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/configValue" },
+          "description": "配置值按页面展示顺序；同一配置项下 value 唯一"
+        }
+      }
+    },
+    "configValue": {
+      "type": "object",
+      "required": ["config_key", "value", "relay_variants", "manual_vehicles"],
+      "additionalProperties": false,
+      "properties": {
+        "config_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "冗余字段，与所属配置项的 config_key 相同；保留是为了与 src/models/common.ts 的 ConfigValue 一致，读写不需要字段映射"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "配置值，如「14扬声器」；同一配置项下唯一，首尾空白在写入前去掉"
+        },
+        "relay_variants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/variantRef" },
+          "uniqueItems": true,
+          "description": "关联的需求变体引用，配置值通过它们得到适用车型；不存变体内容与车型快照"
+        },
+        "manual_vehicles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "页面里直接填写、不来自需求变体的车型；车型名沿用需求表的归一化写法（去引号、去空白、下划线换成连字符）"
+        }
+      }
+    },
+    "variantRef": {
+      "type": "object",
+      "required": ["requirement_id", "variant_key"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "需求ID，取自 requirements.json 的 requirements[].id"
+        },
+        "variant_key": {
+          "type": "string",
+          "description": "变体键，取自该需求下 variants[].key；空串表示该需求「无变体差异」的那一支，是合法取值"
+        }
+      }
+    }
+  }
+}

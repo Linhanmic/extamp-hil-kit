@@ -32,6 +32,8 @@ fixtures/gauge-sample/  最小的 Gauge 测试项目，用于验证启动页的�
 docs/grid-system.md     12 列栅格设计规范（页面级 + 组件级 A/B/C 方案）
 docs/data-model.md      数据模型模块的组织方式与约定
 docs/requirements-json.md  requirements.json 的结构约定（JSON Schema 与导入语义）
+docs/config-json.md     config.json 的结构约定（配置参数页落盘结构）
+docs/config.schema.json config.json 的 JSON Schema，编辑器里可直接对数据文件校验
 testdatas/              需求分析表样例（需求导入的回归测试跑真实表格）
 dist/                   渲染进程构建产物（git 忽略）
 dist-electron/          主进程 / 预加载构建产物（git 忽略）
