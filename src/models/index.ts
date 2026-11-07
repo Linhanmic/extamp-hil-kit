@@ -74,3 +74,12 @@ export type {
   SpecsSavedState,
   SpecsWriteOutcome,
 } from './spec'
+export type {
+  ConceptFileInfo,
+  ConceptFileContent,
+  ConceptsListOutcome,
+  ConceptsReadOutcome,
+  ConceptsSavedState,
+  ConceptsWriteOutcome,
+  ConceptsDeleteOutcome,
+} from './concept'

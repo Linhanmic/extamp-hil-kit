@@ -1,4 +1,8 @@
 import type {
+  ConceptsDeleteOutcome,
+  ConceptsListOutcome,
+  ConceptsReadOutcome,
+  ConceptsWriteOutcome,
   ConfigsLoadOutcome,
   ConfigsSaveOutcome,
   Configuration,
@@ -102,6 +106,16 @@ export interface DesktopBridge {
     read: (path: string) => Promise<SpecsReadOutcome>
     /** 整份写回 spec 文件（更新场景标签后保存） */
     write: (path: string, text: string) => Promise<SpecsWriteOutcome>
+  }
+  concepts: {
+    /** 列出当前项目 concepts 目录下的 .cpt 文件 */
+    list: () => Promise<ConceptsListOutcome>
+    /** 读取一个封装文件的原文 */
+    read: (path: string) => Promise<ConceptsReadOutcome>
+    /** 整份写回封装文件（结构化编辑后重新生成） */
+    write: (path: string, text: string) => Promise<ConceptsWriteOutcome>
+    /** 删除一个封装文件 */
+    delete: (path: string) => Promise<ConceptsDeleteOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */

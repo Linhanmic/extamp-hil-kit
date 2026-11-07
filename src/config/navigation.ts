@@ -6,6 +6,7 @@ export type NavIconName =
   | 'meter'
   | 'snapshot'
   | 'spec'
+  | 'concept'
   | 'requirement'
 
 export interface NavItem {
@@ -23,7 +24,8 @@ export interface NavItem {
  * 3. 出声位置 → 音量表 —— 执行中的播放定位与实时电平监测
  * 4. 快照 —— 记录测量结果
  * 5. 规格 —— 按配置参数更新场景的车型标签
- * 6. 需求 —— 参考材料，放最后
+ * 6. 封装管理 —— 维护 concepts 目录下的可复用步骤封装（.cpt）
+ * 7. 需求 —— 参考材料，放最后
  */
 export const NAV_ITEMS: NavItem[] = [
   { name: 'task-new', path: '/task/new', label: '新建任务', icon: 'create' },
@@ -33,5 +35,6 @@ export const NAV_ITEMS: NavItem[] = [
   { name: 'meter', path: '/meter', label: '音量表', icon: 'meter' },
   { name: 'snapshot', path: '/snapshot', label: '快照', icon: 'snapshot' },
   { name: 'spec', path: '/spec', label: '规格', icon: 'spec' },
+  { name: 'concept', path: '/concept', label: '封装管理', icon: 'concept' },
   { name: 'requirement', path: '/requirement', label: '需求', icon: 'requirement' },
 ]

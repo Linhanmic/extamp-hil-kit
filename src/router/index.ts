@@ -10,6 +10,7 @@ const NAV_VIEWS: Record<string, () => Promise<unknown>> = {
   meter: () => import('../views/MeterView.vue'),
   snapshot: () => import('../views/SnapshotView.vue'),
   spec: () => import('../views/SpecView.vue'),
+  concept: () => import('../views/ConceptView.vue'),
   requirement: () => import('../views/RequirementView.vue'),
 }
 

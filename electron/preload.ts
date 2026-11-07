@@ -60,6 +60,12 @@ contextBridge.exposeInMainWorld('desktop', {
     read: (path: string) => ipcRenderer.invoke('specs:read', path),
     write: (path: string, text: string) => ipcRenderer.invoke('specs:write', path, text),
   },
+  concepts: {
+    list: () => ipcRenderer.invoke('concepts:list'),
+    read: (path: string) => ipcRenderer.invoke('concepts:read', path),
+    write: (path: string, text: string) => ipcRenderer.invoke('concepts:write', path, text),
+    delete: (path: string) => ipcRenderer.invoke('concepts:delete', path),
+  },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),
     save: (settings: ProjectSettings) => ipcRenderer.invoke('settings:save', settings),

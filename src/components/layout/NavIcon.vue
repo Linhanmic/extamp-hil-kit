@@ -58,8 +58,14 @@ defineProps<{
       <circle cx="5.6" cy="5.6" r="0.9" />
     </template>
 
+    <!-- 封装管理：立方体（封装） -->
+    <template v-else-if="name === 'concept'">
+      <path d="M8 2.6l5 2.5v5L8 12.6 3 10.1v-5z" stroke-linejoin="round" />
+      <path d="M3 5.1l5 2.5 5-2.5M8 7.6v5" stroke-linejoin="round" />
+    </template>
+
     <!-- 需求：文档 -->
-    <template v-else>
+    <template v-else-if="name === 'requirement'">
       <path d="M4.2 2.6h5L12 5.4v8H4.2z" stroke-linejoin="round" />
       <path d="M9.2 2.6v2.8H12" stroke-linejoin="round" />
       <path d="M6 8.2h4M6 10.6h4" stroke-linecap="round" />

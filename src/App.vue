@@ -12,6 +12,7 @@ import SplitResizer from './components/layout/SplitResizer.vue'
 import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
 import { useWorkspace } from './composables/useWorkspace'
+import { useConceptsStore } from './stores/concepts'
 import { useConfigsStore } from './stores/configs'
 import { useMeterStore } from './stores/meter'
 import { useOutputStore } from './stores/output'
@@ -38,6 +39,7 @@ const meterStore = useMeterStore()
 const slotMapStore = useSlotMapStore()
 const snapshotStore = useSnapshotStore()
 const specsStore = useSpecsStore()
+const conceptsStore = useConceptsStore()
 watch(
   () => project.value?.path,
   (path) => {
@@ -50,6 +52,7 @@ watch(
       void slotMapStore.load()
       void snapshotStore.load()
       void specsStore.load()
+      void conceptsStore.load()
       return
     }
     settingsStore.clear()
@@ -60,6 +63,7 @@ watch(
     slotMapStore.clear()
     snapshotStore.clear()
     specsStore.clear()
+    conceptsStore.clear()
   },
   { immediate: true },
 )
