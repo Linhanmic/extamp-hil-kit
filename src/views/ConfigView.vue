@@ -9,14 +9,17 @@ import { useRequirementsStore } from '@/stores/requirements'
 
 /**
  * 配置参数页（对齐 Excel 结构稿）：
- * 标题 + 新增 → 配置项筛选 + 车型筛选 → 可展开配置项表（状态 / 操作）。
+ * 标题 + 新增 → 配置键下拉 · 车型下拉（均单选）→ 可展开配置项表。
+ * 列表右缘对齐第 12 栅格中线（宽 11.5/12）。
  * 数据由 store 在应用启动 / 切换项目时从 `.hil-kit/config.json` 读回，每次保存后重新读取。
  */
 const store = useConfigsStore()
 const requirementsStore = useRequirementsStore()
 
-const keyword = ref('')
-const vehicleFilter = ref<string[]>([])
+/** 配置键筛选（单选，空 = 全部） */
+const configKeyFilter = ref('')
+/** 车型筛选（单选，空 = 全部） */
+const vehicleFilter = ref('')
 const configurationVisible = ref(false)
 const editingConfiguration = ref<string | null>(null)
 const valueVisible = ref(false)
@@ -25,7 +28,10 @@ const editingValue = ref<ConfigurationValueRow | null>(null)
 
 const available = computed(() => Boolean(window.desktop?.configs))
 
-/** 车型筛选候选项：配置值生效车型去重 */
+/** 配置键候选项：当前项目全部配置项名称 */
+const configKeyOptions = computed(() => store.rows.map((row) => row.config_key))
+
+/** 车型候选项：配置值生效车型去重 */
 const vehicleOptions = computed(() => {
   const names: string[] = []
   for (const row of store.rows) {
@@ -39,54 +45,28 @@ const vehicleOptions = computed(() => {
 })
 
 /**
- * 过滤逻辑：
- * - 关键字：配置项名 / 配置值 / 车型 / 需求名
- * - 车型：配置值级过滤——只保留含所选车型的配置值；配置项在仍有匹配值或关键字只命中项名时保留
- * 统计徽章仍显示全量，不随筛选跳变。
+ * 过滤：配置键精确匹配整行；车型在配置值级过滤——只保留含该车型的值。
  */
 const filteredRows = computed<ConfigurationRow[]>(() => {
-  const query = keyword.value.trim().toLowerCase()
-  const vehicles = vehicleFilter.value
-  if (!query && !vehicles.length) return store.rows
+  let rows = store.rows
+  if (configKeyFilter.value) {
+    rows = rows.filter((row) => row.config_key === configKeyFilter.value)
+  }
+  if (!vehicleFilter.value) return rows
 
-  return store.rows.flatMap((row) => {
-    const keyHit = query ? row.config_key.toLowerCase().includes(query) : false
-    const matchedValues = row.values.filter((value) => {
-      // 车型多选：命中任一所选车型即可（OR），与关键字 AND
-      const vehicleOrHit =
-        !vehicles.length || vehicles.some((vehicle) => value.resolved.vehicles.includes(vehicle))
-      if (!vehicleOrHit) return false
-      if (!query) return true
-      if (value.value.toLowerCase().includes(query)) return true
-      if (value.resolved.vehicles.some((vehicle) => vehicle.toLowerCase().includes(query))) {
-        return true
-      }
-      return value.resolved.refs.some((ref) =>
-        ref.requirement_name.toLowerCase().includes(query),
-      )
-    })
-
-    if (matchedValues.length) {
-      return [{ ...row, values: matchedValues, valueCount: matchedValues.length }]
-    }
-    // 关键字只命中配置项名、且未按车型排除时保留空壳行（仍可编辑配置项）
-    if (keyHit && !vehicles.length) return [row]
-    return []
+  return rows.flatMap((row) => {
+    const matchedValues = row.values.filter((value) =>
+      value.resolved.vehicles.includes(vehicleFilter.value),
+    )
+    if (!matchedValues.length) return []
+    return [{ ...row, values: matchedValues, valueCount: matchedValues.length }]
   })
 })
 
 const emptyText = computed(() => {
-  if (keyword.value.trim() || vehicleFilter.value.length) return '未找到匹配的配置项'
+  if (configKeyFilter.value || vehicleFilter.value) return '未找到匹配的配置项'
   return '该项目还没有配置参数'
 })
-
-// ISO 存 UTC，界面按本地时间展示
-function formatTime(value?: string): string {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('zh-CN', { hour12: false })
-}
 
 function openCreateConfiguration() {
   editingConfiguration.value = null
@@ -129,24 +109,16 @@ async function onRemoveVariant(
 </script>
 
 <!--
-  @grid A：标题行（标题 + 新增）、筛选行（配置项 + 车型 + 更新时间）、列表区均为 12 列 Row。
-  筛选：配置项 6 · 车型 4 · 更新时间 2；标题：标题 8 · 新增 4。
+  @grid A：标题行（标题 + 新增）、筛选行（配置键 + 车型）、列表区均为 12 列 Row。
+  标题：标题 8 · 新增 4；筛选：配置键 4 · 车型 3（画稿左侧两块，右侧留空）。
+  列表内容宽 11.5/12，右缘落在第 12 栅格中线。
 -->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行：配置参数 · 新增配置参数 -->
+    <!-- 标题行：配置参数 · 新增配置参数（无统计徽章） -->
     <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-8 flex min-w-0 items-center gap-2">
+      <div class="col-span-8 flex min-w-0 items-center">
         <h1 class="text-lg font-medium text-ink">配置参数</h1>
-        <el-tag size="small" type="info" effect="plain">
-          {{ store.configurationCount }} 个配置项
-        </el-tag>
-        <el-tag size="small" type="info" effect="plain">
-          {{ store.configValueCount }} 个配置值
-        </el-tag>
-        <el-tag size="small" type="info" effect="plain">
-          {{ store.vehicleCount }} 款车型
-        </el-tag>
       </div>
       <div v-if="available" class="col-span-4 justify-self-end">
         <el-button size="small" type="primary" @click="openCreateConfiguration">
@@ -155,26 +127,30 @@ async function onRemoveVariant(
       </div>
     </div>
 
-    <!-- 筛选行：配置项筛选区 · 车型筛选区 · 最近更新 -->
+    <!-- 筛选行：配置键下拉 · 车型下拉（均单选；无最近更新） -->
     <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-6">
-        <el-input
-          v-model="keyword"
+      <div class="col-span-4">
+        <el-select
+          v-model="configKeyFilter"
           size="small"
           clearable
-          placeholder="配置项筛选：名称、配置值、车型或需求"
-        />
+          placeholder="配置键：全部"
+          class="w-full"
+        >
+          <el-option
+            v-for="key in configKeyOptions"
+            :key="key"
+            :label="key"
+            :value="key"
+          />
+        </el-select>
       </div>
-      <div class="col-span-4">
+      <div class="col-span-3">
         <el-select
           v-model="vehicleFilter"
           size="small"
-          multiple
           clearable
-          collapse-tags
-          collapse-tags-tooltip
-          :max-collapse-tags="2"
-          placeholder="车型筛选：全部车型"
+          placeholder="车型：全部"
           class="w-full"
         >
           <el-option
@@ -185,11 +161,6 @@ async function onRemoveVariant(
           />
         </el-select>
       </div>
-      <p class="col-span-2 justify-self-end text-[11px] text-ink-muted">
-        <template v-if="store.hasData">
-          最近更新 {{ formatTime(store.document?.updatedAt) }}
-        </template>
-      </p>
     </div>
 
     <el-alert
@@ -217,22 +188,26 @@ async function onRemoveVariant(
       description="导入需求分析表后，配置值可以关联需求变体，适用车型会自动跟着需求数据更新。"
     />
 
-    <!-- 列表区：右边界收到右侧第二栅格（12 列中占 10 列） -->
+    <!-- 列表区：外层 12 列，内容宽 11.5/12 → 右缘 = 第 12 栅格中线 -->
     <div class="grid grid-cols-12">
-      <div class="col-span-10 min-w-0">
-        <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的配置参数…</p>
-        <ConfigurationTable
-          v-else-if="filteredRows.length"
-          :rows="filteredRows"
-          @add-value="openCreateValue"
-          @edit-configuration="openEditConfiguration"
-          @delete-configuration="store.removeConfiguration"
-          @edit-value="openEditValue"
-          @delete-value="store.removeConfigValue"
-          @add-variant="openAddVariant"
-          @remove-variant="onRemoveVariant"
-        />
-        <el-empty v-else :description="emptyText" />
+      <div class="col-span-12 min-w-0">
+        <div class="w-[calc(11.5/12*100%)]">
+          <p v-if="store.loading" class="text-[11px] text-ink-muted">
+            正在读取已保存的配置参数…
+          </p>
+          <ConfigurationTable
+            v-else-if="filteredRows.length"
+            :rows="filteredRows"
+            @add-value="openCreateValue"
+            @edit-configuration="openEditConfiguration"
+            @delete-configuration="store.removeConfiguration"
+            @edit-value="openEditValue"
+            @delete-value="store.removeConfigValue"
+            @add-variant="openAddVariant"
+            @remove-variant="onRemoveVariant"
+          />
+          <el-empty v-else :description="emptyText" />
+        </div>
       </div>
     </div>
 
