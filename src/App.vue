@@ -76,36 +76,21 @@ const titlebarTitle = computed(() =>
   hasProject.value ? `${project.value?.name} / ${routeTitle.value}` : '启动',
 )
 
-// 三块区域的显隐状态
+// 三块区域的显隐状态：右栏默认收起，需要时从标题栏展开
 const visible = reactive({
   sidebar: true,
   panel: true,
-  secondSidebar: true,
+  secondSidebar: false,
 })
 
-const {
-  sidebarUnits,
-  secondSidebarUnits,
-  mainUnits,
-  panelHeightPercent,
-  resizeSidebar,
-  resizeSecondSidebar,
-  resizePanel,
-} = useLayoutSize()
+const { contentColumns, panelHeightPercent, resizeSidebar, resizeSecondSidebar, resizePanel } =
+  useLayoutSize(visible)
 
 const contentRef = ref<HTMLElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 
-// 三栏按设计网格的 12 份分配：左 3 份 · 中 5 份 · 右 4 份（用 fr 表达，缩放窗口时保持比例），
-// 两条 4px 分隔条为固定轨道
-const contentColumns = computed(() => {
-  const tracks: string[] = []
-  if (visible.sidebar) tracks.push(`minmax(0, ${sidebarUnits.value}fr)`, '4px')
-  tracks.push(`minmax(0, ${mainUnits.value}fr)`)
-  if (visible.secondSidebar) tracks.push('4px', `minmax(0, ${secondSidebarUnits.value}fr)`)
-  return tracks.join(' ')
-})
-
+// 三栏轨道由 useLayoutSize 统一给出：两侧栏固定占 3 / 12 与 4 / 12 的窗口宽度，
+// 主内容吃剩余空间，收展右栏只改变主内容宽度。
 const onSidebarResize = (delta: number) => resizeSidebar(delta, contentRef.value?.clientWidth ?? 0)
 const onSecondSidebarResize = (delta: number) =>
   resizeSecondSidebar(delta, contentRef.value?.clientWidth ?? 0)
