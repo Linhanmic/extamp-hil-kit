@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 
 export interface WorkspaceProject {
   /** 项目根目录的绝对路径 */
@@ -62,7 +62,9 @@ export function inspectProject(dir: string): { ok: true; project: WorkspaceProje
 }
 
 function commitProject(dir: string): { state: WorkspaceState; error?: string } {
-  const inspected = inspectProject(dir)
+  // 归一化路径，避免同一个项目因分隔符不同（\ 与 /）在最近列表里重复
+  const normalized = resolve(dir)
+  const inspected = inspectProject(normalized)
   if (!inspected.ok) return { state: readWorkspace(), error: inspected.reason }
 
   const state = readWorkspace()

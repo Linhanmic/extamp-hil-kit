@@ -22,6 +22,7 @@ src/                    渲染进程（Vue 应用）
   views/                LaunchView（启动页）、FeatureView（导航项占位页）、Home/About
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
   router/               由 NAV_ITEMS 生成导航路由；file:// 协议下自动切到 hash history
+fixtures/gauge-sample/  最小的 Gauge 测试项目，用于验证启动页的项目选择流程
 docs/grid-system.md     12 列栅格设计规范（页面级 + 组件级 A/B/C 方案）
 dist/                   渲染进程构建产物（git 忽略）
 dist-electron/          主进程 / 预加载构建产物（git 忽略）
@@ -47,6 +48,10 @@ npm run lint        # oxlint + eslint
 - **选择项目** → 打开系统目录选择器，校验目录是否包含 `manifest.json` 或 `.gauge`（Gauge 项目标记）。校验失败会就地提示错误、继续停在启动页。
 - **绑定成功** → 写入 `workspace.json`（含最近 5 个项目），标题栏显示「项目名 / 页面名」，侧栏底部显示当前项目与「切换」入口。
 - **路径失效** → 每次读取都会过滤掉已不存在的目录；当前项目失效时自动回到启动页。
+
+启动页样式参考 ZCode 欢迎页：柔和渐变背景 + 居中卡片，自上而下为应用图标、欢迎标题、说明、整宽主按钮与「最近打开」列表。选择目录时会先把路径归一化（`path.resolve`），避免同一项目因分隔符不同在最近列表里重复。
+
+仓库内置了测试用项目 `fixtures/gauge-sample`（含 `manifest.json`、`specs/smoke.spec`、`env/default/default.properties`），启动页直接选它即可通过校验。
 
 ## Electron 约定
 
