@@ -8,11 +8,25 @@ import { useSnapshotStore } from '@/stores/snapshot'
  */
 const store = useSnapshotStore()
 const selectedIndex = ref(0)
+const vehicleFilter = ref('')
 
-const selectedFile = computed(() => store.files[selectedIndex.value] ?? store.files[0] ?? null)
+const vehicleOptions = computed(() => {
+  const names = new Set<string>()
+  for (const file of store.files) {
+    for (const vehicle of file.vehicles) names.add(vehicle)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+})
+
+const visibleFiles = computed(() =>
+  vehicleFilter.value
+    ? store.files.filter((file) => file.vehicles.includes(vehicleFilter.value))
+    : store.files,
+)
+const selectedFile = computed(() => visibleFiles.value[selectedIndex.value] ?? visibleFiles.value[0] ?? null)
 
 watch(
-  () => store.files,
+  visibleFiles,
   () => {
     selectedIndex.value = 0
   },
@@ -24,10 +38,28 @@ watch(
   <div class="flex flex-col gap-3">
     <div class="w-[calc(11.5/12*100%)]">
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-12 flex flex-wrap items-center gap-2">
-          <h1 class="text-lg font-medium text-ink">快照</h1>
-          <el-tag size="small" type="info" effect="plain">{{ store.fileCount }} 个快照</el-tag>
-          <el-tag size="small" type="info" effect="plain">{{ store.channelCount }} 个通道</el-tag>
+        <div class="col-span-12 flex flex-wrap items-center">
+          <h1 class="text-lg font-medium text-ink">扬声器快照</h1>
+        </div>
+      </div>
+
+      <!-- 车型筛选：单选，过滤左侧快照列表 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-3">
+          <el-select
+            v-model="vehicleFilter"
+            size="small"
+            clearable
+            placeholder="车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
         </div>
       </div>
     </div>
@@ -52,13 +84,14 @@ watch(
     <div class="w-[calc(11.5/12*100%)]">
       <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取扬声器快照…</p>
       <el-empty v-else-if="!store.hasData" description="snapshot.ini 中还没有快照" />
+      <el-empty v-else-if="!visibleFiles.length" description="未找到适用该车型的快照" />
 
       <div v-else class="grid grid-cols-12 gap-3">
         <!-- 左：快照分节列表 -->
         <div class="col-span-3">
           <div class="flex max-h-[60vh] flex-col overflow-y-auto border border-line">
             <button
-              v-for="(file, index) in store.files"
+              v-for="(file, index) in visibleFiles"
               :key="`${file.name}-${index}`"
               type="button"
               class="border-b border-line px-3 py-2 text-left text-[11px] break-all outline-none last:border-b-0 hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -75,9 +108,6 @@ watch(
           <div v-if="selectedFile" class="border border-line">
             <div class="border-b border-line bg-surface-soft px-3 py-2">
               <h2 class="text-[13px] font-medium break-all text-ink">{{ selectedFile.name }}</h2>
-            </div>
-            <div class="border-b border-line px-3 py-2 text-[11px] break-all text-ink">
-              适用车型：{{ selectedFile.vehicles.join('/') || '—' }}
             </div>
             <div
               v-for="channel in selectedFile.channels"

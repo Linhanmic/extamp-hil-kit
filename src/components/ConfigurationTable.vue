@@ -110,12 +110,6 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
           <span class="min-w-0 truncate text-[13px] text-ink" :title="row.config_key">
             {{ row.config_key }}
           </span>
-          <el-tag size="small" type="info" effect="plain" class="shrink-0">
-            {{ row.valueCount }} 值
-          </el-tag>
-          <el-tag size="small" type="info" effect="plain" class="shrink-0">
-            {{ row.vehicleCount }} 车型
-          </el-tag>
         </div>
         <div class="col-span-2 flex items-center justify-center px-2 py-2">
           <el-tag size="small" :type="statusType(row.issueCount)" effect="plain">

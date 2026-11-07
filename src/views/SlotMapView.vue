@@ -11,6 +11,7 @@ const store = useSlotMapStore()
 const viewMode = ref<'overview' | 'detail'>('overview')
 const selectedName = ref('')
 const vehicleFilter = ref('')
+const sourceFilter = ref('')
 
 const vehicleOptions = computed(() => {
   const names = new Set<string>()
@@ -25,12 +26,23 @@ const visiblePlans = computed(() =>
     ? store.plans.filter((plan) => plan.vehicles.includes(vehicleFilter.value))
     : store.plans,
 )
-const titles = computed(() => sourceTitles(visiblePlans.value))
+const titles = computed(() =>
+  sourceFilter.value
+    ? sourceTitles(visiblePlans.value).filter((title) => title === sourceFilter.value)
+    : sourceTitles(visiblePlans.value),
+)
+const sourceOptions = computed(() => sourceTitles(store.plans))
 const selectedPlan = computed(
   () =>
     visiblePlans.value.find((plan) => plan.name === selectedName.value) ??
     visiblePlans.value[0] ??
     null,
+)
+
+const selectedScenarios = computed(() =>
+  (selectedPlan.value?.scenarios ?? []).filter(
+    (scenario) => !sourceFilter.value || scenario.title === sourceFilter.value,
+  ),
 )
 
 watch(
@@ -58,7 +70,6 @@ function displayName(fileName: string): string {
       <div class="grid grid-cols-12 items-center gap-2">
         <div class="col-span-6 flex items-center gap-2">
           <h1 class="text-lg font-medium text-ink">SLOT 映射</h1>
-          <el-tag size="small" type="info" effect="plain">{{ store.planCount }} 个映射</el-tag>
           <el-tag v-if="store.errorPlanCount" size="small" type="warning" effect="plain">
             {{ store.errorPlanCount }} 个文件异常
           </el-tag>
@@ -75,7 +86,7 @@ function displayName(fileName: string): string {
         </div>
       </div>
 
-      <!-- 车型筛选：单选，过滤总览列与详情方案列表 -->
+      <!-- 车型 + 音源类型筛选 -->
       <div class="mt-3 grid grid-cols-12 items-center gap-2">
         <div class="col-span-3">
           <el-select
@@ -91,6 +102,17 @@ function displayName(fileName: string): string {
               :label="vehicle"
               :value="vehicle"
             />
+          </el-select>
+        </div>
+        <div class="col-span-3">
+          <el-select
+            v-model="sourceFilter"
+            size="small"
+            clearable
+            placeholder="音源类型：全部"
+            class="w-full"
+          >
+            <el-option v-for="title in sourceOptions" :key="title" :label="title" :value="title" />
           </el-select>
         </div>
       </div>
@@ -188,7 +210,7 @@ function displayName(fileName: string): string {
               :title="selectedPlan.error"
             />
             <div
-              v-for="scenario in selectedPlan.scenarios"
+              v-for="scenario in selectedScenarios"
               :key="scenario.title"
               class="grid grid-cols-12 items-center border-b border-line/60 last:border-b-0"
             >
