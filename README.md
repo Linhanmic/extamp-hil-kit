@@ -18,23 +18,35 @@ electron/               Electron 主进程侧（不参与渲染进程打包）
   config-store.ts       配置参数落盘读写：结构校验、配置值补齐 / 去掉 config_key
   settings.ts           项目设置 IPC：读写设置与选择文件 / 目录
   settings-store.ts     项目设置落盘读写、路径解析（相对路径按项目根算）
+  business.ts           业务资料只读 IPC：output / meter / slot-map / snapshot
+  business-store.ts     四类业务数据（UTF-8 文本与快照目录）的读取与解析
+  specs.ts              spec 清单 / 读取 / 标签写回（限制在项目 specs 目录内）
+  concepts.ts           .cpt 清单 / 读取 / 写回 / 删除（限制在 concepts 目录内）
 src/                    渲染进程（Vue 应用）
   App.vue               壳层：标题栏 + 启动页闸门 + 可拖拽三栏内容区
   components/
     layout/             壳层组件：AppTitleBar、WindowControls、AppSidebar、AppPanel、
                         AppSecondSidebar、RegionToggle、SplitResizer、DesignGrid、NavIcon
     ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
-  composables/          useTheme（主题）、useLayoutSize（区域尺寸）、useDesignGrid（设计网格）、
-                        useWorkspace（Gauge 项目选择与持久化）、useRequirementsImport（需求导入流程）
+    RequirementImportDialog.vue / RequirementTable.vue   需求导入弹窗与需求表
+    ConfigurationFormDialog / ConfigurationTable / ConfigValueFormDialog  配置项与配置值维护
+    ConceptFormDialog.vue / SettingsDialog.vue / SettingsPathField.vue    封装表单、项目设置与路径字段
+  composables/          useTheme、useLayoutSize、useDesignGrid、useWorkspace、useRequirementsImport、useAsyncData
   config/navigation.ts  侧栏导航项与顺序（路由与侧栏共用同一份定义）
   config/settings-defaults.ts  项目设置的默认值（主进程与渲染层共用）
-  stores/               requirements（需求数据）、configs（配置参数）、settings（项目设置）
-  models/               数据模型：纯类型模块，common.ts 放共享基础类型，领域模型按需补充
-  views/                LaunchView（启动页）、RequirementView（需求）、ConfigView（配置参数）、
-                        FeatureView（其余导航项占位页）、Home/About
+  spec/                 纯解析与条件求值：condition.ts（适用条件集合运算）、
+                        spec-file.ts（Gauge 规格解析与标签改写）、concept-file.ts（.cpt 解析与生成）
+  stores/               requirements、configs、settings、specs、concepts、output、meter、slotMap、snapshot
+  models/               数据模型：纯类型模块，common.ts 放共享基础类型，
+                        领域模型另见 concept / output / spec / slot-map / snapshot / volume
+  views/                LaunchView（启动页）、RequirementView、ConfigView、SlotMapView、OutputView、
+                        MeterView、SnapshotView、SpecView、ConceptView、
+                        FeatureView（「新建任务」占位页）、Home/About
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
   router/               由 NAV_ITEMS 生成导航路由；file:// 协议下自动切到 hash history
 fixtures/gauge-sample/  最小的 Gauge 测试项目，用于验证启动页的项目选择流程
+docs/project-specification.md  项目规格书：功能需求（FR-*）、验收用例（AT-01～AT-15）、风险与待确认项
+docs/requirements-anchor.md    总体需求锚定：范围边界、非目标、成功指标与待澄清问题
 docs/grid-system.md     12 列栅格设计规范（页面级 + 组件级 A/B/C 方案）
 docs/data-model.md      数据模型模块的组织方式与约定
 docs/requirements-json.md  requirements.json 的结构约定（JSON Schema 与导入语义）
@@ -71,6 +83,24 @@ npm run lint        # oxlint + eslint
 启动页样式参考 ZCode 欢迎页：柔和渐变背景 + 居中卡片，自上而下为应用图标、欢迎标题、说明、整宽主按钮与「最近打开」列表。选择目录时会先把路径归一化（`path.resolve`），避免同一项目因分隔符不同在最近列表里重复。
 
 仓库内置了测试用项目 `fixtures/gauge-sample`（含 `manifest.json`、`specs/smoke.spec`、`env/default/default.properties`），启动页直接选它即可通过校验。
+
+## 功能概览
+
+侧栏 9 个入口与当前实现状态（顺序见 `src/config/navigation.ts`）：
+
+| 入口      | 数据来源                                         | 能力                                        |
+| --------- | ------------------------------------------------ | ------------------------------------------- |
+| 新建任务  | 无                                               | 占位页，功能未定义                          |
+| 配置参数  | `<项目>/.hil-kit/config.json`（可在设置改位置）   | 读写：配置项 / 配置值 / 变体引用 / 手工车型 |
+| SLOT 映射 | 项目设置里的映射文件及其引用的 slot 文件         | 只读                                        |
+| 出声位置  | 项目设置里的出声位置文件                         | 只读                                        |
+| 音量表    | 项目设置里的音量表文件（UTF-8 分隔文本）         | 只读                                        |
+| 快照      | 项目设置里的快照目录（`*.txt`）                  | 只读                                        |
+| 规格      | `<项目>/specs/**/*.spec`                         | 条件求值预览 + 写回场景车型标签             |
+| 封装管理  | `<项目>/concepts/**/*.cpt`                       | 新增 / 编辑 / 删除 + 格式校验               |
+| 需求      | Excel 导入 → `<项目>/.hil-kit/requirements.json` | 导入、读回、搜索、展开详情                  |
+
+四类只读页面只做解析与展示，不含播放、采集、实时监测或硬件执行能力。
 
 ## 需求（侧栏「需求」）
 
@@ -122,7 +152,7 @@ Excel 读取用 SheetJS，但走「Node 读字节 + `XLSX.read(buffer)`」而不
 | 分组 | 设置项 | 谁在用 |
 | --- | --- | --- |
 | 数据文件 | 需求 JSON、配置参数 JSON | `requirements:load/save`、`configs:load/save` 的读写位置 |
-| 其他业务数据 | 扬声器快照目录、音量表文件、SLOT 映射配置文件 | 对应功能（待接入） |
+| 其他业务数据 | 扬声器快照目录、音量表文件、SLOT 映射配置文件 | `output:load` / `meter:load` / `slot-map:load` / `snapshot:load` 的读取路径（只读） |
 | 需求分析表导入 | 默认文件、工作表名、表头行、四个列位置 | 导入弹窗的起始路径与列映射默认值 |
 
 路径可以写相对项目根的（如 `config/SLOT映射/mapping.ini`），也可以写绝对路径；相对路径在读写时解析，弹窗里会显示解析出来的完整位置。需求与配置参数的 json 留空表示沿用 `.hil-kit` 下的默认文件，其余三项留空表示「还没配置」。导入默认参数里的工作表名、表头行、列位置留空或填 0 表示按表自动探测——设置里显式填过的列会覆盖探测结果，代表用户意图优先。
