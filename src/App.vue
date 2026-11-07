@@ -42,17 +42,18 @@ const specsStore = useSpecsStore()
 const conceptsStore = useConceptsStore()
 watch(
   () => project.value?.path,
-  (path) => {
+  async (path) => {
     if (path) {
       void settingsStore.load()
-      void requirementsStore.load()
-      void configsStore.load()
       void outputStore.load()
       void meterStore.load()
       void slotMapStore.load()
       void snapshotStore.load()
-      void specsStore.load()
       void conceptsStore.load()
+      // 配置状态依赖需求：必须先读需求再读配置，避免启动时把有效引用短暂判为失效
+      await requirementsStore.load()
+      await configsStore.load()
+      void specsStore.load()
       return
     }
     settingsStore.clear()
