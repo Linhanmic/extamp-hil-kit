@@ -13,12 +13,7 @@ import { useLayoutSize } from './composables/useLayoutSize'
 
 const route = useRoute()
 
-const routeTitle = computed(() => {
-  const name = route.name
-  if (name === 'home') return '首页'
-  if (name === 'about') return '关于'
-  return String(name ?? '')
-})
+const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '首页')
 
 // 三块区域的显隐状态
 const visible = reactive({

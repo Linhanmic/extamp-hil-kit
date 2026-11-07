@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-
-const navItems = [
-  { label: '首页', to: '/', icon: 'home' },
-  { label: '关于', to: '/about', icon: 'info' },
-] as const
+import { NAV_ITEMS } from '@/config/navigation'
+import NavIcon from './NavIcon.vue'
 </script>
 
 <template>
@@ -18,37 +15,16 @@ const navItems = [
       </span>
     </div>
 
-    <!-- 纵向导航列表；每一项是水平组合，见 RouterLink 上的注释 -->
-    <nav class="flex flex-col gap-0.5 p-2">
+    <!-- 纵向导航列表；顺序定义见 src/config/navigation.ts，每一项是水平组合 -->
+    <nav class="flex shrink-0 flex-col gap-0.5 p-2">
       <!-- @grid B：导航项是「图标 + 文字」组合，整项占满所在列，内部只用统一 gap -->
       <RouterLink
-        v-for="item in navItems"
-        :key="item.to"
-        :to="item.to"
+        v-for="item in NAV_ITEMS"
+        :key="item.name"
+        :to="item.path"
         class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink-muted transition-colors hover:bg-surface [&.router-link-exact-active]:bg-primary/10 [&.router-link-exact-active]:text-primary"
       >
-        <svg
-          v-if="item.icon === 'home'"
-          class="size-4 shrink-0"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.2"
-        >
-          <path d="M2.5 6.8 8 2.5l5.5 4.3v6.4h-4v-3.4h-3v3.4h-4z" stroke-linejoin="round" />
-        </svg>
-        <svg
-          v-else
-          class="size-4 shrink-0"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.2"
-        >
-          <circle cx="8" cy="8" r="5.5" />
-          <path d="M8 7.4v4.2" stroke-linecap="round" />
-          <circle cx="8" cy="4.9" r="0.8" fill="currentColor" stroke="none" />
-        </svg>
+        <NavIcon :name="item.icon" />
         <span class="truncate">{{ item.label }}</span>
       </RouterLink>
     </nav>

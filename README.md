@@ -13,12 +13,13 @@ src/                    渲染进程（Vue 应用）
   App.vue               壳层：自定义标题栏 + 可拖拽三栏内容区
   components/
     layout/             壳层组件：AppTitleBar、WindowControls、AppSidebar、AppPanel、
-                        AppSecondSidebar、RegionToggle、SplitResizer
+                        AppSecondSidebar、RegionToggle、SplitResizer、DesignGrid、NavIcon
     ThemeSwitcher.vue   主题切换（跟随系统 / 浅色 / 深色）
-  composables/          useTheme（主题）、useLayoutSize（可拖拽区域尺寸）
-  views/                路由页面
+  composables/          useTheme（主题）、useLayoutSize（可拖拽区域尺寸）、useDesignGrid（设计网格）
+  config/navigation.ts  侧栏导航项与顺序（路由与侧栏共用同一份定义）
+  views/                路由页面（FeatureView 为导航项的占位页）
   assets/               main.css（Tailwind 入口 + @theme 设计变量）、base.css（设计变量）
-  router/               file:// 协议下自动切到 hash history
+  router/               由 NAV_ITEMS 生成导航路由；file:// 协议下自动切到 hash history
 docs/grid-system.md     12 列栅格设计规范（页面级 + 组件级 A/B/C 方案）
 dist/                   渲染进程构建产物（git 忽略）
 dist-electron/          主进程 / 预加载构建产物（git 忽略）
