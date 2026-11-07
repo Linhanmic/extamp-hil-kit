@@ -12,6 +12,17 @@ import { useSpecsStore } from '@/stores/specs'
 const store = useSpecsStore()
 const applying = ref(false)
 const selectedPath = ref('')
+const treeOpen = ref(true)
+const collapseVersion = ref(0)
+
+function toggleTree() {
+  if (treeOpen.value) {
+    treeOpen.value = false
+    collapseVersion.value += 1
+  } else {
+    treeOpen.value = true
+  }
+}
 
 const tree = computed(() => buildSpecTree(store.entries))
 const selectedEntry = computed(
@@ -76,13 +87,8 @@ async function onApply() {
   <div class="flex flex-col gap-3">
     <div class="w-[calc(11.5/12*100%)]">
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-7 flex flex-wrap items-center gap-2">
+        <div class="col-span-7 flex flex-wrap items-center">
           <h1 class="text-lg font-medium text-ink">规格书</h1>
-          <el-tag size="small" type="info" effect="plain">{{ store.fileCount }} 个文件</el-tag>
-          <el-tag size="small" type="info" effect="plain">{{ store.scenarioCount }} 个场景</el-tag>
-          <el-tag v-if="store.notApplicableCount" size="small" type="warning" effect="plain">
-            {{ store.notApplicableCount }} 个场景不适用
-          </el-tag>
         </div>
         <div class="col-span-5 justify-self-end">
           <el-button
@@ -100,6 +106,7 @@ async function onApply() {
 
     <el-alert
       v-if="store.error"
+      class="w-[calc(11.5/12*100%)]"
       type="error"
       show-icon
       :closable="false"
@@ -109,6 +116,7 @@ async function onApply() {
 
     <el-alert
       v-if="store.warnings.length"
+      class="w-[calc(11.5/12*100%)]"
       type="warning"
       show-icon
       :closable="false"
@@ -124,14 +132,30 @@ async function onApply() {
         <!-- 左：specs 下一层开始的目录树 -->
         <div class="col-span-3">
           <div class="max-h-[65vh] overflow-y-auto border border-line py-1">
-            <SpecTreeNodeItem
-              v-for="node in tree"
-              :key="`${node.type}-${node.path}`"
-              :node="node"
-              :depth="0"
-              :selected-path="selectedEntry?.path ?? ''"
-              @select="selectedPath = $event"
-            />
+            <!-- 根节点：规格书，一键折叠全部子目录 -->
+            <button
+              type="button"
+              class="flex w-full items-center gap-1 px-2 py-1 text-left text-[11px] font-medium text-ink outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+              :title="treeOpen ? '一键折叠全部目录' : '展开规格书目录'"
+              @click="toggleTree"
+            >
+              <svg class="size-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path v-if="treeOpen" d="M4 6.5 8 10.5 12 6.5" />
+                <path v-else d="M6.5 4 10.5 8 6.5 12" />
+              </svg>
+              <span>规格书</span>
+            </button>
+            <template v-if="treeOpen">
+              <SpecTreeNodeItem
+                v-for="node in tree"
+                :key="`${node.type}-${node.path}`"
+                :node="node"
+                :depth="0"
+                :selected-path="selectedEntry?.path ?? ''"
+                :collapse-version="collapseVersion"
+                @select="selectedPath = $event"
+              />
+            </template>
           </div>
         </div>
 

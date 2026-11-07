@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { SpecTreeNode } from '@/spec/tree'
 import { specDisplayName } from '@/spec/tree'
 
@@ -7,10 +7,19 @@ const props = defineProps<{
   node: SpecTreeNode
   depth: number
   selectedPath: string
+  /** 根节点一键折叠时递增，所有目录同时收起 */
+  collapseVersion?: number
 }>()
 
 const emit = defineEmits<{ select: [path: string] }>()
 const open = ref(true)
+
+watch(
+  () => props.collapseVersion,
+  () => {
+    open.value = false
+  },
+)
 </script>
 
 <template>
@@ -48,6 +57,7 @@ const open = ref(true)
         :node="child"
         :depth="props.depth + 1"
         :selected-path="selectedPath"
+        :collapse-version="collapseVersion"
         @select="emit('select', $event)"
       />
     </template>
