@@ -34,7 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { name: 'output', path: '/output', label: '出声位置', icon: 'output' },
   { name: 'meter', path: '/meter', label: '音量表', icon: 'meter' },
   { name: 'snapshot', path: '/snapshot', label: '扬声器快照', icon: 'snapshot' },
-  { name: 'spec', path: '/spec', label: '规格', icon: 'spec' },
+  { name: 'spec', path: '/spec', label: '规格书', icon: 'spec' },
   { name: 'concept', path: '/concept', label: '封装管理', icon: 'concept' },
   { name: 'requirement', path: '/requirement', label: '软件需求', icon: 'requirement' },
 ]
