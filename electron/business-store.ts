@@ -48,42 +48,57 @@ function readLines(text: string): string[] {
 /* ------------------------------------------------------------------ */
 
 /**
- * 解析出声位置文本：`#` 开一行新场景，`适用车型:` 行给场景标车型，
- * `*` 开头的行按是否含 `|` 分成「出声扬声器列表」或「检查步骤」。
+ * 解析出声位置文本：`#` 开新场景；适用车型按 /、逗号等拆分，未写表示全部车型。
+ * 支持 speak="左前|中置" / no_speak='右前|重低音'；旧式 `* 左前|中置` 仍按出声关键字解析。
  */
 export function parseOutputText(text: string): OutputScenario[] {
   const scenarios: OutputScenario[] = []
   let current: OutputScenario | null = null
+  const createScenario = (title: string): OutputScenario => ({
+    title,
+    allVehicles: true,
+    vehicles: [],
+    steps: [],
+    speakKeywords: [],
+    noSpeakKeywords: [],
+  })
+  const appendKeywords = (target: string[], content: string) => {
+    for (const keyword of content.split('|')) {
+      const text = keyword.trim()
+      if (text && !target.includes(text)) target.push(text)
+    }
+  }
 
   for (const line of readLines(text)) {
     if (line.startsWith('#')) {
       if (current) scenarios.push(current)
-      current = { title: line.slice(1).trim(), vehicles: [], steps: [], speakers: [] }
+      current = createScenario(line.slice(1).trim())
       continue
     }
-    if (!current) current = { title: '', vehicles: [], steps: [], speakers: [] }
+    if (!current) current = createScenario('')
 
-    if (line.startsWith('适用车型:')) {
+    if (line.startsWith('适用车型:') || line.startsWith('适用车型：')) {
+      current.allVehicles = false
       current.vehicles = line
-        .slice('适用车型:'.length)
-        .split(/[,，]/)
+        .slice('适用车型'.length + 1)
+        .split(/[/、,，;；]/)
         .map((item) => item.trim())
-        .filter((item) => item !== '')
+        .filter(Boolean)
       continue
     }
-    if (line.startsWith('*')) {
-      const body = line.slice(1).trim()
-      if (body.includes('|')) {
-        current.speakers = body
-          .split('|')
-          .map((item) => item.trim())
-          .filter((item) => item !== '')
-      } else {
-        current.steps.push(body)
-      }
+
+    const body = line.startsWith('*') ? line.slice(1).trim() : line
+    const directives = [...body.matchAll(/\b(no_speak|speak)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    for (const match of directives) {
+      const content = match[2] ?? match[3] ?? ''
+      appendKeywords(match[1] === 'speak' ? current.speakKeywords : current.noSpeakKeywords, content)
+    }
+    // 兼容旧文件：没有 speak= 的竖线列表仍是出声扬声器关键字
+    if (!directives.length && line.startsWith('*') && body.includes('|')) {
+      appendKeywords(current.speakKeywords, body)
       continue
     }
-    current.steps.push(line)
+    current.steps.push(body)
   }
   if (current) scenarios.push(current)
   return scenarios

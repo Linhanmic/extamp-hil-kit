@@ -27,27 +27,53 @@ afterEach(() => {
 })
 
 describe('parseOutputText', () => {
-  it('按 # 分场景，解析适用车型、步骤与 | 分隔的出声位置', () => {
+  it('未写适用车型表示全部车型，旧竖线列表仍识别为出声关键字', () => {
     const text = [
       '# 检查智能语音关闭时出声位置是否正确',
       '* step1',
       '* 所有扬声器不出声',
       '',
       '# 检查智能语音全车播放时出声位置是否正确',
-      '适用车型:SC6H,YU2',
+      '适用车型:SC6H/YU2',
       '* step1',
       '* 左前低音|左前高音|右前低音|中置',
     ].join('\n')
 
     expect(parseOutputText(text)).toEqual([
-      { title: '检查智能语音关闭时出声位置是否正确', vehicles: [], steps: ['step1', '所有扬声器不出声'], speakers: [] },
+      {
+        title: '检查智能语音关闭时出声位置是否正确',
+        allVehicles: true,
+        vehicles: [],
+        steps: ['step1', '所有扬声器不出声'],
+        speakKeywords: [],
+        noSpeakKeywords: [],
+      },
       {
         title: '检查智能语音全车播放时出声位置是否正确',
+        allVehicles: false,
         vehicles: ['SC6H', 'YU2'],
         steps: ['step1'],
-        speakers: ['左前低音', '左前高音', '右前低音', '中置'],
+        speakKeywords: ['左前低音', '左前高音', '右前低音', '中置'],
+        noSpeakKeywords: [],
       },
     ])
+  })
+
+  it('识别 speak 与 no_speak 后单双引号内容，多个关键字按竖线分隔', () => {
+    const text = [
+      '# 场景',
+      '适用车型:SC6H/YU2',
+      '* speak="左前低音|中置"',
+      '* no_speak=\'右前低音|重低音\'',
+      '* speak="左前高音"',
+    ].join('\n')
+
+    expect(parseOutputText(text)[0]).toMatchObject({
+      allVehicles: false,
+      vehicles: ['SC6H', 'YU2'],
+      speakKeywords: ['左前低音', '中置', '左前高音'],
+      noSpeakKeywords: ['右前低音', '重低音'],
+    })
   })
 })
 

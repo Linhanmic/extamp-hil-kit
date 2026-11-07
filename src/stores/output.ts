@@ -20,7 +20,7 @@ export const useOutputStore = defineStore('output', () => {
   const speakerCount = computed(() => {
     const names = new Set<string>()
     for (const scenario of scenarios.value) {
-      for (const speaker of scenario.speakers) names.add(speaker)
+      for (const speaker of scenario.speakKeywords) names.add(speaker)
     }
     return names.size
   })
