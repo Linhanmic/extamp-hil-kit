@@ -125,8 +125,8 @@ function joinVehicles(vehicles: string[]): string {
             :model-value="excludedIds.has(requirement.id) ? 'skip' : 'participate'"
             size="small"
             :options="[
-              { label: '参与参数映射', value: 'participate' },
-              { label: '不参与参数映射', value: 'skip' },
+              { label: '参与', value: 'participate' },
+              { label: '不参与', value: 'skip' },
             ]"
             @update:model-value="setParticipating(requirement.id, $event)"
           />
