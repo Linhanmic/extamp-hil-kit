@@ -42,7 +42,7 @@ npm run lint        # oxlint + eslint
 - 主进程跟随 `package.json` 的 `type: module` 输出 ESM（`dist-electron/main.js`）；预加载脚本在 `sandbox: true` 下必须是 CommonJS，因此单独构建为 `dist-electron/preload.cjs`。
 - 渲染进程通过 `contextIsolation: true` + `nodeIntegration: false` 隔离，Node 能力只经 `contextBridge` 暴露。
 - 生产环境用 `file://` 加载 `dist/index.html`，`vite.config.ts` 里 `base: './'` 保证资源相对路径；路由在 `file:` 协议下自动切换为 hash history。
-- 窗口按**设计尺寸**创建：默认 1472 × 960，最小 1120 × 720。主进程读取主屏 `scaleFactor`，把窗口尺寸折算成 DIP（`1472 / scaleFactor`）、再用 `zoomFactor: 1 / scaleFactor` 反向补偿，因此 1 个布局像素恒等于 1 个物理像素——界面排版不受系统缩放影响，窗口也不会被工作区高度钳制。代价是不跟随 Windows 文本缩放；且当前只按主屏缩放比计算，多显示器不同缩放尚未处理。
+- 窗口默认 1176 × 768（DIP），最小 1120 × 720。窗口与布局一律使用逻辑像素、**不设置 `zoomFactor`**：系统缩放到 125% 时界面按 1.25 倍物理像素呈现，字号跟随用户的缩放偏好，窗口在多显示器之间移动时由 Chromium 自动重排。
 
 ## 界面规范
 

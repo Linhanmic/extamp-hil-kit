@@ -1,28 +1,18 @@
-import { app, BrowserWindow, ipcMain, screen, shell, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
 
 // vite-plugin-electron 在开发模式下注入该变量；生产构建下为空，改为加载本地文件
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
-// 设计基准尺寸，单位为「布局像素」，与物理像素 1:1 对应。
-// Electron 的窗口尺寸走 DIP（受系统缩放影响），因此按主屏 scaleFactor 折算窗口尺寸，
-// 再用同比例的 zoomFactor 反向补偿，保证界面布局始终按 1472 × 960 排版、
-// 1 个布局像素就等于 1 个物理像素；同时窗口不会因为系统缩放被工作区高度钳制。
-const DESIGN_WIDTH = 1472
-const DESIGN_HEIGHT = 960
-const MIN_DESIGN_WIDTH = 1120
-const MIN_DESIGN_HEIGHT = 720
+// 窗口与界面布局一律使用 DIP（逻辑像素），由系统缩放负责整体放大：
+// 不设置 zoomFactor，因此 125% 缩放下界面按 1.25 倍物理像素呈现，字号跟随用户的缩放偏好，
+// 窗口在缩放比不同的显示器之间移动时也由 Chromium 自动重排。
+const WINDOW_WIDTH = 1176
+const WINDOW_HEIGHT = 768
+const MIN_WINDOW_WIDTH = 1120
+const MIN_WINDOW_HEIGHT = 720
 
 let mainWindow: BrowserWindow | null = null
-
-function primaryScaleFactor() {
-  return screen.getPrimaryDisplay().scaleFactor || 1
-}
-
-// Electron 允许的 zoomFactor 区间是 0.5–5，超过 200% 缩放时退到 0.5 保证可用
-function zoomForScale(scaleFactor: number) {
-  return Math.max(0.5, 1 / scaleFactor)
-}
 
 // 无边框窗口下，窗口控制按钮由渲染层自绘，经 IPC 调用这里
 function registerWindowControls() {
@@ -45,14 +35,12 @@ function registerWindowControls() {
 }
 
 function createWindow() {
-  const scaleFactor = primaryScaleFactor()
-
   const win = new BrowserWindow({
-    width: Math.round(DESIGN_WIDTH / scaleFactor),
-    height: Math.round(DESIGN_HEIGHT / scaleFactor),
-    // 桌面端三栏布局的最小可用尺寸（同样是设计尺寸，按缩放折算）
-    minWidth: Math.round(MIN_DESIGN_WIDTH / scaleFactor),
-    minHeight: Math.round(MIN_DESIGN_HEIGHT / scaleFactor),
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    // 桌面端三栏布局的最小可用尺寸，低于此尺寸栅格列会被压破
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     show: false,
     // 无边框：标题栏与窗口控制全部由渲染层实现
     frame: false,
@@ -66,15 +54,15 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      zoomFactor: zoomForScale(scaleFactor),
     },
   })
 
   mainWindow = win
 
-  // 显式再设一次绝对值，避免 Chromium 按 host 记忆的缩放与本次计算叠加
+  // Chromium 会按 host 记住页面缩放并持久化，历史版本用过 zoomFactor 补偿时重启会残留，
+  // 这里显式复位为 1，保证界面始终按系统缩放呈现
   win.webContents.on('did-finish-load', () => {
-    win.webContents.setZoomFactor(zoomForScale(scaleFactor))
+    win.webContents.setZoomFactor(1)
   })
 
   win.once('ready-to-show', () => win.show())
