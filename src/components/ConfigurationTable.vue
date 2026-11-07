@@ -55,7 +55,7 @@ function statusType(issueCount: number) {
 }
 
 function joinVehicles(vehicles: string[]): string {
-  return vehicles.length ? vehicles.join('、') : '—'
+  return vehicles.length ? vehicles.join('/') : '—'
 }
 
 /** 关联需求列只列需求名称（去重），变体内容在展开明细里展示 */
