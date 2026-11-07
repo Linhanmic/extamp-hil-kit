@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { ConfigurationRow, ConfigurationValueRow } from '@/stores/configs'
+import { ref } from 'vue'
+import type { ConfigurationRow } from '@/stores/configs'
 
 /**
- * 配置项表格：一行一个配置项，展开是它的配置值（适用车型、关联变体、操作）。
- * 车型标签区分来源——浅色是关联变体解析出来的，描边是页面直接填写的；
- * 同一车型两边都有时只显示一次。
+ * 配置参数表（对齐 Excel 结构稿）：
+ * 外层一行一个配置项（配置项 · 状态 · 操作），展开后是配置值子表
+ * （配置值 · 关联需求 · 适用车型 · 状态 · 操作），配置值再展开是只读变体明细。
+ * 所有水平布局走 12 列栅格；嵌套层复用外层 12 列，span 按列对齐。
  */
 defineProps<{ rows: ConfigurationRow[] }>()
 
@@ -16,146 +18,313 @@ const emit = defineEmits<{
   deleteValue: [configKey: string, value: string]
 }>()
 
-function manualOnlyVehicles(value: ConfigurationValueRow): string[] {
-  return value.resolved.manualVehicles.filter(
-    (vehicle) => !value.resolved.variantVehicles.includes(vehicle),
-  )
+/** 展开的配置项 config_key */
+const openKeys = ref(new Set<string>())
+/** 展开的配置值 `${config_key}::${value}` */
+const openValueKeys = ref(new Set<string>())
+
+function toggleConfiguration(configKey: string) {
+  const next = new Set(openKeys.value)
+  if (next.has(configKey)) next.delete(configKey)
+  else next.add(configKey)
+  openKeys.value = next
+}
+
+function toggleValue(configKey: string, value: string) {
+  const key = `${configKey}::${value}`
+  const next = new Set(openValueKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  openValueKeys.value = next
+}
+
+function valueRowKey(configKey: string, value: string) {
+  return `${configKey}::${value}`
+}
+
+/** 配置项 / 配置值状态：有关联引用问题 → 待处理，否则正常 */
+function statusText(issueCount: number) {
+  return issueCount > 0 ? '待处理' : '正常'
+}
+
+function statusType(issueCount: number) {
+  return issueCount > 0 ? 'warning' : 'success'
+}
+
+function joinVehicles(vehicles: string[]): string {
+  return vehicles.length ? vehicles.join('、') : '—'
+}
+
+function joinRefs(
+  refs: { requirement_name: string; label: string; status: string }[],
+): string {
+  if (!refs.length) return '—'
+  return refs
+    .map((ref) => {
+      const base = `${ref.requirement_name} · ${ref.label}`
+      if (ref.status === 'missing') return `${base}（失效）`
+      if (ref.status === 'ambiguous') return `${base}（同名需求歧义）`
+      return base
+    })
+    .join('、')
 }
 </script>
 
 <template>
-  <el-table :data="rows" size="small" max-height="420" row-key="config_key">
-    <el-table-column type="expand">
-      <template #default="{ row }">
-        <div class="grid grid-cols-12 gap-2 px-2 py-2">
-          <!-- @grid A：配置值区块头（标题 + 状态 + 操作） -->
-          <div class="col-span-9 flex items-center gap-2">
-            <h4 class="text-[11px] font-medium text-ink">配置值 ({{ row.valueCount }})</h4>
-            <el-tag v-if="row.issueCount" size="small" type="warning" effect="plain">
-              {{ row.issueCount }} 个配置值的变体引用待处理
-            </el-tag>
+  <!-- @grid A：外层表头 / 数据行统一 12 列；嵌套子表复用同一 12 列做列对齐 -->
+  <div class="min-w-0 border border-line">
+    <!-- 表头：配置项 9 · 状态 1.5 → 用 9/2/1 近似，状态与操作各占可对齐轨道 -->
+    <!-- 实际 span：配置项 9 · 状态 2 · 操作 1（操作内再分编辑/删除），合计 12 -->
+    <div
+      class="grid grid-cols-12 items-center gap-0 border-b border-line bg-surface-soft text-[11px] font-medium text-ink"
+    >
+      <div class="col-span-9 px-3 py-2">配置项</div>
+      <div class="col-span-2 px-2 py-2 text-center">状态</div>
+      <div class="col-span-1 px-2 py-2 text-center">操作</div>
+    </div>
+
+    <template v-for="row in rows" :key="row.config_key">
+      <!-- 配置项行 -->
+      <div class="grid grid-cols-12 items-center gap-0 border-b border-line">
+        <div class="col-span-9 flex min-w-0 items-center gap-1 px-2 py-2">
+          <button
+            type="button"
+            class="grid size-5 shrink-0 place-items-center rounded text-ink-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+            :aria-expanded="openKeys.has(row.config_key)"
+            :aria-label="`${openKeys.has(row.config_key) ? '收起' : '展开'}配置项 ${row.config_key}`"
+            @click="toggleConfiguration(row.config_key)"
+          >
+            <svg
+              class="size-3"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                v-if="openKeys.has(row.config_key)"
+                d="M4 6.5 8 10.5 12 6.5"
+              />
+              <path v-else d="M6.5 4 10.5 8 6.5 12" />
+            </svg>
+          </button>
+          <span class="min-w-0 truncate text-[13px] text-ink" :title="row.config_key">
+            {{ row.config_key }}
+          </span>
+          <el-tag size="small" type="info" effect="plain" class="shrink-0">
+            {{ row.valueCount }} 值
+          </el-tag>
+          <el-tag size="small" type="info" effect="plain" class="shrink-0">
+            {{ row.vehicleCount }} 车型
+          </el-tag>
+        </div>
+        <div class="col-span-2 px-2 py-2 text-center">
+          <el-tag size="small" :type="statusType(row.issueCount)" effect="plain">
+            {{ statusText(row.issueCount) }}
+          </el-tag>
+        </div>
+        <div class="col-span-1 flex items-center justify-center gap-0 px-1 py-2">
+          <el-button
+            type="primary"
+            link
+            size="small"
+            @click="emit('editConfiguration', row.config_key)"
+          >
+            编辑
+          </el-button>
+          <el-popconfirm
+            :title="`删除配置项「${row.config_key}」及其全部配置值？`"
+            confirm-button-text="删除"
+            cancel-button-text="取消"
+            width="220"
+            @confirm="emit('deleteConfiguration', row.config_key)"
+          >
+            <template #reference>
+              <el-button type="danger" link size="small">删除</el-button>
+            </template>
+          </el-popconfirm>
+        </div>
+      </div>
+
+      <!-- 展开：配置值子表 -->
+      <div v-if="openKeys.has(row.config_key)" class="border-b border-line bg-surface-soft/40">
+        <!-- 子表头：与外层 12 列对齐——配置值 3 · 关联需求 3 · 适用车型 3 · 状态 2 · 操作 1 -->
+        <div class="grid grid-cols-12 items-center gap-0 border-b border-line/60">
+          <div class="col-span-3 px-3 py-1.5 pl-8 text-[11px] font-medium text-ink-muted">
+            配置值
           </div>
-          <div class="col-span-3 justify-self-end">
-            <el-button size="small" type="primary" link @click="emit('addValue', row.config_key)">
-              新增配置值
-            </el-button>
+          <div class="col-span-3 px-2 py-1.5 text-[11px] font-medium text-ink-muted">
+            关联需求
           </div>
-
-          <div class="col-span-12 min-w-0">
-            <p v-if="!row.values.length" class="text-[11px] text-ink-muted">
-              这个配置项还没有配置值
-            </p>
-            <!-- @grid A：每个配置值一行，配置值 3 · 车型与变体 6 · 操作 3 -->
-            <div v-else class="flex flex-col gap-1">
-              <div
-                v-for="value in row.values"
-                :key="value.value"
-                class="grid grid-cols-12 items-start gap-2 rounded-md bg-surface-soft px-2 py-1.5"
-              >
-                <p
-                  class="col-span-3 min-w-0 truncate text-[11px] font-medium text-ink"
-                  :title="value.value"
-                >
-                  {{ value.value }}
-                </p>
-
-                <div class="col-span-6 flex min-w-0 flex-col gap-1">
-                  <div class="flex flex-wrap items-center gap-1">
-                    <span class="text-[11px] text-ink-muted">车型</span>
-                    <el-tag
-                      v-for="vehicle in value.resolved.variantVehicles"
-                      :key="`variant-${vehicle}`"
-                      size="small"
-                      type="info"
-                      effect="plain"
-                    >
-                      {{ vehicle }}
-                    </el-tag>
-                    <el-tag
-                      v-for="vehicle in manualOnlyVehicles(value)"
-                      :key="`manual-${vehicle}`"
-                      size="small"
-                      effect="plain"
-                    >
-                      {{ vehicle }}
-                    </el-tag>
-                    <span v-if="!value.resolved.vehicles.length" class="text-[11px] text-ink-muted">
-                      未确定
-                    </span>
-                  </div>
-
-                  <div class="flex flex-wrap items-center gap-1">
-                    <span class="text-[11px] text-ink-muted">变体</span>
-                    <el-tag
-                      v-for="ref in value.resolved.refs"
-                      :key="`${ref.requirement_name}-${ref.variant_key}`"
-                      size="small"
-                      :type="ref.status === 'ok' ? 'info' : 'danger'"
-                      effect="plain"
-                    >
-                      {{ ref.requirement_name }} · {{ ref.label }}
-                      <template v-if="ref.status === 'missing'">（失效）</template>
-                      <template v-else-if="ref.status === 'ambiguous'">（同名需求歧义）</template>
-                    </el-tag>
-                    <span v-if="!value.resolved.refs.length" class="text-[11px] text-ink-muted">
-                      未关联
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-span-3 flex items-center justify-end gap-1">
-                  <el-button
-                    type="primary"
-                    link
-                    @click="emit('editValue', row.config_key, value.value)"
-                  >
-                    编辑
-                  </el-button>
-                  <el-popconfirm
-                    :title="`删除配置值「${value.value}」？`"
-                    confirm-button-text="删除"
-                    cancel-button-text="取消"
-                    width="200"
-                    @confirm="emit('deleteValue', row.config_key, value.value)"
-                  >
-                    <template #reference>
-                      <el-button type="danger" link>删除</el-button>
-                    </template>
-                  </el-popconfirm>
-                </div>
-              </div>
-            </div>
+          <div class="col-span-3 px-2 py-1.5 text-[11px] font-medium text-ink-muted">
+            适用车型
+          </div>
+          <div class="col-span-2 px-2 py-1.5 text-center text-[11px] font-medium text-ink-muted">
+            状态
+          </div>
+          <div class="col-span-1 px-2 py-1.5 text-center text-[11px] font-medium text-ink-muted">
+            操作
           </div>
         </div>
-      </template>
-    </el-table-column>
 
-    <el-table-column prop="config_key" label="配置项" min-width="140" show-overflow-tooltip />
-    <el-table-column label="配置值" width="72" align="center">
-      <template #default="{ row }">
-        <el-tag size="small" round type="info" effect="plain">{{ row.valueCount }}</el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column label="车型" width="64" align="center">
-      <template #default="{ row }">{{ row.vehicleCount }}</template>
-    </el-table-column>
-    <el-table-column label="操作" width="120" align="center">
-      <template #default="{ row }">
-        <el-button type="primary" link @click="emit('editConfiguration', row.config_key)">
-          编辑
-        </el-button>
-        <el-popconfirm
-          :title="`删除配置项「${row.config_key}」及其全部配置值？`"
-          confirm-button-text="删除"
-          cancel-button-text="取消"
-          width="220"
-          @confirm="emit('deleteConfiguration', row.config_key)"
+        <p
+          v-if="!row.values.length"
+          class="px-3 py-3 pl-8 text-[11px] text-ink-muted"
         >
-          <template #reference>
-            <el-button type="danger" link>删除</el-button>
-          </template>
-        </el-popconfirm>
-      </template>
-    </el-table-column>
-  </el-table>
+          这个配置项还没有配置值
+          <el-button
+            type="primary"
+            link
+            size="small"
+            class="ml-2"
+            @click="emit('addValue', row.config_key)"
+          >
+            新增配置值
+          </el-button>
+        </p>
+
+        <template v-for="value in row.values" :key="valueRowKey(row.config_key, value.value)">
+          <!-- 配置值行 -->
+          <div class="grid grid-cols-12 items-start gap-0 border-b border-line/40">
+            <div class="col-span-3 flex min-w-0 items-start gap-1 px-2 py-2 pl-8">
+              <button
+                type="button"
+                class="mt-0.5 grid size-4 shrink-0 place-items-center rounded text-ink-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+                :aria-expanded="openValueKeys.has(valueRowKey(row.config_key, value.value))"
+                :aria-label="`${openValueKeys.has(valueRowKey(row.config_key, value.value)) ? '收起' : '展开'}变体明细`"
+                @click="toggleValue(row.config_key, value.value)"
+              >
+                <svg
+                  class="size-2.5"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    v-if="openValueKeys.has(valueRowKey(row.config_key, value.value))"
+                    d="M4 6.5 8 10.5 12 6.5"
+                  />
+                  <path v-else d="M6.5 4 10.5 8 6.5 12" />
+                </svg>
+              </button>
+              <span
+                class="min-w-0 break-all text-[12px] font-medium text-ink"
+                :title="value.value"
+              >
+                {{ value.value }}
+              </span>
+            </div>
+            <div class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink" :title="joinRefs(value.resolved.refs)">
+              {{ joinRefs(value.resolved.refs) }}
+            </div>
+            <div
+              class="col-span-3 min-w-0 px-2 py-2 text-[11px] text-ink"
+              :title="joinVehicles(value.resolved.vehicles)"
+            >
+              {{ joinVehicles(value.resolved.vehicles) }}
+            </div>
+            <div class="col-span-2 px-2 py-2 text-center">
+              <el-tag
+                size="small"
+                :type="value.resolved.hasIssue ? 'warning' : 'success'"
+                effect="plain"
+              >
+                {{ value.resolved.hasIssue ? '待处理' : '正常' }}
+              </el-tag>
+            </div>
+            <div class="col-span-1 flex flex-col items-center gap-0 px-1 py-1">
+              <el-button
+                type="primary"
+                link
+                size="small"
+                @click="emit('editValue', row.config_key, value.value)"
+              >
+                编辑
+              </el-button>
+              <el-popconfirm
+                :title="`删除配置值「${value.value}」？`"
+                confirm-button-text="删除"
+                cancel-button-text="取消"
+                width="200"
+                @confirm="emit('deleteValue', row.config_key, value.value)"
+              >
+                <template #reference>
+                  <el-button type="danger" link size="small">删除</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
+          </div>
+
+          <!-- 变体明细（只读）：需求名称 · 变体键 | 车型 -->
+          <div
+            v-if="openValueKeys.has(valueRowKey(row.config_key, value.value))"
+            class="border-b border-line/30"
+          >
+            <p
+              v-if="!value.resolved.refs.length"
+              class="px-3 py-1.5 pl-14 text-[11px] text-ink-muted"
+            >
+              未关联需求变体；可在配置值里关联变体或手工填写车型
+            </p>
+            <div
+              v-for="ref in value.resolved.refs"
+              :key="`${ref.requirement_name}-${ref.variant_key}`"
+              class="grid grid-cols-12 items-center gap-0"
+            >
+              <!-- 需求名称 3 · 变体键 3 · 车型 3 · 状态 2 · 操作 1（操作留空） -->
+              <div class="col-span-3 flex min-w-0 items-center gap-2 px-2 py-1.5 pl-14">
+                <span class="min-w-0 truncate text-[11px] text-ink" :title="ref.requirement_name">
+                  {{ ref.requirement_name }}
+                </span>
+              </div>
+              <div class="col-span-3 min-w-0 px-2 py-1.5">
+                <el-tag size="small" :type="ref.status === 'ok' ? 'info' : 'danger'" effect="plain">
+                  {{ ref.label }}
+                  <template v-if="ref.status === 'missing'">（失效）</template>
+                  <template v-else-if="ref.status === 'ambiguous'">（同名需求歧义）</template>
+                </el-tag>
+              </div>
+              <div
+                class="col-span-3 min-w-0 px-2 py-1.5 text-[11px] text-ink-muted"
+                :title="joinVehicles(ref.vehicles)"
+              >
+                {{ joinVehicles(ref.vehicles) }}
+              </div>
+              <div class="col-span-2 px-2 py-1.5 text-center">
+                <el-tag
+                  size="small"
+                  :type="ref.status === 'ok' ? 'success' : 'danger'"
+                  effect="plain"
+                >
+                  {{ ref.status === 'ok' ? '正常' : ref.status === 'ambiguous' ? '歧义' : '失效' }}
+                </el-tag>
+              </div>
+              <div class="col-span-1" />
+            </div>
+          </div>
+        </template>
+
+        <!-- 子表底栏：新增配置值 -->
+        <div class="grid grid-cols-12 items-center gap-0 py-1.5">
+          <div class="col-span-9 pl-8">
+            <el-button
+              type="primary"
+              link
+              size="small"
+              @click="emit('addValue', row.config_key)"
+            >
+              ＋ 新增配置值
+            </el-button>
+          </div>
+          <div class="col-span-2" />
+          <div class="col-span-1" />
+        </div>
+      </div>
+    </template>
+  </div>
 </template>

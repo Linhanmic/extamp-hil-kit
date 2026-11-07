@@ -47,3 +47,7 @@ __screenshots__/
 
 # 本地图标/界面探针截图
 *probe*.png
+
+# 临时原型与冒烟脚本
+docs/.proto-smoke.*
+docs/config-display-prototype.html
