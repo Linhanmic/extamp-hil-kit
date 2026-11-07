@@ -42,3 +42,9 @@ export interface ConceptsDeleteOutcome {
   error?: string
   deleted?: boolean
 }
+
+/** 按车型生成 cpt 的结果 */
+export interface ConceptGenerateOutcome {
+  error?: string
+  saved?: ConceptsSavedState
+}

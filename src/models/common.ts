@@ -82,6 +82,7 @@ export interface ProjectSettings {
   snapshotDir: string//扬声器快照所在目录
   volumeTablePath: string//音量表文件
   slotMappingPath: string//SLOT 映射配置文件
+  conceptOutputDir: string//按车型生成 cpt 的目录；空表示 specs
   requirementsImport: RequirementsImportDefaults
 }
 /** settings.json 的文件结构：结构约定见 docs/settings-json.md */

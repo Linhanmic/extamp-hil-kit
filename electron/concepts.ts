@@ -5,18 +5,20 @@
  * 读写 / 删除前校验目标路径确实在 <项目>/specs 之内，避免越界操作。
  */
 import { mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep, basename } from 'node:path'
 import { ipcMain } from 'electron'
 import type {
   ConceptFileContent,
   ConceptFileInfo,
   ConceptsDeleteOutcome,
+  ConceptGenerateOutcome,
   ConceptsListOutcome,
   ConceptsReadOutcome,
   ConceptsSavedState,
   ConceptsWriteOutcome,
 } from '../src/models'
 import { readWorkspace } from './workspace'
+import { readSettings, resolveProjectPath } from './settings-store'
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -58,6 +60,39 @@ function listConceptFiles(dir: string): string[] {
     }
   }
   return result
+}
+
+/** 按车型生成一个 cpt 到设置中的生成目录；默认 specs */
+export function generateConceptFile(
+  projectPath: string,
+  fileName: string,
+  text: string,
+): ConceptGenerateOutcome {
+  if (typeof fileName !== 'string' || basename(fileName) !== fileName || !fileName.endsWith('.cpt')) {
+    return { error: '生成的 cpt 文件名不正确' }
+  }
+  if (typeof text !== 'string' || !text.trim()) {
+    return { error: '生成的 cpt 内容不能为空' }
+  }
+
+  try {
+    const configured = readSettings(projectPath).document?.settings.conceptOutputDir ?? ''
+    const base = resolveProjectPath(projectPath, configured, 'specs')
+    const target = resolve(base, fileName)
+    if (!target.startsWith(base + sep)) {
+      return { error: '生成文件路径不在 cpt 生成目录内' }
+    }
+    mkdirSync(base, { recursive: true })
+    writeFileSync(target, text, 'utf8')
+    return {
+      saved: {
+        filePath: target,
+        updatedAt: statSync(target).mtime.toISOString(),
+      },
+    }
+  } catch (error) {
+    return { error: `cpt 文件生成失败：${errorMessage(error)}` }
+  }
 }
 
 export function registerConceptsIpc() {
@@ -121,6 +156,12 @@ export function registerConceptsIpc() {
     } catch (error) {
       return { error: `封装文件无法写入：${errorMessage(error)}` } satisfies ConceptsWriteOutcome
     }
+  })
+
+  handle('concepts:generate', (_event, fileName: string, text: string) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies ConceptGenerateOutcome
+    return generateConceptFile(project.path, fileName, text)
   })
 
   handle('concepts:delete', (_event, path: string) => {

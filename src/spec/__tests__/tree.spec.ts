@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSpecTree, specDisplayName } from '../tree'
+import { buildSpecTree, specCheckState, specFilePaths } from '../tree'
 
 describe('buildSpecTree', () => {
   it('从 specs 下一层构建层级，目录优先，空目录不出现', () => {
@@ -18,8 +18,18 @@ describe('buildSpecTree', () => {
     })
   })
 
-  it('文件名显示不带 spec 后缀', () => {
-    expect(specDisplayName('example.spec')).toBe('example')
-    expect(specDisplayName('example.SPEC')).toBe('example')
+  it('目录按后代文件计算级联三态', () => {
+    const tree = buildSpecTree([
+      { name: 'nested/a.spec', path: '/specs/nested/a.spec' },
+      { name: 'nested/b.spec', path: '/specs/nested/b.spec' },
+      { name: 'root.spec', path: '/specs/root.spec' },
+    ])
+    const nested = tree[0]!
+    expect(specFilePaths(nested)).toEqual(['/specs/nested/a.spec', '/specs/nested/b.spec'])
+    expect(specCheckState(nested, new Set())).toBe('unchecked')
+    expect(specCheckState(nested, new Set(['/specs/nested/a.spec']))).toBe('indeterminate')
+    expect(
+      specCheckState(nested, new Set(['/specs/nested/a.spec', '/specs/nested/b.spec'])),
+    ).toBe('checked')
   })
 })

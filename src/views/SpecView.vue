@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import SpecTreeNodeItem from '@/components/SpecTreeNodeItem.vue'
-import { buildSpecTree, specDisplayName } from '@/spec/tree'
+import { buildSpecTree, specCheckState, specDisplayName, specFilePaths } from '@/spec/tree'
+import type { SpecTreeNode } from '@/spec/tree'
 import { useSpecsStore } from '@/stores/specs'
 
 /**
@@ -14,6 +15,23 @@ const applying = ref(false)
 const selectedPath = ref('')
 const treeOpen = ref(true)
 const collapseVersion = ref(0)
+const checkedPaths = ref(new Set<string>())
+const rootNode = computed<SpecTreeNode>(() => ({
+  type: 'directory',
+  name: '规格书',
+  path: '',
+  children: tree.value,
+}))
+const rootCheckState = computed(() => specCheckState(rootNode.value, checkedPaths.value))
+
+function onToggle(node: SpecTreeNode, checked: boolean) {
+  const next = new Set(checkedPaths.value)
+  for (const path of specFilePaths(node)) {
+    if (checked) next.add(path)
+    else next.delete(path)
+  }
+  checkedPaths.value = next
+}
 
 function toggleTree() {
   if (treeOpen.value) {
@@ -133,18 +151,27 @@ async function onApply() {
         <div class="col-span-3">
           <div class="max-h-[65vh] overflow-y-auto border border-line py-1">
             <!-- 根节点：规格书，一键折叠全部子目录 -->
-            <button
-              type="button"
-              class="flex w-full items-center gap-1 px-2 py-1 text-left text-[11px] font-medium text-ink outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
-              :title="treeOpen ? '一键折叠全部目录' : '展开规格书目录'"
-              @click="toggleTree"
-            >
+            <div class="flex items-center">
+              <el-checkbox
+                size="small"
+                :model-value="rootCheckState === 'checked'"
+                :indeterminate="rootCheckState === 'indeterminate'"
+                aria-label="选择全部规格书"
+                @change="onToggle(rootNode, rootCheckState !== 'checked')"
+              />
+              <button
+                type="button"
+                class="flex min-w-0 flex-1 items-center gap-1 px-1 py-1 text-left text-[11px] font-medium text-ink outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+                :title="treeOpen ? '一键折叠全部目录' : '展开规格书目录'"
+                @click="toggleTree"
+              >
               <svg class="size-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
                 <path v-if="treeOpen" d="M4 6.5 8 10.5 12 6.5" />
                 <path v-else d="M6.5 4 10.5 8 6.5 12" />
               </svg>
               <span>规格书</span>
-            </button>
+              </button>
+            </div>
             <template v-if="treeOpen">
               <SpecTreeNodeItem
                 v-for="node in tree"
@@ -152,8 +179,11 @@ async function onApply() {
                 :node="node"
                 :depth="0"
                 :selected-path="selectedEntry?.path ?? ''"
+                selectable
+                :checked-paths="checkedPaths"
                 :collapse-version="collapseVersion"
                 @select="selectedPath = $event"
+                @toggle="onToggle"
               />
             </template>
           </div>

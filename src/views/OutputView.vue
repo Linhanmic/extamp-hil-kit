@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useOutputStore } from '@/stores/output'
+import { useConceptsStore } from '@/stores/concepts'
+import { extractParams, serializeConcepts, validateConcepts } from '@/spec/concept-file'
 
 /**
  * 出声位置：场景文本 + 车型单选筛选。
  * 场景下方为适用车型，底部为出声 / 不出声扬声器关键字。
  */
 const store = useOutputStore()
+const conceptsStore = useConceptsStore()
 const keyword = ref('')
 const vehicleFilter = ref('')
+const generating = ref(false)
 
 const vehicleOptions = computed(() => {
   const names = new Set<string>()
@@ -44,6 +49,40 @@ function vehicleText(scenario: { allVehicles: boolean; vehicles: string[] }): st
 function keywordText(keywords: string[]): string {
   return keywords.length ? keywords.join('、') : '-'
 }
+
+/** 按当前车型筛选生成一个 cpt；全部车型场景也会包含 */
+async function generateVehicleCpt() {
+  const vehicle = vehicleFilter.value
+  const api = window.desktop?.concepts
+  if (!vehicle || !api?.generate) return
+
+  const concepts = filteredScenarios.value
+    .filter((scenario) => scenario.steps.length)
+    .map((scenario) => ({
+      heading: scenario.title || '未命名场景',
+      params: extractParams(scenario.title),
+      steps: scenario.steps.map((text) => ({ text, table: null })),
+    }))
+  const issues = validateConcepts(concepts)
+  if (issues.length) {
+    ElMessage.error(issues[0]!.message)
+    return
+  }
+
+  generating.value = true
+  try {
+    const fileName = `${vehicle.replace(/[\\/:*?"<>|]/g, '_')}.cpt`
+    const outcome = await api.generate(fileName, serializeConcepts(concepts))
+    if (outcome.saved) {
+      ElMessage.success(`已生成 ${outcome.saved.filePath}`)
+      await conceptsStore.load()
+    } else {
+      ElMessage.error(outcome.error ?? '生成 cpt 失败')
+    }
+  } finally {
+    generating.value = false
+  }
+}
 </script>
 
 <!--
@@ -54,10 +93,19 @@ function keywordText(keywords: string[]): string {
   <div class="flex flex-col gap-3">
     <div class="w-[calc(11.5/12*100%)]">
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-12 flex flex-wrap items-center gap-2">
+        <div class="col-span-7">
           <h1 class="text-lg font-medium text-ink">出声位置</h1>
-          <el-tag size="small" type="info" effect="plain">{{ store.scenarioCount }} 个场景</el-tag>
-          <el-tag size="small" type="info" effect="plain">{{ store.speakerCount }} 个出声位置</el-tag>
+        </div>
+        <div class="col-span-5 justify-self-end">
+          <el-button
+            size="small"
+            type="primary"
+            :loading="generating"
+            :disabled="!vehicleFilter || !filteredScenarios.some((scenario) => scenario.steps.length)"
+            @click="generateVehicleCpt"
+          >
+            按车型生成 CPT
+          </el-button>
         </div>
       </div>
 

@@ -13,6 +13,7 @@ function sampleSettings(): ProjectSettings {
     snapshotDir: 'config/扬声器快照',
     volumeTablePath: '',
     slotMappingPath: 'config/SLOT映射/mapping.ini',
+    conceptOutputDir: 'specs',
     requirementsImport: {
       filePath: '',
       sheetName: '6、软件需求分析表',

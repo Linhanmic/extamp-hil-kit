@@ -1,18 +1,25 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { SpecTreeNode } from '@/spec/tree'
-import { specDisplayName } from '@/spec/tree'
+import { specCheckState, specDisplayName } from '@/spec/tree'
 
 const props = defineProps<{
   node: SpecTreeNode
   depth: number
   selectedPath: string
+  /** 仅规格书树开启 checkbox；封装库复用树但不显示 */
+  selectable?: boolean
+  checkedPaths?: Set<string>
   /** 根节点一键折叠时递增，所有目录同时收起 */
   collapseVersion?: number
 }>()
 
-const emit = defineEmits<{ select: [path: string] }>()
+const emit = defineEmits<{
+  select: [path: string]
+  toggle: [node: SpecTreeNode, checked: boolean]
+}>()
 const open = ref(true)
+const checkState = computed(() => specCheckState(props.node, props.checkedPaths ?? new Set()))
 
 watch(
   () => props.collapseVersion,
@@ -20,35 +27,50 @@ watch(
     open.value = false
   },
 )
+
+function toggleChecked() {
+  emit('toggle', props.node, checkState.value !== 'checked')
+}
 </script>
 
 <template>
   <div>
-    <button
-      v-if="props.node.type === 'directory'"
-      type="button"
-      class="flex w-full items-center gap-1 px-2 py-1 text-left text-[11px] text-ink-muted outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
-      :style="{ paddingLeft: `${props.depth * 12 + 8}px` }"
-      @click="open = !open"
+    <div
+      class="flex items-center"
+      :style="{ paddingLeft: `${props.depth * 12 + 4}px` }"
     >
-      <svg class="size-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
-        <path v-if="open" d="M4 6.5 8 10.5 12 6.5" />
-        <path v-else d="M6.5 4 10.5 8 6.5 12" />
-      </svg>
-      <span class="truncate">{{ props.node.name }}</span>
-    </button>
+      <el-checkbox
+        v-if="props.selectable"
+        size="small"
+        :model-value="checkState === 'checked'"
+        :indeterminate="checkState === 'indeterminate'"
+        :aria-label="`选择${props.node.name}`"
+        @change="toggleChecked"
+      />
+      <button
+        v-if="props.node.type === 'directory'"
+        type="button"
+        class="flex min-w-0 flex-1 items-center gap-1 px-1 py-1 text-left text-[11px] text-ink-muted outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+        @click="open = !open"
+      >
+        <svg class="size-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path v-if="open" d="M4 6.5 8 10.5 12 6.5" />
+          <path v-else d="M6.5 4 10.5 8 6.5 12" />
+        </svg>
+        <span class="truncate">{{ props.node.name }}</span>
+      </button>
 
-    <button
-      v-else
-      type="button"
-      class="w-full truncate px-2 py-1 text-left text-[11px] outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
-      :class="selectedPath === props.node.path ? 'bg-primary/10 text-primary' : 'text-ink'"
-      :style="{ paddingLeft: `${props.depth * 12 + 8}px` }"
-      :title="props.node.name"
-      @click="emit('select', props.node.path)"
-    >
-      {{ specDisplayName(props.node.name) }}
-    </button>
+      <button
+        v-else
+        type="button"
+        class="min-w-0 flex-1 truncate px-1 py-1 text-left text-[11px] outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+        :class="selectedPath === props.node.path ? 'bg-primary/10 text-primary' : 'text-ink'"
+        :title="props.node.name"
+        @click="emit('select', props.node.path)"
+      >
+        {{ specDisplayName(props.node.name) }}
+      </button>
+    </div>
 
     <template v-if="props.node.type === 'directory' && open">
       <SpecTreeNodeItem
@@ -57,8 +79,11 @@ watch(
         :node="child"
         :depth="props.depth + 1"
         :selected-path="selectedPath"
+        :selectable="selectable"
+        :checked-paths="checkedPaths"
         :collapse-version="collapseVersion"
         @select="emit('select', $event)"
+        @toggle="(node, checked) => emit('toggle', node, checked)"
       />
     </template>
   </div>

@@ -65,6 +65,8 @@ contextBridge.exposeInMainWorld('desktop', {
     read: (path: string) => ipcRenderer.invoke('concepts:read', path),
     write: (path: string, text: string) => ipcRenderer.invoke('concepts:write', path, text),
     delete: (path: string) => ipcRenderer.invoke('concepts:delete', path),
+    generate: (fileName: string, text: string) =>
+      ipcRenderer.invoke('concepts:generate', fileName, text),
   },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),

@@ -13,6 +13,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   snapshotDir: '',
   volumeTablePath: '',
   slotMappingPath: '',
+  conceptOutputDir: 'specs',
   requirementsImport: {
     filePath: '',
     sheetName: '',

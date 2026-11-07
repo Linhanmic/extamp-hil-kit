@@ -21,6 +21,7 @@
 | `configsPath` | `configs:load` / `configs:save` 读写配置参数 |
 | `outputPath` | `output:load` 读取出声位置文件 |
 | `snapshotDir` / `volumeTablePath` / `slotMappingPath` | `snapshot:load` / `meter:load` / `slot-map:load` 读取快照、音量表、SLOT 映射 |
+| `conceptOutputDir` | `concepts:generate` 按车型生成 cpt；空串回落到 `specs` |
 | `requirementsImport` | 需求导入弹窗：文件选择器的起始路径、工作表与列映射的默认值 |
 
 ## JSON Schema（2020-12）

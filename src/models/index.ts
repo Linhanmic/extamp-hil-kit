@@ -85,4 +85,5 @@ export type {
   ConceptsSavedState,
   ConceptsWriteOutcome,
   ConceptsDeleteOutcome,
+  ConceptGenerateOutcome,
 } from './concept'

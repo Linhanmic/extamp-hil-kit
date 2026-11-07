@@ -46,3 +46,19 @@ export function buildSpecTree(files: { name: string; path: string }[]): SpecTree
 export function specDisplayName(fileName: string): string {
   return fileName.replace(/\.spec$/i, '')
 }
+
+export type SpecCheckState = 'checked' | 'unchecked' | 'indeterminate'
+
+export function specFilePaths(node: SpecTreeNode): string[] {
+  if (node.type === 'file') return [node.path]
+  return node.children.flatMap(specFilePaths)
+}
+
+/** 目录按后代文件计算三态；空目录或未选为 unchecked */
+export function specCheckState(node: SpecTreeNode, checked: Set<string>): SpecCheckState {
+  const paths = specFilePaths(node)
+  if (!paths.length) return 'unchecked'
+  const count = paths.filter((path) => checked.has(path)).length
+  if (count === 0) return 'unchecked'
+  return count === paths.length ? 'checked' : 'indeterminate'
+}

@@ -1,5 +1,6 @@
 import type {
   ConceptsDeleteOutcome,
+  ConceptGenerateOutcome,
   ConceptsListOutcome,
   ConceptsReadOutcome,
   ConceptsWriteOutcome,
@@ -116,6 +117,8 @@ export interface DesktopBridge {
     write: (path: string, text: string) => Promise<ConceptsWriteOutcome>
     /** 删除一个封装文件 */
     delete: (path: string) => Promise<ConceptsDeleteOutcome>
+    /** 按车型生成一个 cpt 到设置中的生成目录 */
+    generate: (fileName: string, text: string) => Promise<ConceptGenerateOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */
