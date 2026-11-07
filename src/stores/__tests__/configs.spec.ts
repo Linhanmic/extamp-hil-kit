@@ -154,7 +154,7 @@ describe('useConfigsStore 读取与派生', () => {
       vehicles: ['EFSS'],
       variantVehicles: ['EFSS'],
       specialRules: [],
-      hasIssue: false,
+      status: 'normal',
     })
     expect(values[1]?.resolved).toMatchObject({
       vehicles: ['HFAF'],
@@ -182,14 +182,38 @@ describe('useConfigsStore 读取与派生', () => {
     ).toEqual(['EFSS'])
   })
 
-  it('引用不到的需求标为失效，同名需求标为歧义，都不参与车型合并', async () => {
+  it('引用不到的需求或无法唯一确定的变体都标为失效，配置值与配置项为异常', async () => {
     const { store } = await storeWithData({ document: configsDocument() })
     const refs = store.rows[0]?.values[2]?.resolved.refs ?? []
 
     expect(refs[0]).toMatchObject({ requirement_name: '失联需求', status: 'missing', vehicles: [] })
-    expect(refs[1]).toMatchObject({ requirement_name: '音量控制', status: 'ambiguous', vehicles: [] })
-    expect(store.rows[0]?.values[2]?.resolved.hasIssue).toBe(true)
-    expect(store.rows[0]?.issueCount).toBe(1)
+    expect(refs[1]).toMatchObject({ requirement_name: '音量控制', status: 'missing', vehicles: [] })
+    expect(store.rows[0]?.values[2]?.resolved.status).toBe('error')
+    expect(store.rows[0]?.status).toBe('error')
+  })
+
+  it('无关联且无特殊配置为浮空；空配置项也浮空；特殊规则命中 0 仍为正常', async () => {
+    const { store } = await storeWithData({ document: configsDocument() })
+
+    await store.addConfiguration('空配置项')
+    expect(store.rows.find((row) => row.config_key === '空配置项')?.status).toBe('floating')
+
+    await store.addConfigValue('空配置项', {
+      value: '浮空值',
+      relay_variants: [],
+      special_vehicles: [],
+    })
+    expect(store.rows.find((row) => row.config_key === '空配置项')?.status).toBe('floating')
+
+    await store.updateConfigValue('空配置项', '浮空值', {
+      value: '浮空值',
+      relay_variants: [],
+      special_vehicles: [{ match: 'starts_with', text: '不存在' }],
+    })
+    const row = store.rows.find((item) => item.config_key === '空配置项')
+    expect(row?.values[0]?.resolved.vehicles).toEqual([])
+    expect(row?.values[0]?.resolved.status).toBe('normal')
+    expect(row?.status).toBe('normal')
   })
 
   it('变体标签取变体内容的第一条文本，空内容显示为无变体差异', async () => {

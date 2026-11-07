@@ -11,8 +11,11 @@ import type {
 } from '@/models'
 import { useRequirementsStore } from './requirements'
 
-/** 变体引用的解析状态：正常 / 同名需求歧义 / 找不到需求或变体 */
-export type VariantRefStatus = 'ok' | 'ambiguous' | 'missing'
+/** 变体引用的解析状态：能在需求中找到为正常，否则失效 */
+export type VariantRefStatus = 'ok' | 'missing'
+
+/** 配置项 / 配置值状态 */
+export type ConfigurationStatus = 'normal' | 'floating' | 'error'
 
 /** 解析后的变体引用：车型与标签来自当前已导入的需求数据 */
 export interface ResolvedVariantRef {
@@ -31,8 +34,12 @@ export interface ResolvedConfigValue {
   variantVehicles: string[]
   specialRules: SpecialVehicleRule[]
   refs: ResolvedVariantRef[]
-  /** 存在失效或歧义的变体引用 */
-  hasIssue: boolean
+  /**
+   * 正常：全部关联变体有效，或无关联但有特殊车型配置；
+   * 浮空：无关联且无特殊车型配置；异常：存在失效关联变体。
+   * 特殊规则是否命中车型不影响“已配置”判定。
+   */
+  status: ConfigurationStatus
 }
 
 export interface ConfigurationValueRow extends ConfigValue {
@@ -45,7 +52,8 @@ export interface ConfigurationRow {
   values: ConfigurationValueRow[]
   valueCount: number
   vehicleCount: number
-  issueCount: number
+  /** 异常 > 浮空 > 正常；没有配置值也归为浮空 */
+  status: ConfigurationStatus
 }
 
 /** 配置值编辑弹窗的输入 */
@@ -103,16 +111,8 @@ export const useConfigsStore = defineStore('configs', () => {
 
   function resolveRef(ref: VariantRef): ResolvedVariantRef {
     const candidates = requirementsByName.value.get(ref.requirement_name) ?? []
-    if (candidates.length > 1) {
-      return {
-        ...ref,
-        label: variantLabel(undefined, ref.variant_key),
-        status: 'ambiguous',
-        vehicles: [],
-      }
-    }
-
-    const requirement = candidates[0]
+    // 找不到需求，或同名需求导致无法确定唯一引用，都按失效处理
+    const requirement = candidates.length === 1 ? candidates[0] : undefined
     const index = requirement
       ? requirement.variants.findIndex((variant) => variant.key === ref.variant_key)
       : -1
@@ -183,7 +183,11 @@ export const useConfigsStore = defineStore('configs', () => {
       variantVehicles,
       specialRules,
       refs,
-      hasIssue: refs.some((ref) => ref.status !== 'ok'),
+      status: refs.some((ref) => ref.status === 'missing')
+        ? 'error'
+        : !refs.length && !specialRules.length
+          ? 'floating'
+          : 'normal',
     }
   }
 
@@ -202,7 +206,13 @@ export const useConfigsStore = defineStore('configs', () => {
         values,
         valueCount: values.length,
         vehicleCount: vehicles.size,
-        issueCount: values.filter((value) => value.resolved.hasIssue).length,
+        status: !values.length
+          ? 'floating'
+          : values.some((value) => value.resolved.status === 'error')
+            ? 'error'
+            : values.some((value) => value.resolved.status === 'floating')
+              ? 'floating'
+              : 'normal',
       }
     }),
   )

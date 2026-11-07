@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { ConfigurationRow } from '@/stores/configs'
+import type { ConfigurationRow, ConfigurationStatus } from '@/stores/configs'
 
 /**
  * 配置参数表（对齐 Excel 结构稿）：
@@ -45,13 +45,16 @@ function valueRowKey(configKey: string, value: string) {
   return `${configKey}::${value}`
 }
 
-/** 配置项 / 配置值状态：有关联引用问题 → 待处理，否则正常 */
-function statusText(issueCount: number) {
-  return issueCount > 0 ? '待处理' : '正常'
+const statusLabels: Record<ConfigurationStatus, string> = {
+  normal: '正常',
+  floating: '浮空',
+  error: '异常',
 }
 
-function statusType(issueCount: number) {
-  return issueCount > 0 ? 'warning' : 'success'
+function statusType(status: ConfigurationStatus) {
+  if (status === 'error') return 'danger'
+  if (status === 'floating') return 'info'
+  return 'success'
 }
 
 function joinVehicles(vehicles: string[]): string {
@@ -112,8 +115,8 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
           </span>
         </div>
         <div class="col-span-2 flex items-center justify-center px-2 py-2">
-          <el-tag size="small" :type="statusType(row.issueCount)" effect="plain">
-            {{ statusText(row.issueCount) }}
+          <el-tag size="small" :type="statusType(row.status)" effect="plain">
+            {{ statusLabels[row.status] }}
           </el-tag>
         </div>
         <div class="col-span-1 flex items-center justify-center gap-0 py-2 pr-6 pl-1">
@@ -222,10 +225,10 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
             <div class="col-span-2 flex items-center justify-center px-2 py-2">
               <el-tag
                 size="small"
-                :type="value.resolved.hasIssue ? 'warning' : 'success'"
+                :type="statusType(value.resolved.status)"
                 effect="plain"
               >
-                {{ value.resolved.hasIssue ? '待处理' : '正常' }}
+                {{ statusLabels[value.resolved.status] }}
               </el-tag>
             </div>
             <!-- 编辑 / 删除同一行 -->
@@ -277,9 +280,6 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
               <div class="col-span-3 min-w-0 truncate px-2 py-1.5 text-[11px] text-ink" :title="ref.label">
                 {{ ref.label }}
                 <span v-if="ref.status === 'missing'" class="text-ink-muted">（失效）</span>
-                <span v-else-if="ref.status === 'ambiguous'" class="text-ink-muted">
-                  （同名需求歧义）
-                </span>
               </div>
               <div
                 class="col-span-3 min-w-0 truncate px-2 py-1.5 text-[11px] text-ink"
@@ -293,7 +293,7 @@ function joinRequirementNames(refs: { requirement_name: string }[]): string {
                   :type="ref.status === 'ok' ? 'success' : 'danger'"
                   effect="plain"
                 >
-                  {{ ref.status === 'ok' ? '正常' : ref.status === 'ambiguous' ? '歧义' : '失效' }}
+                  {{ ref.status === 'ok' ? '正常' : '失效' }}
                 </el-tag>
               </div>
               <div class="col-span-1 flex items-center justify-center py-1.5 pr-6 pl-1">

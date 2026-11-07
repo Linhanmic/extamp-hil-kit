@@ -5,7 +5,7 @@ import ConfigurationTable from '@/components/ConfigurationTable.vue'
 import ConfigValueFormDialog from '@/components/ConfigValueFormDialog.vue'
 import { useConfigsStore } from '@/stores/configs'
 import type { ConfigurationValueRow, VariantRefStatus } from '@/stores/configs'
-import { filterConfigurationRows, type IssueFilter } from '@/stores/config-filter'
+import { filterConfigurationRows, type ConfigurationStatusFilter } from '@/stores/config-filter'
 import { useRequirementsStore } from '@/stores/requirements'
 
 /**
@@ -21,8 +21,8 @@ const requirementsStore = useRequirementsStore()
 const configKeyFilter = ref('')
 /** 车型筛选（单选，空 = 全部） */
 const vehicleFilter = ref('')
-const itemStatusFilter = ref<IssueFilter>('')
-const valueStatusFilter = ref<IssueFilter>('')
+const itemStatusFilter = ref<ConfigurationStatusFilter>('')
+const valueStatusFilter = ref<ConfigurationStatusFilter>('')
 const variantStatusFilter = ref<'' | VariantRefStatus>('')
 const configurationVisible = ref(false)
 const editingConfiguration = ref<string | null>(null)
@@ -133,7 +133,7 @@ async function onRemoveVariant(
 
       <!-- 筛选行：配置键 3 · 车型 2 · 配置项状态 2 · 配置值状态 2 · 变体状态 3 -->
       <div class="mt-3 grid grid-cols-12 items-center gap-2">
-        <div class="col-span-3">
+        <div class="col-span-2">
           <el-select
             v-model="configKeyFilter"
             size="small"
@@ -165,16 +165,17 @@ async function onRemoveVariant(
             />
           </el-select>
         </div>
-        <div class="col-span-2">
+        <div class="col-span-3">
           <el-select
             v-model="itemStatusFilter"
             size="small"
             clearable
-            placeholder="配置项状态：全部"
+            placeholder="配置项：全部"
             class="w-full"
           >
             <el-option label="正常" value="normal" />
-            <el-option label="待处理" value="issue" />
+            <el-option label="浮空" value="floating" />
+            <el-option label="异常" value="error" />
           </el-select>
         </div>
         <div class="col-span-2">
@@ -182,11 +183,12 @@ async function onRemoveVariant(
             v-model="valueStatusFilter"
             size="small"
             clearable
-            placeholder="配置值状态：全部"
+            placeholder="配置值：全部"
             class="w-full"
           >
             <el-option label="正常" value="normal" />
-            <el-option label="待处理" value="issue" />
+            <el-option label="浮空" value="floating" />
+            <el-option label="异常" value="error" />
           </el-select>
         </div>
         <div class="col-span-3">
@@ -199,7 +201,6 @@ async function onRemoveVariant(
           >
             <el-option label="正常" value="ok" />
             <el-option label="失效" value="missing" />
-            <el-option label="歧义" value="ambiguous" />
           </el-select>
         </div>
       </div>
