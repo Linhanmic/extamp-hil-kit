@@ -57,9 +57,6 @@ async function save() {
           />
         </div>
       </div>
-      <p class="text-[11px] text-ink-muted">
-        配置项名称全项目唯一；配置值在配置项下维护，名称不会重复保存到配置值里。
-      </p>
 
       <el-alert v-if="error" type="error" :closable="false" show-icon :title="error" />
     </div>
