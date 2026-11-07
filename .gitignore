@@ -25,6 +25,9 @@ coverage
 *.sln
 *.sw?
 
+# Office 临时锁文件（如 ~$xxx.xlsx）
+~$*
+
 *.tsbuildinfo
 
 .eslintcache

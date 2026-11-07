@@ -9,6 +9,7 @@ function sampleSettings(): ProjectSettings {
   return {
     requirementsPath: 'config/关联需求/requirements.json',
     configsPath: '.hil-kit/config.json',
+    outputPath: 'config/出声位置/出声位置.txt',
     snapshotDir: 'config/扬声器快照',
     volumeTablePath: '',
     slotMappingPath: 'config/SLOT映射/mapping.ini',

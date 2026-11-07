@@ -2,6 +2,7 @@ import type {
   ConfigsLoadOutcome,
   ConfigsSaveOutcome,
   Configuration,
+  OutputLoadOutcome,
   ProjectSettings,
   RequirementsChooseOutcome,
   RequirementsLoadOutcome,
@@ -13,6 +14,9 @@ import type {
   SettingsPickKind,
   SettingsPickOutcome,
   SettingsSaveOutcome,
+  SlotMappingLoadOutcome,
+  SnapshotLoadOutcome,
+  VolumeTableLoadOutcome,
 } from '@/models'
 
 export interface WorkspaceProject {
@@ -71,6 +75,22 @@ export interface DesktopBridge {
     load: () => Promise<ConfigsLoadOutcome>
     /** 整份写回配置参数到 .hil-kit/config.json */
     save: (configurations: Configuration[]) => Promise<ConfigsSaveOutcome>
+  }
+  output: {
+    /** 读取当前项目的出声位置文件 */
+    load: () => Promise<OutputLoadOutcome>
+  }
+  meter: {
+    /** 读取当前项目的音量表文件 */
+    load: () => Promise<VolumeTableLoadOutcome>
+  }
+  slotMap: {
+    /** 读取当前项目的 SLOT 映射配置及其 slot 文件 */
+    load: () => Promise<SlotMappingLoadOutcome>
+  }
+  snapshot: {
+    /** 读取当前项目扬声器快照目录下的所有快照文件 */
+    load: () => Promise<SnapshotLoadOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */

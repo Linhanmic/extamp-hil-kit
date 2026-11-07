@@ -9,6 +9,7 @@ import type { ProjectSettings } from '../models/common'
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   requirementsPath: '.hil-kit/requirements.json',
   configsPath: '.hil-kit/config.json',
+  outputPath: '',
   snapshotDir: '',
   volumeTablePath: '',
   slotMappingPath: '',

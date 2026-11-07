@@ -99,6 +99,7 @@ export function sanitizeSettings(input: unknown): ProjectSettings {
   return {
     requirementsPath: readText(input, 'requirementsPath'),
     configsPath: readText(input, 'configsPath'),
+    outputPath: readText(input, 'outputPath'),
     snapshotDir: readText(input, 'snapshotDir'),
     volumeTablePath: readText(input, 'volumeTablePath'),
     slotMappingPath: readText(input, 'slotMappingPath'),

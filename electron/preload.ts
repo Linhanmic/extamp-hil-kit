@@ -43,6 +43,18 @@ contextBridge.exposeInMainWorld('desktop', {
     load: () => ipcRenderer.invoke('configs:load'),
     save: (configurations: Configuration[]) => ipcRenderer.invoke('configs:save', configurations),
   },
+  output: {
+    load: () => ipcRenderer.invoke('output:load'),
+  },
+  meter: {
+    load: () => ipcRenderer.invoke('meter:load'),
+  },
+  slotMap: {
+    load: () => ipcRenderer.invoke('slot-map:load'),
+  },
+  snapshot: {
+    load: () => ipcRenderer.invoke('snapshot:load'),
+  },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),
     save: (settings: ProjectSettings) => ipcRenderer.invoke('settings:save', settings),

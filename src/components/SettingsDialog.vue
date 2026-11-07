@@ -45,6 +45,9 @@ async function chooseFile(kind: SettingsPickKind) {
     case 'configs-json':
       form.value.configsPath = path
       break
+    case 'output-file':
+      form.value.outputPath = path
+      break
     case 'volume-table':
       form.value.volumeTablePath = path
       break
@@ -145,9 +148,15 @@ async function submit() {
       <div class="rounded-lg border border-line bg-surface-soft p-3">
         <p class="text-[11px] font-medium text-ink">其他业务数据</p>
         <p class="mt-1 mb-2 text-[11px] text-ink-muted">
-          供扬声器快照、音量表与 SLOT 映射使用；留空表示还没配置，相应功能配置前不可用。
+          供出声位置、扬声器快照、音量表与 SLOT 映射使用；留空表示还没配置，相应功能配置前不可用。
         </p>
         <div class="flex flex-col gap-2">
+          <SettingsPathField
+            v-model="form.outputPath"
+            label="出声位置文件"
+            placeholder="如 config/出声位置/出声位置.txt"
+            @pick="chooseFile('output-file')"
+          />
           <SettingsPathField
             v-model="form.snapshotDir"
             label="扬声器快照目录"

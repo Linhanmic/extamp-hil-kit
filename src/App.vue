@@ -13,8 +13,12 @@ import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
 import { useWorkspace } from './composables/useWorkspace'
 import { useConfigsStore } from './stores/configs'
+import { useMeterStore } from './stores/meter'
+import { useOutputStore } from './stores/output'
 import { useRequirementsStore } from './stores/requirements'
 import { useSettingsStore } from './stores/settings'
+import { useSlotMapStore } from './stores/slotMap'
+import { useSnapshotStore } from './stores/snapshot'
 import LaunchView from './views/LaunchView.vue'
 
 const route = useRoute()
@@ -24,10 +28,14 @@ const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '�
 const { project, ready, load } = useWorkspace()
 const hasProject = computed(() => project.value !== null)
 
-// 应用打开（或切换项目）时读回该项目的设置、需求与配置参数
+// 应用打开（或切换项目）时读回该项目的设置、需求、配置参数与其余业务数据
 const settingsStore = useSettingsStore()
 const requirementsStore = useRequirementsStore()
 const configsStore = useConfigsStore()
+const outputStore = useOutputStore()
+const meterStore = useMeterStore()
+const slotMapStore = useSlotMapStore()
+const snapshotStore = useSnapshotStore()
 watch(
   () => project.value?.path,
   (path) => {
@@ -35,11 +43,19 @@ watch(
       void settingsStore.load()
       void requirementsStore.load()
       void configsStore.load()
+      void outputStore.load()
+      void meterStore.load()
+      void slotMapStore.load()
+      void snapshotStore.load()
       return
     }
     settingsStore.clear()
     requirementsStore.clear()
     configsStore.clear()
+    outputStore.clear()
+    meterStore.clear()
+    slotMapStore.clear()
+    snapshotStore.clear()
   },
   { immediate: true },
 )

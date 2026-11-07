@@ -70,6 +70,7 @@ export interface RequirementsImportDefaults {
 export interface ProjectSettings {
   requirementsPath: string//需求 json
   configsPath: string//配置参数 json
+  outputPath: string//出声位置文件
   snapshotDir: string//扬声器快照所在目录
   volumeTablePath: string//音量表文件
   slotMappingPath: string//SLOT 映射配置文件
@@ -106,6 +107,7 @@ export interface SettingsPickOutcome {
 export type SettingsPickKind =
   | 'requirements-json'
   | 'configs-json'
+  | 'output-file'
   | 'volume-table'
   | 'slot-mapping'
   | 'requirements-sheet'

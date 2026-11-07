@@ -22,6 +22,7 @@
       "required": [
         "requirementsPath",
         "configsPath",
+        "outputPath",
         "snapshotDir",
         "volumeTablePath",
         "slotMappingPath",
@@ -36,6 +37,10 @@
         "configsPath": {
           "type": "string",
           "description": "配置参数 json 的位置；相对路径按项目根解析，空串表示默认 .hil-kit/config.json"
+        },
+        "outputPath": {
+          "type": "string",
+          "description": "出声位置文件；相对路径按项目根解析，空串表示还没配置"
         },
         "snapshotDir": {
           "type": "string",

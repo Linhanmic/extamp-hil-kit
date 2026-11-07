@@ -3,7 +3,11 @@ import { defineStore } from 'pinia'
 import { DEFAULT_PROJECT_SETTINGS } from '@/config/settings-defaults'
 import type { ProjectSettings, ProjectSettingsDocument, SettingsPickKind } from '@/models'
 import { useConfigsStore } from './configs'
+import { useMeterStore } from './meter'
+import { useOutputStore } from './output'
 import { useRequirementsStore } from './requirements'
+import { useSlotMapStore } from './slotMap'
+import { useSnapshotStore } from './snapshot'
 
 export type SaveResult = { ok: true } | { ok: false; error: string }
 
@@ -11,11 +15,15 @@ export type SaveResult = { ok: true } | { ok: false; error: string }
  * 项目设置：应用启动、切换项目时从 `<项目>/.hil-kit/settings.json` 读回来。
  * 文件缺失或损坏时主进程带回默认值，这里直接用 `settings` 即可，不用区分「有没有配过」。
  *
- * 保存后需求与配置参数按新路径重读一次——设置改了路径，页面上的数据就要跟着换。
+ * 保存后各业务数据按新路径重读一次——设置改了路径，页面上的数据就要跟着换。
  */
 export const useSettingsStore = defineStore('settings', () => {
   const requirementsStore = useRequirementsStore()
   const configsStore = useConfigsStore()
+  const outputStore = useOutputStore()
+  const meterStore = useMeterStore()
+  const slotMapStore = useSlotMapStore()
+  const snapshotStore = useSnapshotStore()
 
   const document = ref<ProjectSettingsDocument | null>(null)
   const loading = ref(false)
@@ -74,7 +82,14 @@ export const useSettingsStore = defineStore('settings', () => {
 
       // 以盘上的数据为准（主进程会 trim、校验列号）
       await load()
-      await Promise.all([requirementsStore.load(), configsStore.load()])
+      await Promise.all([
+        requirementsStore.load(),
+        configsStore.load(),
+        outputStore.load(),
+        meterStore.load(),
+        slotMapStore.load(),
+        snapshotStore.load(),
+      ])
       return { ok: true }
     } catch {
       const message = '保存设置失败'

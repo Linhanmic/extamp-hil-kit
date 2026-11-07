@@ -45,3 +45,24 @@ export type {
   RequirementsPreviewOutcome,
   RequirementsSaveOutcome
 } from './common'
+export type {
+  OutputScenario,
+  OutputDocument,
+  OutputLoadOutcome,
+} from './output'
+export type {
+  VolumeTableRow,
+  VolumeTableDocument,
+  VolumeTableLoadOutcome,
+} from './volume'
+export type {
+  SlotMappingEntry,
+  SlotMappingDocument,
+  SlotMappingLoadOutcome,
+} from './slot-map'
+export type {
+  SnapshotChannel,
+  SnapshotFile,
+  SnapshotDocument,
+  SnapshotLoadOutcome,
+} from './snapshot'

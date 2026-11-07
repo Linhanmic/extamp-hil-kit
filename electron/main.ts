@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
+import { registerBusinessIpc } from './business'
 import { registerConfigsIpc } from './configs'
 import { registerRequirementsIpc } from './requirements'
 import { registerSettingsIpc } from './settings'
@@ -107,6 +108,7 @@ if (!app.requestSingleInstanceLock()) {
     registerWorkspaceIpc()
     registerRequirementsIpc()
     registerConfigsIpc()
+    registerBusinessIpc()
     registerSettingsIpc()
     createWindow()
 

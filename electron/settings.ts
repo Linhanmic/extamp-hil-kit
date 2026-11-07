@@ -21,6 +21,10 @@ import { readWorkspace } from './workspace'
 const PICK_FILTERS: Record<SettingsPickKind, Electron.FileFilter[]> = {
   'requirements-json': [{ name: '需求数据', extensions: ['json'] }],
   'configs-json': [{ name: '配置参数', extensions: ['json'] }],
+  'output-file': [
+    { name: '出声位置', extensions: ['txt'] },
+    { name: '所有文件', extensions: ['*'] },
+  ],
   'volume-table': [
     { name: '音量表', extensions: ['csv', 'xlsx', 'xls'] },
     { name: '所有文件', extensions: ['*'] },
@@ -35,6 +39,7 @@ const PICK_FILTERS: Record<SettingsPickKind, Electron.FileFilter[]> = {
 const PICK_TITLES: Record<SettingsPickKind, string> = {
   'requirements-json': '选择需求数据文件',
   'configs-json': '选择配置参数文件',
+  'output-file': '选择出声位置文件',
   'volume-table': '选择音量表文件',
   'slot-mapping': '选择 SLOT 映射配置文件',
   'requirements-sheet': '选择需求分析表',
@@ -51,6 +56,8 @@ function currentPath(settings: ProjectSettings, kind: SettingsPickKind): string 
       return settings.requirementsPath
     case 'configs-json':
       return settings.configsPath
+    case 'output-file':
+      return settings.outputPath
     case 'volume-table':
       return settings.volumeTablePath
     case 'slot-mapping':
