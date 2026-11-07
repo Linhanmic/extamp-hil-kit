@@ -6,7 +6,7 @@
 
 - 这是「编辑器」模型，不是导入式全量替换：页面每次新增 / 修改 / 删除后把整份文件写回（读 → 改 → 写），`configurations` 整体覆盖。
 - **首次保存**建文件，`createdAt` 与 `updatedAt` 都写本次保存时间；**之后每次保存**只刷新 `updatedAt`，`createdAt` 保持不变。
-- 写入前做一次校验，任一项不过就不写文件、页面报错：结构合法、`config_key` 唯一、同一配置项内 `value` 唯一、`manual_vehicles` 去重且非空。
+- 写入前做一次校验，任一项不过就不写文件、页面报错：结构合法、`config_key` 唯一、同一配置项内 `value` 唯一、`vehicles` 去重且非空。
 - 变体引用的存在性**不在写入时强制**：需求重新导入后旧引用会失效，读到时标记出来即可，不能因为一条失效引用把整份配置卡住不让保存。新增引用由页面的变体选择器保证指向真实变体。
 - 文件损坏、版本不支持或结构不对 → 页面按 error 处理并提示重新维护，不把半份数据当可信对象。
 
@@ -19,10 +19,10 @@
 - `configurations` 的数组顺序就是页面展示顺序；`config_key` 全文件唯一，作为配置项主键。
 - 同一配置项下 `config_value[].value` 唯一。配置值的身份是 `config_key + value`，不另设 ID。
 - 配置值**不重复写 `config_key`**：归属由所在的配置项唯一确定。模型里的 `ConfigValue.config_key` 保留（便于在内存与界面里定位所属配置项），读写时由存储层按所属项补齐与去掉。
-- `relay_variants` **只存引用** `{ requirement_id, variant_key }`，配置值的适用车型通过引用解析得到，变体内容与车型以 `requirements.json` 为准。
-- `manual_vehicles` 是在页面直接填写的车型（不来自任何变体），用来覆盖「特殊配置项没有对应需求」的情况。
-- 配置值的**生效车型 = 关联变体的 `vehicles` ∪ `manual_vehicles`**，由读取方计算，不落盘。
-- 需求还没导入、或需求重新导入后该变体已不存在时，引用标记为**失效**：页面用状态标签提示，保存时保留引用、不静默删除，由用户决定移除还是重新关联。
+- `relay_variants` **只存引用** `{ requirement_name, variant_key }`：需求按名称匹配，变体按内容键匹配，配置值的适用车型与变体内容都从 `requirements.json` 解析，不存快照。
+- `vehicles` 是配置值自身携带的车型，也就是页面里**直接填写**、不来自任何变体的那一部分，用来覆盖「特殊配置项没有对应需求」的情况。
+- 配置值的**生效车型 = 关联变体解析出的车型 ∪ 自身 `vehicles`**，由读取方计算，不落盘。
+- 需求还没导入、需求重新导入后名称变了或该变体已不存在时，引用标记为**失效**；同名需求有多条时标记为**歧义**。两种情况都用状态标签提示，保存时保留引用、不静默删除，由用户决定移除还是重新关联。
 
 ## JSON Schema（2020-12）
 
@@ -72,7 +72,7 @@
     },
     "configValue": {
       "type": "object",
-      "required": ["value", "relay_variants", "manual_vehicles"],
+      "required": ["value", "relay_variants", "vehicles"],
       "additionalProperties": false,
       "properties": {
         "value": {
@@ -86,23 +86,23 @@
           "uniqueItems": true,
           "description": "关联的需求变体引用，配置值通过它们得到适用车型；不存变体内容与车型快照"
         },
-        "manual_vehicles": {
+        "vehicles": {
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 },
-          "description": "页面里直接填写、不来自需求变体的车型；车型名沿用需求表的归一化写法（去引号、去空白、下划线换成连字符）"
+          "description": "配置值自身携带、页面直接填写的车型（不来自需求变体）；由关联变体解析出的车型不重复存储，生效车型由读取方合并计算。车型名沿用需求表的归一化写法（去引号、去空白、下划线换成连字符）"
         }
       }
     },
     "variantRef": {
       "type": "object",
-      "required": ["requirement_id", "variant_key"],
+      "required": ["requirement_name", "variant_key"],
       "additionalProperties": false,
       "properties": {
-        "requirement_id": {
+        "requirement_name": {
           "type": "string",
           "minLength": 1,
-          "description": "需求ID，取自 requirements.json 的 requirements[].id"
+          "description": "需求名称，取自 requirements.json 的 requirements[].name；同名需求有多条时该引用按歧义处理"
         },
         "variant_key": {
           "type": "string",
@@ -128,14 +128,14 @@
         {
           "value": "14扬声器",
           "relay_variants": [
-            { "requirement_id": "SwRS_AMP_Handeshake_001", "variant_key": "变体1" }
+            { "requirement_name": "功放握手", "variant_key": "变体1" }
           ],
-          "manual_vehicles": []
+          "vehicles": []
         },
         {
           "value": "10扬声器",
           "relay_variants": [],
-          "manual_vehicles": ["SC6H", "YU2"]
+          "vehicles": ["SC6H", "YU2"]
         }
       ]
     },
@@ -145,9 +145,9 @@
         {
           "value": "AMP-A",
           "relay_variants": [
-            { "requirement_id": "SwRS_AMP_Handeshake_001", "variant_key": "" }
+            { "requirement_name": "功放握手", "variant_key": "" }
           ],
-          "manual_vehicles": []
+          "vehicles": []
         }
       ]
     }
@@ -157,10 +157,11 @@
 
 ## 说明
 
-- **只存变体引用，不存变体快照**：需求表会重新导入，快照会和 `requirements.json` 打架。引用 `(requirement_id, variant_key)` 后，需求一更新，配置值的车型自动跟着变；引用不到的变体明确标记失效，比悄悄用旧数据好。
-- **车型不落盘**：`vehicles` 是可计算出来的值（关联变体车型 ∪ 手工车型），按 [data-model.md](data-model.md) 的「派生字段」约定不进文件。需要车型清单时从变体侧汇总。
+- **只存变体引用，不存变体快照**：需求表会重新导入，快照会和 `requirements.json` 打架。引用 `(requirement_name, variant_key)` 后，需求一更新，配置值的车型自动跟着变；引用不到的需求或变体明确标记失效，比悄悄用旧数据好。
+- **需求按名称引用**：配置页要展示的就是需求名称，按名称引用让 JSON 自解释，不用再回表查 ID。代价是两个——需求改名后旧引用失效、需求表里出现同名需求时无法区分，这两种情况都按失效 / 歧义提示，由用户重新关联，不在数据层做猜测。
+- **派生车型不落盘**：`vehicles` 只存页面直接填写的车型，由关联变体推导出的车型不进文件（按 [data-model.md](data-model.md) 的「派生字段」约定）；生效车型由读取方合并两边计算，需要车型清单时也从变体侧汇总。
 - **`variant_key` 可以是空串**：需求表里「整行都写 `●`、没有变体描述」的情况会合并成一个 `key` 为空串的变体，它是合法变体，不是缺字段。
 - **配置值不落 `config_key`**：归属由所在的配置项决定，重复写一份只会带来「内层与外层不一致」的风险。模型里保留 `ConfigValue.config_key`，是为了在内存与界面里不靠外层上下文就能定位所属配置项；存储层读取时按所属项补齐、写入时去掉，落盘结构与模型因此不是逐字段对应。
-- **车型名来源**：从 `requirements.json` 各变体的 `vehicles` 汇总去重，或用户在输入框里直接填；两边都用需求表的归一化写法，避免「`SC6H` 与 `SC6H `」这种同一车型的两个写法。手工输入的车型不做去引号 / 下划线换算以外的猜测，只做 trim。
+- **车型名来源**：从 `requirements.json` 各变体的 `vehicles` 汇总去重，或用户在输入框里直接填进配置值的 `vehicles`；两边都用需求表的归一化写法，避免「`SC6H` 与 `SC6H `」这种同一车型的两个写法。手工输入的车型不做去引号 / 下划线换算以外的猜测，只做 trim。
 - **与 tauri-app 的差异**：那边配置项叫 `config_item`、配置值与需求变体解耦、靠 CSV/Excel 导入并全量替换，还有一张变体 × 配置项的映射表；本仓库沿用 `config_key` 命名、配置值与变体是直接引用、只做页面手工维护，映射所需的信息（哪个变体对应哪个配置值）由 `relay_variants` 本身承载，不再单开映射表。
-- **与现有模型的差异（实现时同步）**：`src/models/common.ts` 里 `ConfigValue.relay_variants` 是 `Variant[]`、另有 `vehicles: string[]`。按本文件，`relay_variants` 改为 `VariantRef[]`（`{ requirement_id, variant_key }`），`vehicles` 改为 `manual_vehicles`，生效车型由 store 层计算；`config_key` 留在模型里但不落盘（见上一条）。
+- **与模型的关系**：`src/models/common.ts` 里已有 `VariantRef`（`{ requirement_name, variant_key }`），`ConfigValue.relay_variants` 用的就是它；`ConfigValue.vehicles` 只存页面直接填写的车型，生效车型由 store 层合并变体车型计算；`ConfigValue.config_key` 留在模型里但不落盘（见上一条）。落盘结构与模型只差这一个字段。

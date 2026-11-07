@@ -13,12 +13,17 @@ export interface Requirement {
   detail: string//需求详情
   variants: Variant[]//需求对应的所有变体
 }
+/** 配置值关联的需求变体引用：需求按名称匹配、变体按内容键匹配，变体内容与车型以需求数据为准 */
+export interface VariantRef {
+  requirement_name: string//关联需求名称，对应需求数据里 requirements[].name
+  variant_key: string//关联变体的内容键，空串表示该需求「无变体差异」的那一支
+}
 /** 配置值 */
 export interface ConfigValue {
-  config_key: string//配置值所属配置键
+  config_key: string//配置值所属配置键，便于在内存与界面里定位所属配置项；落盘时不写，读取时按所属配置项补齐
   value: string//配置值
-  relay_variants: Variant[]//配置关联的变体，通过其可以更新配置值对应的车型，部分特殊配置此项为空
-  vehicles: string[]//配置值适用的车型，可以通过关联变体计算，对于部分特殊配置值，在导入时直接填入
+  relay_variants: VariantRef[]//配置值关联的需求变体引用，通过它们得到配置值对应的车型，部分特殊配置此项为空
+  vehicles: string[]//配置值自身携带、页面直接填写的车型（不来自需求变体）；生效车型由读取方合并关联变体的车型计算
 }
 /** 配置 */
 export interface Configuration {

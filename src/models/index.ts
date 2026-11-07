@@ -13,6 +13,7 @@
  */
 export type {
   Variant,
+  VariantRef,
   Requirement,
   ConfigValue,
   Configuration,

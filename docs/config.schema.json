@@ -46,7 +46,7 @@
     },
     "configValue": {
       "type": "object",
-      "required": ["value", "relay_variants", "manual_vehicles"],
+      "required": ["value", "relay_variants", "vehicles"],
       "additionalProperties": false,
       "properties": {
         "value": {
@@ -60,23 +60,23 @@
           "uniqueItems": true,
           "description": "关联的需求变体引用，配置值通过它们得到适用车型；不存变体内容与车型快照"
         },
-        "manual_vehicles": {
+        "vehicles": {
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 },
-          "description": "页面里直接填写、不来自需求变体的车型；车型名沿用需求表的归一化写法（去引号、去空白、下划线换成连字符）"
+          "description": "配置值自身携带、页面直接填写的车型（不来自需求变体）；由关联变体解析出的车型不重复存储，生效车型由读取方合并计算。车型名沿用需求表的归一化写法（去引号、去空白、下划线换成连字符）"
         }
       }
     },
     "variantRef": {
       "type": "object",
-      "required": ["requirement_id", "variant_key"],
+      "required": ["requirement_name", "variant_key"],
       "additionalProperties": false,
       "properties": {
-        "requirement_id": {
+        "requirement_name": {
           "type": "string",
           "minLength": 1,
-          "description": "需求ID，取自 requirements.json 的 requirements[].id"
+          "description": "需求名称，取自 requirements.json 的 requirements[].name；同名需求有多条时该引用按歧义处理"
         },
         "variant_key": {
           "type": "string",
