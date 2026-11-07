@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { ConfigurationRow } from '@/stores/configs'
+import type { ConfigurationRow, ConfigurationValueRow } from '@/stores/configs'
 
 /**
  * 配置项表格：一行一个配置项，展开是它的配置值（适用车型、关联变体、操作）。
- * 车型标签区分来源——浅色是关联变体解析出来的，描边是页面直接填写的。
+ * 车型标签区分来源——浅色是关联变体解析出来的，描边是页面直接填写的；
+ * 同一车型两边都有时只显示一次。
  */
 defineProps<{ rows: ConfigurationRow[] }>()
 
@@ -14,6 +15,12 @@ const emit = defineEmits<{
   editValue: [configKey: string, value: string]
   deleteValue: [configKey: string, value: string]
 }>()
+
+function manualOnlyVehicles(value: ConfigurationValueRow): string[] {
+  return value.resolved.manualVehicles.filter(
+    (vehicle) => !value.resolved.variantVehicles.includes(vehicle),
+  )
+}
 </script>
 
 <template>
@@ -65,7 +72,7 @@ const emit = defineEmits<{
                       {{ vehicle }}
                     </el-tag>
                     <el-tag
-                      v-for="vehicle in value.resolved.manualVehicles"
+                      v-for="vehicle in manualOnlyVehicles(value)"
                       :key="`manual-${vehicle}`"
                       size="small"
                       effect="plain"

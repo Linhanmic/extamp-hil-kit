@@ -19,6 +19,7 @@ const store = useConfigsStore()
 const text = ref('')
 const refs = ref<VariantRef[]>([])
 const vehicles = ref<string[]>([])
+const vehicleInput = ref('')
 const requirementIndex = ref<number | null>(null)
 const variantIndex = ref<number | null>(null)
 const error = ref('')
@@ -38,6 +39,7 @@ watch(visible, (open) => {
   text.value = props.configValue?.value ?? ''
   refs.value = (props.configValue?.relay_variants ?? []).map((ref) => ({ ...ref }))
   vehicles.value = [...(props.configValue?.vehicles ?? [])]
+  vehicleInput.value = ''
   requirementIndex.value = null
   variantIndex.value = null
   error.value = ''
@@ -86,12 +88,41 @@ function removeRef(ref: VariantRef) {
   )
 }
 
+/** 手工车型的输入建议：需求数据里的车型，排除已经加进来的 */
+function fetchVehicleSuggestions(query: string, callback: (items: { value: string }[]) => void) {
+  const keyword = query.trim().toLowerCase()
+  callback(
+    store.vehicleOptions
+      .filter((vehicle) => !vehicles.value.includes(vehicle))
+      .filter((vehicle) => !keyword || vehicle.toLowerCase().includes(keyword))
+      .map((vehicle) => ({ value: vehicle })),
+  )
+}
+
+/** 回车或「添加」都走这里：输入框里的文字必须显式入列，不能靠控件的隐藏提交语义 */
+function addVehicle(name: string) {
+  const vehicle = name.trim()
+  if (!vehicle) return
+  if (!vehicles.value.includes(vehicle)) vehicles.value = [...vehicles.value, vehicle]
+  vehicleInput.value = ''
+}
+
+function removeVehicle(name: string) {
+  vehicles.value = vehicles.value.filter((vehicle) => vehicle !== name)
+}
+
+function onVehicleSelect(item: Record<string, unknown>) {
+  addVehicle(typeof item.value === 'string' ? item.value : '')
+}
+
 async function save() {
   error.value = ''
   if (!text.value.trim()) {
     error.value = '配置值不能为空'
     return
   }
+  // 输入框里还没回车 / 点添加的车型，保存时一并收下，别让输入白丢
+  addVehicle(vehicleInput.value)
 
   const input: ConfigValueInput = {
     value: text.value,
@@ -208,25 +239,39 @@ async function save() {
         <p class="mt-1 text-[11px] text-ink-muted">
           这里填写的车型直接计入适用车型，适合没有对应需求的特殊配置值。
         </p>
+
+        <div v-if="vehicles.length" class="mt-2 flex flex-wrap items-center gap-1">
+          <el-tag
+            v-for="vehicle in vehicles"
+            :key="vehicle"
+            size="small"
+            effect="plain"
+            closable
+            @close="removeVehicle(vehicle)"
+          >
+            {{ vehicle }}
+          </el-tag>
+        </div>
+        <p v-else class="mt-2 text-[11px] text-ink-muted">还没有手工车型</p>
+
+        <!-- @grid A：输入 9 列 + 添加按钮 3 列 -->
         <div class="mt-2 grid grid-cols-12 items-center gap-2">
-          <div class="col-span-12">
-            <el-select
-              v-model="vehicles"
+          <div class="col-span-9">
+            <el-autocomplete
+              v-model="vehicleInput"
               size="small"
               class="w-full"
-              multiple
-              filterable
-              allow-create
-              default-first-option
-              placeholder="选择或直接输入车型名后回车"
-            >
-              <el-option
-                v-for="vehicle in store.vehicleOptions"
-                :key="vehicle"
-                :label="vehicle"
-                :value="vehicle"
-              />
-            </el-select>
+              :fetch-suggestions="fetchVehicleSuggestions"
+              select-when-unmatched
+              placeholder="输入或选择车型名，回车添加"
+              @select="onVehicleSelect"
+              @keyup.enter="addVehicle(vehicleInput)"
+            />
+          </div>
+          <div class="col-span-3 justify-self-end">
+            <el-button size="small" :disabled="!vehicleInput.trim()" @click="addVehicle(vehicleInput)">
+              添加
+            </el-button>
           </div>
         </div>
       </div>
