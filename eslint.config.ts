@@ -19,6 +19,8 @@ export default defineConfigWithVueTs(
   globalIgnores([
     '**/dist/**',
     '**/dist-ssr/**',
+    // Electron 主进程 / 预加载构建产物
+    '**/dist-electron/**',
     '**/coverage/**',
     // unplugin 自动生成的声明文件
     'src/auto-imports.d.ts',

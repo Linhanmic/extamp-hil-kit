@@ -8,7 +8,7 @@ const navItems = [
 </script>
 
 <template>
-  <aside class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-line bg-surface-soft">
+  <aside class="flex min-h-0 flex-col overflow-hidden border-r border-line bg-surface-soft">
     <!-- @grid B：品牌行是「标识 + 名称」组合，整组占满所在列，内部只用统一 gap -->
     <div class="flex items-center gap-2 border-b border-line px-3 py-2.5">
       <span

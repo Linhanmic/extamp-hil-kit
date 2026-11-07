@@ -7,9 +7,22 @@ import tailwindcss from '@tailwindcss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import electron from 'vite-plugin-electron/simple'
+
+// 主进程跟随 package.json 的 type: module 输出为 ESM（Electron 28+ 支持）；
+// 预加载脚本在 sandbox 下必须是 CommonJS，因此单独指定 .cjs 产物
+const preloadBuild = {
+  outDir: 'dist-electron',
+  emptyOutDir: false,
+  rollupOptions: {
+    output: { format: 'cjs' as const, entryFileNames: 'preload.cjs', codeSplitting: false },
+  },
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 桌面端通过 file:// 加载产物，资源路径必须是相对路径
+  base: './',
   plugins: [
     vue(),
     vueDevTools(),
@@ -24,6 +37,14 @@ export default defineConfig({
     Components({
       resolvers: [ElementPlusResolver()],
       dts: 'src/components.d.ts',
+    }),
+    // Electron：dev 下自动拉起桌面窗口，build 下附带编译主进程与预加载
+    electron({
+      main: { entry: 'electron/main.ts' },
+      preload: {
+        input: 'electron/preload.ts',
+        vite: { build: preloadBuild },
+      },
     }),
   ],
   resolve: {

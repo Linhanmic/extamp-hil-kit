@@ -2,6 +2,8 @@
 
 本规范约束本项目**所有水平布局**——既包括页面级主要区块，也包括组件内部的水平组合容器。技术栈为 Vue 3 + Tailwind CSS 4 + Element Plus，栅格一律使用 Tailwind 原生 12 列栅格（底层 CSS Grid），**不自造第二套网格类**。
 
+本项目是**桌面端专属应用**（Electron 外壳），不为移动端和平板做适配：不设响应式断点，栅格只有一套桌面尺寸，窗口最小可用尺寸由 Electron 主进程保证（`minWidth: 1120`、`minHeight: 720`）。
+
 ---
 
 ## 1. 三层结构
@@ -9,14 +11,14 @@
 页面与任何水平组合容器都遵循「容器 Container → 行 Row → 列 Column」：
 
 ```html
-<!-- Container：负责最大宽度、居中、水平内边距 -->
-<div class="mx-auto w-full max-w-7xl px-6">
-  <!-- Row：负责把空间切成 12 列 -->
-  <div class="grid grid-cols-12 gap-6">
+<!-- Container：桌面外壳铺满窗口，不设最大宽度与内边距 -->
+<div class="h-dvh w-full">
+  <!-- Row：把空间切成 12 列；页面级区域直接贴合，不留沟槽 -->
+  <div class="grid h-full grid-cols-12 gap-0">
     <!-- Column：负责承载内容 -->
-    <div class="col-span-12 lg:col-span-2">…</div>
-    <div class="col-span-12 lg:col-span-7">…</div>
-    <div class="col-span-12 lg:col-span-3">…</div>
+    <div class="col-span-2">…</div>
+    <div class="col-span-7">…</div>
+    <div class="col-span-3">…</div>
   </div>
 </div>
 ```
@@ -25,9 +27,11 @@
 
 | 角色 | 类名 | 说明 |
 | --- | --- | --- |
-| 容器 | `mx-auto w-full max-w-7xl px-6` | 最大 1280px、水平居中、左右 24px 内边距 |
-| 行 | `grid grid-cols-12 gap-6` | 12 条等宽轨道（`minmax(0, 1fr)`），沟槽 24px |
-| 列 | `col-span-12 lg:col-span-N` | N ∈ 1…12，一行内所有 span 之和不得超过 12 |
+| 容器（桌面外壳） | `h-dvh w-full` | 铺满窗口，不设最大宽度、不设内边距 |
+| 容器（独立内容页 / 弹窗内容） | `mx-auto w-full max-w-7xl px-6` | 需要居中阅读感的页面才用，最大 1280px、左右 24px |
+| 行（页面级） | `grid grid-cols-12 gap-0` | 12 条等宽轨道，区域之间贴合，用 1px 分隔线划分 |
+| 行（组件级） | `grid grid-cols-12 gap-2` / `gap-3` | 组件内部按比例分配空间时使用 |
+| 列 | `col-span-N` | N ∈ 1…12，一行内所有 span 之和不得超过 12；桌面端不写断点前缀 |
 
 如果项目将来改用 Sass/CSS Module 手写，等价实现是：
 
@@ -41,26 +45,30 @@
 
 ---
 
-## 2. 断点与响应式
+## 2. 桌面端单一尺寸（不做响应式）
 
-移动优先：**小屏默认 `col-span-12` 单列堆叠**，随视口变宽逐级放开。
+本项目是桌面端专属应用，**不设断点、不做移动端适配**：
 
-| 视口 | Tailwind 前缀 | 允许的跨度 | 本项目约定 |
-| --- | --- | --- | --- |
-| < 768px | 无 | 仅 `col-span-12` | 所有主要区块垂直堆叠 |
-| ≥ 768px | `md:` | `col-span-12 / 6 / 4` | 主要区块可两列或三列 |
-| ≥ 1024px | `lg:` | `col-span-1 … 12` | 完整 12 列精细布局 |
-| ≥ 1280px | `xl:` | 同上 | 容器封顶 1280px 并居中 |
+| 项 | 约定 |
+| --- | --- |
+| 栅格 | 始终 12 列，列跨度使用固定 `col-span-N`，不写 `sm:` / `md:` / `lg:` / `xl:` 前缀 |
+| 窗口尺寸 | Electron 主进程保证 `minWidth: 1120`、`minHeight: 720`，默认 `1440 × 900` |
+| 最小窗口下的表现 | 仍需无横向溢出：列内文本用 `truncate` / `min-w-0`，控件宽度必须能被列容纳 |
+| 移动端 / 平板 | 不实现，也不为它们保留样式分支 |
 
-硬性要求：小屏不得为了维持多列把内容压窄，宁可堆叠。超过 4 列密集卡片布局禁止出现在 `md` 以下。
+判定标准：在 1120px 宽的窗口下所有 span 之和仍为 12、主要区域不挤压、页面不出现横向滚动条。
 
 ---
 
 ## 3. 沟槽（gutter）
 
 - 间距**只由 `gap` 提供**，禁止给单个子元素写不同 `margin` 来模拟列间距。
-- 同一行内 `gap` 必须一致：页面级行用 `gap-6`（24px）；卡片级行用 `gap-3`（12px）；微组件行用 `gap-1`～`gap-2`。
+- 同一行内 `gap` 必须一致，按行级别区分：
+  - **页面级行 `gap-0`**：左栏、中列、右栏之间直接贴合，用 1px 分隔线（`border-r` / `border-l`）划分；中列内部的 `main_content` 与 `panel` 之间同样贴合，用 `border-t` 划分。桌面 IDE 式外壳不留沟槽。
+  - **卡片级行 `gap-3`**（12px）：卡片内部的分组行。
+  - **微组件行 `gap-1`～`gap-2`**：工具栏、标签组、列表行等紧凑控件行。
 - 纵向间距在纵向容器上用 `gap-*` / `space-y-*` 表达，不要靠零散 margin 拼接。
+
 
 ---
 
@@ -82,12 +90,12 @@
 适用：子元素之间**需要按比例分配空间**的组合容器——工具栏、卡片头（左标题 + 右操作）、列表行（名称 + 状态）、瓦片网格、表单行、统计块。
 
 ```html
-<!-- @grid A：工具栏内部 Row -->
+<!-- @grid A：工具栏内部 Row（桌面单一尺寸，不写断点前缀） -->
 <div class="grid h-10 grid-cols-12 items-center gap-2">
-  <RegionToggle class="col-span-2 lg:col-span-1" />      <!-- Column：span-1 -->
-  <span class="col-span-3 truncate lg:col-span-6">工作区 / 首页</span>  <!-- Column：span-6 -->
-  <ThemeSwitcher class="col-span-4 lg:col-span-3" />     <!-- Column：span-3 -->
-  <button class="col-span-2 justify-self-end lg:col-span-1">…</button>
+  <RegionToggle class="col-span-1 justify-self-start" />   <!-- Column：span-1 -->
+  <span class="col-span-6 truncate">工作区 / 首页</span>      <!-- Column：span-6 -->
+  <ThemeSwitcher class="col-span-3 justify-self-end" />     <!-- Column：span-3 -->
+  <button class="col-span-1 justify-self-end">…</button>    <!-- Column：span-1 -->
 </div>
 ```
 
@@ -138,7 +146,7 @@
 
 | 水平组合容器 | 方案 | 备注 |
 | --- | --- | --- |
-| 页面主区块（左栏 / 主内容 / 右栏） | A | 页面级 Row，`gap-6` |
+| 页面主区块（左栏 / 主内容 / 右栏） | A | 页面级 Row，`gap-0` + 1px 分隔线 |
 | 工具栏、操作栏 | A | 卡片级 Row，`gap-2` |
 | 卡片头（标题 + 右侧操作） | A | 标题 span 大、操作用 `justify-self-end` |
 | 列表行（名称 + 状态/元信息） | A | 名称 span-8、状态 span-4 |
@@ -160,27 +168,27 @@
 - 在 Row 下直接放内容而不包 Column；
 - 主要布局使用 `absolute` / `fixed` 定位（局部微调如角标、浮层允许）；
 - 同一行内 span 之和超过 12；
-- 小屏强行保持 4 列以上卡片导致内容挤压。
+- 在页面级区域之间加沟槽（桌面外壳必须贴合，用分隔线划分）。
 
 ---
 
 ## 9. 当前壳层的栅格映射
 
-页面级（`src/App.vue`，Row `grid grid-cols-12 gap-6`）：
+页面级（`src/App.vue`，Row `grid grid-cols-12 gap-0`，区域之间 1px 分隔线）：
 
-| 区块 | 小屏 | lg | 侧栏收起时的补齐 |
-| --- | --- | --- | --- |
-| 左栏 sidebar | `col-span-12` | `lg:col-span-2` | — |
-| 主内容 main | `col-span-12` | `lg:col-span-7` | `lg:col-span-9` / `10` / `12` |
-| 右栏 second sidebar | `col-span-12` | `lg:col-span-3` | — |
+| 区块 | span | 侧栏收起时的补齐 |
+| --- | --- | --- |
+| 左栏 sidebar | `col-span-2` | — |
+| 主内容 main | `col-span-7` | `col-span-9` / `10` / `12` |
+| 右栏 second sidebar | `col-span-3` | — |
 
-主内容列内部的 `main_content` 与 `panel` 是**同一列内的上下分段**（纵向），不占用水平栅格：`main_content` 用 `flex-1`，`panel` 移动端 `h-56`、`lg` 起占列高 34%。
+主内容列内部的 `main_content` 与 `panel` 是**同一列内的上下分段**（纵向），不占用水平栅格：`main_content` 用 `flex-1`，`panel` 占列高 34%，两者贴合、以 `border-t` 分隔。
 
 组件级：
 
 | 组件 | 容器 | 方案 | span 分配 |
 | --- | --- | --- | --- |
-| 工具栏（App.vue） | 水平 Row | A | 左栏按钮 1 · 面包屑 6 · 主题 3 · 面板按钮 1 · 右栏按钮 1（小屏 2/3/4/2） |
+| 工具栏（App.vue） | 水平 Row | A | 左栏按钮 1 · 面包屑 6 · 主题 3 · 面板按钮 1 · 右栏按钮 1 |
 | 面板标签栏（AppPanel） | 水平 Row | A | 标签组 8 · 占位说明 4（`justify-self-end`） |
 | 品牌行（AppSidebar） | 水平 Row | A | 标识 2 · 名称 10 |
 | 导航项（AppSidebar） | 水平 Row | A | 图标 2 · 文字 10 |
@@ -197,9 +205,10 @@
 2. 每个水平组合容器是否都标注了 A / B / C？有没有小组件内部完全脱离栅格？
 3. 有没有用固定像素宽度拼水平布局？控件固有宽度是否超出了它所在的列？
 4. 同一行 span 之和是否 ≤ 12？留空是否用 `col-start-*` 而不是 margin？
-5. 小屏（< 768px）是否全部堆叠？有没有横向溢出（`scrollWidth > innerWidth`）？
-6. 主要布局是否零 `absolute` / `fixed`？
-7. 沟槽是否只由 `gap` 提供，且同一行内一致？
+5. 有没有误加断点前缀（`sm:` / `md:` / `lg:` / `xl:`）？桌面端只应有一份尺寸。
+6. 窗口最小尺寸（1120 × 720）下是否仍有横向溢出（`scrollWidth > innerWidth`）？
+7. 主要布局是否零 `absolute` / `fixed`？
+8. 沟槽是否只由 `gap` 提供，且同一行内一致？页面级区域之间是否已贴合（`gap-0` + 分隔线）？
 
 ---
 
@@ -223,8 +232,20 @@
 <!-- ✗ 反例：固定像素宽度拼侧栏，沟槽靠 margin -->
 <aside class="w-60 shrink-0 border-r">…</aside>
 
-<!-- ✓ 正例：列宽来自栅格轨道 -->
-<aside class="col-span-12 lg:col-span-2 rounded-lg border">…</aside>
+<!-- ✓ 正例：列宽来自栅格轨道，桌面端不写断点前缀 -->
+<aside class="col-span-2 border-r">…</aside>
+```
+
+```html
+<!-- ✗ 反例：页面级区域之间留 24px 沟槽 -->
+<div class="grid grid-cols-12 gap-6">
+  <aside class="col-span-2 rounded-lg">…</aside>
+</div>
+
+<!-- ✓ 正例：区域贴合，靠分隔线划分 -->
+<div class="grid grid-cols-12 gap-0">
+  <aside class="col-span-2 border-r border-line">…</aside>
+</div>
 ```
 
 ```html
