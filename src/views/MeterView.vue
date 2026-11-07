@@ -92,19 +92,8 @@ const emptyText = computed(() =>
         </div>
       </div>
 
-      <!-- 音源类型 + 车型筛选，均为单选 -->
+      <!-- 车型 + 音源类型筛选，均为单选 -->
       <div class="mt-3 grid grid-cols-12 items-center gap-2">
-        <div class="col-span-3">
-          <el-select
-            v-model="sourceFilter"
-            size="small"
-            clearable
-            placeholder="音源类型：全部"
-            class="w-full"
-          >
-            <el-option v-for="source in sourceOptions" :key="source" :label="source" :value="source" />
-          </el-select>
-        </div>
         <div class="col-span-3">
           <el-select
             v-model="vehicleFilter"
@@ -119,6 +108,17 @@ const emptyText = computed(() =>
               :label="vehicle"
               :value="vehicle"
             />
+          </el-select>
+        </div>
+        <div class="col-span-3">
+          <el-select
+            v-model="sourceFilter"
+            size="small"
+            clearable
+            placeholder="音源类型：全部"
+            class="w-full"
+          >
+            <el-option v-for="source in sourceOptions" :key="source" :label="source" :value="source" />
           </el-select>
         </div>
       </div>
