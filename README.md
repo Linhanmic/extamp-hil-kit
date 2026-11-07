@@ -42,7 +42,7 @@ npm run lint        # oxlint + eslint
 - 主进程跟随 `package.json` 的 `type: module` 输出 ESM（`dist-electron/main.js`）；预加载脚本在 `sandbox: true` 下必须是 CommonJS，因此单独构建为 `dist-electron/preload.cjs`。
 - 渲染进程通过 `contextIsolation: true` + `nodeIntegration: false` 隔离，Node 能力只经 `contextBridge` 暴露。
 - 生产环境用 `file://` 加载 `dist/index.html`，`vite.config.ts` 里 `base: './'` 保证资源相对路径；路由在 `file:` 协议下自动切换为 hash history。
-- 窗口默认 1440 × 900，最小 1120 × 720——低于该宽度会压破三栏栅格。
+- 窗口默认 1472 × 960，最小 1120 × 720——低于该宽度会压破三栏栅格。
 
 ## 界面规范
 

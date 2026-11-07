@@ -28,8 +28,8 @@ function registerWindowControls() {
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: 1472,
+    height: 960,
     // 桌面端三栏布局的最小可用尺寸，低于此尺寸栅格列会被压破
     minWidth: 1120,
     minHeight: 720,
