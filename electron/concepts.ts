@@ -62,11 +62,12 @@ function listConceptFiles(dir: string): string[] {
   return result
 }
 
-/** 按车型生成一个 cpt 到设置中的生成目录；默认 specs */
-export function generateConceptFile(
+/** 按车型生成一个 cpt 到指定设置项的生成目录；默认 specs */
+function generateConceptFileAt(
   projectPath: string,
   fileName: string,
   text: string,
+  settingKey: 'conceptOutputDir' | 'slotConceptOutputDir',
 ): ConceptGenerateOutcome {
   if (typeof fileName !== 'string' || basename(fileName) !== fileName || !fileName.endsWith('.cpt')) {
     return { error: '生成的 cpt 文件名不正确' }
@@ -76,7 +77,7 @@ export function generateConceptFile(
   }
 
   try {
-    const configured = readSettings(projectPath).document?.settings.conceptOutputDir ?? ''
+    const configured = readSettings(projectPath).document?.settings[settingKey] ?? ''
     const base = resolveProjectPath(projectPath, configured, 'specs')
     const target = resolve(base, fileName)
     if (!target.startsWith(base + sep)) {
@@ -93,6 +94,24 @@ export function generateConceptFile(
   } catch (error) {
     return { error: `cpt 文件生成失败：${errorMessage(error)}` }
   }
+}
+
+/** 出声位置按车型生成 cpt */
+export function generateConceptFile(
+  projectPath: string,
+  fileName: string,
+  text: string,
+): ConceptGenerateOutcome {
+  return generateConceptFileAt(projectPath, fileName, text, 'conceptOutputDir')
+}
+
+/** SLOT 映射按车型生成 cpt，使用独立目录 */
+export function generateSlotConceptFile(
+  projectPath: string,
+  fileName: string,
+  text: string,
+): ConceptGenerateOutcome {
+  return generateConceptFileAt(projectPath, fileName, text, 'slotConceptOutputDir')
 }
 
 export function registerConceptsIpc() {
@@ -162,6 +181,12 @@ export function registerConceptsIpc() {
     const project = readWorkspace().current
     if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies ConceptGenerateOutcome
     return generateConceptFile(project.path, fileName, text)
+  })
+
+  handle('concepts:generate-slot', (_event, fileName: string, text: string) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies ConceptGenerateOutcome
+    return generateSlotConceptFile(project.path, fileName, text)
   })
 
   handle('concepts:delete', (_event, path: string) => {

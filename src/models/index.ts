@@ -68,6 +68,7 @@ export type {
   SnapshotFile,
   SnapshotDocument,
   SnapshotLoadOutcome,
+  SnapshotAppendOutcome,
 } from './snapshot'
 export type {
   SpecFileInfo,

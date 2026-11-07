@@ -9,9 +9,10 @@ import type {
   OutputLoadOutcome,
   SlotMappingLoadOutcome,
   SnapshotLoadOutcome,
+  SnapshotAppendOutcome,
   VolumeTableLoadOutcome,
 } from '../src/models'
-import { readOutput, readSlotMapping, readSnapshotDir, readVolumeTable } from './business-store'
+import { appendSnapshot, readOutput, readSlotMapping, readSnapshotDir, readVolumeTable } from './business-store'
 import { readSettings } from './settings-store'
 import { readWorkspace } from './workspace'
 
@@ -66,6 +67,17 @@ export function registerBusinessIpc() {
       return readSnapshotDir(project.path, settings?.snapshotDir ?? '') satisfies SnapshotLoadOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies SnapshotLoadOutcome
+    }
+  })
+
+  handle('snapshot:append', (_event, section: string, speakers: string[]) => {
+    const project = readWorkspace().current
+    if (!project) return { unconfigured: true } satisfies SnapshotAppendOutcome
+    try {
+      const settings = readSettings(project.path).document?.settings
+      return appendSnapshot(project.path, settings?.snapshotDir ?? '', section, speakers)
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies SnapshotAppendOutcome
     }
   })
 }

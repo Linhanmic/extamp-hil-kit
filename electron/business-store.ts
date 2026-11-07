@@ -7,8 +7,8 @@
  * 解析函数都是纯函数（文本进、结构出），便于单测；读取函数负责解析路径 + 读文件，
  * 文件缺失按「空数据」处理，只有文件存在但读不了 / 解析不了才报 error。
  */
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import type {
   OutputDocument,
   OutputLoadOutcome,
@@ -19,6 +19,7 @@ import type {
   SlotMappingScenario,
   SnapshotDocument,
   SnapshotFile,
+  SnapshotAppendOutcome,
   SnapshotLoadOutcome,
   VolumeTableDocument,
   VolumeTableLoadOutcome,
@@ -185,12 +186,13 @@ export function parseSlotMappingFileText(text: string): {
       continue
     }
     if (line.startsWith('#')) {
-      current = { title: line.slice(1).trim(), slots: [], hasNonSlotSteps: false }
+      current = { title: line.slice(1).trim(), steps: [], slots: [], hasNonSlotSteps: false }
       scenarios.push(current)
       continue
     }
     if (!current || !line.startsWith('*')) continue
 
+    current.steps.push(line.slice(1).trim())
     const matches = [...line.matchAll(/SLOT\s*(\d+)/gi)]
     for (const match of matches) {
       const slot = Number(match[1])
@@ -304,7 +306,42 @@ export function readSlotMapping(projectPath: string, dirPath = ''): SlotMappingL
   return { document: { plans } satisfies SlotMappingDocument }
 }
 
-/** 读取扬声器快照目录下统一的 snapshot.ini */
+/** 追加一个快照分节到 snapshot.ini；保留原文件，拒绝同名分节 */
+export function appendSnapshot(
+  projectPath: string,
+  dirPath: string,
+  section: string,
+  speakers: string[],
+): SnapshotAppendOutcome {
+  const target = resolveProjectPath(projectPath, dirPath)
+  if (!target) return { unconfigured: true }
+
+  const name = section.trim()
+  if (!name || /[[\]\r\n]/.test(name)) return { error: '适用车型分节名称不正确' }
+  const lines = speakers.map((speaker) => speaker.trim()).filter(Boolean)
+  if (!lines.length) return { error: '至少填写一个扬声器' }
+
+  const filePath = join(target, 'snapshot.ini')
+  try {
+    let text = ''
+    try {
+      text = readFileSync(filePath, 'utf8')
+    } catch (error) {
+      if (!isMissing(error)) throw error
+    }
+    const sections = [...text.matchAll(/^\[([^\]]+)\]/gm)].map((match) => match[1]?.trim())
+    if (sections.includes(name)) return { error: `分节「${name}」已存在` }
+
+    const eol = text.includes('\r\n') ? '\r\n' : '\n'
+    const addition = `${text.trimEnd() ? `${eol}${eol}` : ''}[${name}]${eol}${lines.join(eol)}${eol}`
+    mkdirSync(dirname(filePath), { recursive: true })
+    writeFileSync(filePath, `${text.trimEnd()}${addition}`, 'utf8')
+    return { saved: { filePath, updatedAt: statSync(filePath).mtime.toISOString() } }
+  } catch (error) {
+    return { error: `快照写入失败：${message(error)}` }
+  }
+}
+
 export function readSnapshotDir(projectPath: string, dirPath = ''): SnapshotLoadOutcome {
   const target = resolveProjectPath(projectPath, dirPath)
   if (!target) return { unconfigured: true }

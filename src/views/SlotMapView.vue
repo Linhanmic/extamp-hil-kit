@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useSlotMapStore } from '@/stores/slotMap'
+import { useConceptsStore } from '@/stores/concepts'
+import { extractParams, serializeConcepts, validateConcepts } from '@/spec/concept-file'
 import { formatSlots, scenarioSlots, sourceTitles } from '@/stores/slot-map-format'
 
 /**
@@ -8,7 +11,9 @@ import { formatSlots, scenarioSlots, sourceTitles } from '@/stores/slot-map-form
  * 总览按「音源 × 映射方案」展示；详情左侧方案列表，右侧车型与音源 SLOT。
  */
 const store = useSlotMapStore()
+const conceptsStore = useConceptsStore()
 const viewMode = ref<'overview' | 'detail'>('overview')
+const generating = ref(false)
 const selectedName = ref('')
 const vehicleFilter = ref('')
 const sourceFilter = ref('')
@@ -58,6 +63,42 @@ watch(
 function displayName(fileName: string): string {
   return fileName.replace(/\.txt$/i, '')
 }
+
+/** 汇总当前车型适用的映射方案，生成 <车型>-SLOT.cpt */
+async function generateSlotCpt() {
+  const vehicle = vehicleFilter.value
+  const api = window.desktop?.concepts
+  if (!vehicle || !api?.generateSlot) return
+
+  const concepts = visiblePlans.value.flatMap((plan) =>
+    plan.scenarios
+      .filter((scenario) => scenario.steps.length)
+      .map((scenario) => ({
+        heading: `${displayName(plan.name)} · ${scenario.title}`,
+        params: extractParams(scenario.title),
+        steps: scenario.steps.map((text) => ({ text, table: null })),
+      })),
+  )
+  const issues = validateConcepts(concepts)
+  if (issues.length) {
+    ElMessage.error(issues[0]!.message)
+    return
+  }
+
+  generating.value = true
+  try {
+    const fileName = `${vehicle.replace(/[\\/:*?"<>|]/g, '_')}-SLOT.cpt`
+    const outcome = await api.generateSlot(fileName, serializeConcepts(concepts))
+    if (outcome.saved) {
+      ElMessage.success(`已生成 ${outcome.saved.filePath}`)
+      await conceptsStore.load()
+    } else {
+      ElMessage.error(outcome.error ?? '生成 SLOT cpt 失败')
+    }
+  } finally {
+    generating.value = false
+  }
+}
 </script>
 
 <!--
@@ -74,7 +115,19 @@ function displayName(fileName: string): string {
             {{ store.errorPlanCount }} 个文件异常
           </el-tag>
         </div>
-        <div class="col-span-6 justify-self-end">
+        <div class="col-span-6 flex items-center justify-end gap-2">
+          <el-button
+            size="small"
+            type="primary"
+            :loading="generating"
+            :disabled="
+              !vehicleFilter ||
+              !visiblePlans.some((plan) => plan.scenarios.some((scenario) => scenario.steps.length))
+            "
+            @click="generateSlotCpt"
+          >
+            按车型生成 CPT
+          </el-button>
           <el-segmented
             v-model="viewMode"
             size="small"

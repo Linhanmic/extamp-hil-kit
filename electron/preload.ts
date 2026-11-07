@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('desktop', {
   },
   snapshot: {
     load: () => ipcRenderer.invoke('snapshot:load'),
+    append: (section: string, speakers: string[]) =>
+      ipcRenderer.invoke('snapshot:append', section, speakers),
   },
   specs: {
     list: () => ipcRenderer.invoke('specs:list'),
@@ -67,6 +69,8 @@ contextBridge.exposeInMainWorld('desktop', {
     delete: (path: string) => ipcRenderer.invoke('concepts:delete', path),
     generate: (fileName: string, text: string) =>
       ipcRenderer.invoke('concepts:generate', fileName, text),
+    generateSlot: (fileName: string, text: string) =>
+      ipcRenderer.invoke('concepts:generate-slot', fileName, text),
   },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),

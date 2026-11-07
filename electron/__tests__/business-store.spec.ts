@@ -1,9 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   parseOutputText,
+  appendSnapshot,
   parseSlotMappingFileText,
   parseSnapshotIniText,
   parseVolumeTableText,
@@ -131,6 +132,31 @@ describe('parseSnapshotIniText', () => {
         channels: [{ channel: '通道1', speaker: '中置' }],
       },
     ])
+  })
+})
+
+describe('appendSnapshot', () => {
+  it('保留原内容并追加分节，同名分节拒绝', () => {
+    const project = temporaryProject()
+    const dir = join(project, 'config', '扬声器快照')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'snapshot.ini'), '[SC6H]\n左前低音\n', 'utf8')
+
+    const outcome = appendSnapshot(project, 'config/扬声器快照', 'YU2', ['中置', '重低音'])
+    expect(outcome.saved?.filePath).toBe(join(dir, 'snapshot.ini'))
+
+    const text = readFileSync(join(dir, 'snapshot.ini'), 'utf8')
+    expect(text).toContain('[SC6H]')
+    expect(text).toContain('[YU2]\n中置\n重低音')
+    expect(appendSnapshot(project, 'config/扬声器快照', 'YU2', ['中置']).error).toMatch(/已存在/)
+  })
+
+  it('文件不存在时创建，空车型或空扬声器拒绝', () => {
+    const project = temporaryProject()
+    const outcome = appendSnapshot(project, 'config/扬声器快照', 'SC6H/YU2', ['左前'])
+    expect(outcome.saved).toBeDefined()
+    expect(appendSnapshot(project, 'config/扬声器快照', '', ['左前']).error).toMatch(/名称不正确/)
+    expect(appendSnapshot(project, 'config/扬声器快照', 'SC6H', ['  ']).error).toMatch(/至少填写/)
   })
 })
 

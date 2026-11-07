@@ -27,6 +27,7 @@
         "volumeTablePath",
         "slotMappingPath",
         "conceptOutputDir",
+        "slotConceptOutputDir",
         "requirementsImport"
       ],
       "additionalProperties": false,
@@ -58,6 +59,10 @@
         "conceptOutputDir": {
           "type": "string",
           "description": "按车型生成 cpt 的目录；空串表示 specs"
+        },
+        "slotConceptOutputDir": {
+          "type": "string",
+          "description": "按车型生成 SLOT cpt 的目录；空串表示 specs"
         },
         "requirementsImport": { "$ref": "#/$defs/requirementsImport" }
       }

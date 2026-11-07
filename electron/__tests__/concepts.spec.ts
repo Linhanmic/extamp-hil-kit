@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { generateConceptFile } from '../concepts'
+import { generateConceptFile, generateSlotConceptFile } from '../concepts'
 import { writeSettings } from '../settings-store'
 import { DEFAULT_PROJECT_SETTINGS } from '../../src/config/settings-defaults'
 
@@ -37,5 +37,18 @@ describe('generateConceptFile', () => {
 
     expect(generateConceptFile(project, '../escape.cpt', '# x\n').error).toMatch(/文件名不正确/)
     expect(generateConceptFile(project, 'empty.cpt', '  ').error).toMatch(/内容不能为空/)
+  })
+
+  it('SLOT cpt 使用独立生成目录', () => {
+    const project = temporaryProject()
+    writeSettings(project, {
+      ...DEFAULT_PROJECT_SETTINGS,
+      conceptOutputDir: 'output/cpt',
+      slotConceptOutputDir: 'slot/cpt',
+    })
+
+    const outcome = generateSlotConceptFile(project, 'SC6H-SLOT.cpt', '# 媒体音\n* 打开SLOT1\n')
+    expect(outcome.saved?.filePath).toBe(join(project, 'slot', 'cpt', 'SC6H-SLOT.cpt'))
+    expect(readFileSync(outcome.saved!.filePath, 'utf8')).toContain('SLOT1')
   })
 })

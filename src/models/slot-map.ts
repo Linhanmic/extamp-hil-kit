@@ -1,6 +1,8 @@
 /** 一个音源场景及其 SLOT 通道 */
 export interface SlotMappingScenario {
   title: string
+  /** 场景原始步骤（不含 *），供生成 cpt 时保留 */
+  steps: string[]
   slots: number[]
   /** 是否存在 sleep 等非 SLOT 步骤；没有 slots 时界面统一显示“-” */
   hasNonSlotSteps: boolean

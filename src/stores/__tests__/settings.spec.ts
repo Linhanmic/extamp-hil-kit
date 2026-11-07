@@ -14,6 +14,7 @@ function sampleSettings(): ProjectSettings {
     volumeTablePath: '',
     slotMappingPath: 'config/SLOT映射/mapping.ini',
     conceptOutputDir: 'specs',
+    slotConceptOutputDir: 'specs',
     requirementsImport: {
       filePath: '',
       sheetName: '6、软件需求分析表',

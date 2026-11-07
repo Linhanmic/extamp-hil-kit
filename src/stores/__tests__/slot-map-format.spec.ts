@@ -17,15 +17,15 @@ describe('总览矩阵辅助', () => {
       filePath: '/a',
       vehicles: [],
       scenarios: [
-        { title: '媒体音立体声', slots: [1, 2], hasNonSlotSteps: false },
-        { title: '电话音', slots: [13], hasNonSlotSteps: false },
+        { title: '媒体音立体声', steps: ['音源盒打开SLOT1', '音源盒打开SLOT2'], slots: [1, 2], hasNonSlotSteps: false },
+        { title: '电话音', steps: ['音源盒打开SLOT13'], slots: [13], hasNonSlotSteps: false },
       ],
     },
     {
       name: '方案B',
       filePath: '/b',
       vehicles: [],
-      scenarios: [{ title: '媒体音立体声', slots: [3, 4], hasNonSlotSteps: false }],
+      scenarios: [{ title: '媒体音立体声', steps: ['音源盒打开SLOT3', '音源盒打开SLOT4'], slots: [3, 4], hasNonSlotSteps: false }],
     },
   ]
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import SnapshotFormDialog from '@/components/SnapshotFormDialog.vue'
 import { useSnapshotStore } from '@/stores/snapshot'
 
 /**
@@ -9,6 +10,8 @@ import { useSnapshotStore } from '@/stores/snapshot'
 const store = useSnapshotStore()
 const selectedIndex = ref(0)
 const vehicleFilter = ref('')
+const createVisible = ref(false)
+const canAppend = computed(() => Boolean(window.desktop?.snapshot?.append))
 
 const vehicleOptions = computed(() => {
   const names = new Set<string>()
@@ -38,8 +41,18 @@ watch(
   <div class="flex flex-col gap-3">
     <div class="w-[calc(11.5/12*100%)]">
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-12 flex flex-wrap items-center">
+        <div class="col-span-7">
           <h1 class="text-lg font-medium text-ink">扬声器快照</h1>
+        </div>
+        <div class="col-span-5 justify-self-end">
+          <el-button
+            size="small"
+            type="primary"
+            :disabled="!canAppend"
+            @click="createVisible = true"
+          >
+            新增快照
+          </el-button>
         </div>
       </div>
 
@@ -128,5 +141,10 @@ watch(
         </div>
       </div>
     </div>
+
+    <SnapshotFormDialog
+      v-model="createVisible"
+      @added="selectedIndex = Math.max(0, visibleFiles.length - 1)"
+    />
   </div>
 </template>

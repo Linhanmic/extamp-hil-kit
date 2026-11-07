@@ -61,7 +61,9 @@ async function chooseFile(kind: SettingsPickKind) {
   }
 }
 
-async function chooseDirectory(kind: 'snapshot' | 'slot-mapping' | 'concept-output' = 'snapshot') {
+async function chooseDirectory(
+  kind: 'snapshot' | 'slot-mapping' | 'concept-output' | 'slot-concept-output' = 'snapshot',
+) {
   const outcome = await store.pickDirectory()
   if (outcome.canceled) return
   if (outcome.error || !outcome.path) {
@@ -70,6 +72,7 @@ async function chooseDirectory(kind: 'snapshot' | 'slot-mapping' | 'concept-outp
   }
   if (kind === 'slot-mapping') form.value.slotMappingPath = outcome.path
   else if (kind === 'concept-output') form.value.conceptOutputDir = outcome.path
+  else if (kind === 'slot-concept-output') form.value.slotConceptOutputDir = outcome.path
   else form.value.snapshotDir = outcome.path
 }
 
@@ -199,6 +202,13 @@ async function submit() {
             placeholder="留空用 specs"
             fallback="specs"
             @pick="chooseDirectory('concept-output')"
+          />
+          <SettingsPathField
+            v-model="form.slotConceptOutputDir"
+            label="SLOT CPT 生成目录"
+            placeholder="留空用 specs"
+            fallback="specs"
+            @pick="chooseDirectory('slot-concept-output')"
           />
         </div>
       </div>

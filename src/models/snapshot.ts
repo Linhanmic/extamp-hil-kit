@@ -24,3 +24,13 @@ export interface SnapshotLoadOutcome {
   unconfigured?: boolean
   document?: SnapshotDocument
 }
+
+/** 追加一个快照分节的结果 */
+export interface SnapshotAppendOutcome {
+  error?: string
+  unconfigured?: boolean
+  saved?: {
+    filePath: string
+    updatedAt: string
+  }
+}

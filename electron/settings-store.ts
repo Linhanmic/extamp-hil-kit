@@ -104,6 +104,7 @@ export function sanitizeSettings(input: unknown): ProjectSettings {
     volumeTablePath: readText(input, 'volumeTablePath'),
     slotMappingPath: readText(input, 'slotMappingPath'),
     conceptOutputDir: readText(input, 'conceptOutputDir'),
+    slotConceptOutputDir: readText(input, 'slotConceptOutputDir'),
     requirementsImport: {
       filePath: readText(importSettings, 'filePath'),
       sheetName: readText(importSettings, 'sheetName'),

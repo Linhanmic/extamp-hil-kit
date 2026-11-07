@@ -21,6 +21,7 @@ import type {
   SettingsSaveOutcome,
   SlotMappingLoadOutcome,
   SnapshotLoadOutcome,
+  SnapshotAppendOutcome,
   SpecsListOutcome,
   SpecsReadOutcome,
   SpecsWriteOutcome,
@@ -99,6 +100,8 @@ export interface DesktopBridge {
   snapshot: {
     /** 读取当前项目扬声器快照目录下的所有快照文件 */
     load: () => Promise<SnapshotLoadOutcome>
+    /** 向 snapshot.ini 追加一个车型分节 */
+    append: (section: string, speakers: string[]) => Promise<SnapshotAppendOutcome>
   }
   specs: {
     /** 列出当前项目 specs 目录下的 .spec 文件 */
@@ -119,6 +122,8 @@ export interface DesktopBridge {
     delete: (path: string) => Promise<ConceptsDeleteOutcome>
     /** 按车型生成一个 cpt 到设置中的生成目录 */
     generate: (fileName: string, text: string) => Promise<ConceptGenerateOutcome>
+    /** 按车型生成 SLOT cpt 到独立的生成目录 */
+    generateSlot: (fileName: string, text: string) => Promise<ConceptGenerateOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */
