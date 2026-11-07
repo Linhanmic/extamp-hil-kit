@@ -122,7 +122,7 @@ function joinRefs(
             {{ row.vehicleCount }} 车型
           </el-tag>
         </div>
-        <div class="col-span-2 px-2 py-2 text-center">
+        <div class="col-span-2 flex items-center justify-center px-2 py-2">
           <el-tag size="small" :type="statusType(row.issueCount)" effect="plain">
             {{ statusText(row.issueCount) }}
           </el-tag>
@@ -188,12 +188,12 @@ function joinRefs(
         </p>
 
         <template v-for="value in row.values" :key="valueRowKey(row.config_key, value.value)">
-          <!-- 配置值行 -->
-          <div class="grid grid-cols-12 items-start gap-0 border-b border-line/40">
-            <div class="col-span-3 flex min-w-0 items-start gap-1 px-2 py-2 pl-8">
+          <!-- 配置值行：整行 items-center，状态/操作与左侧同一水平线 -->
+          <div class="grid grid-cols-12 items-center gap-0 border-b border-line/40">
+            <div class="col-span-3 flex min-w-0 items-center gap-1 px-2 py-2 pl-8">
               <button
                 type="button"
-                class="mt-0.5 grid size-4 shrink-0 place-items-center rounded text-ink-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="grid size-4 shrink-0 place-items-center rounded text-ink-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
                 :aria-expanded="openValueKeys.has(valueRowKey(row.config_key, value.value))"
                 :aria-label="`${openValueKeys.has(valueRowKey(row.config_key, value.value)) ? '收起' : '展开'}变体明细`"
                 @click="toggleValue(row.config_key, value.value)"
@@ -230,7 +230,7 @@ function joinRefs(
             >
               {{ joinVehicles(value.resolved.vehicles) }}
             </div>
-            <div class="col-span-2 px-2 py-2 text-center">
+            <div class="col-span-2 flex items-center justify-center px-2 py-2">
               <el-tag
                 size="small"
                 :type="value.resolved.hasIssue ? 'warning' : 'success'"
@@ -298,7 +298,7 @@ function joinRefs(
               >
                 {{ joinVehicles(ref.vehicles) }}
               </div>
-              <div class="col-span-2 px-2 py-1.5 text-center">
+              <div class="col-span-2 flex items-center justify-center px-2 py-1.5">
                 <el-tag
                   size="small"
                   :type="ref.status === 'ok' ? 'success' : 'danger'"
