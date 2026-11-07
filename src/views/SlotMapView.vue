@@ -10,14 +10,31 @@ import { formatSlots, scenarioSlots, sourceTitles } from '@/stores/slot-map-form
 const store = useSlotMapStore()
 const viewMode = ref<'overview' | 'detail'>('overview')
 const selectedName = ref('')
+const vehicleFilter = ref('')
 
-const titles = computed(() => sourceTitles(store.plans))
+const vehicleOptions = computed(() => {
+  const names = new Set<string>()
+  for (const plan of store.plans) {
+    for (const vehicle of plan.vehicles) names.add(vehicle)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+})
+
+const visiblePlans = computed(() =>
+  vehicleFilter.value
+    ? store.plans.filter((plan) => plan.vehicles.includes(vehicleFilter.value))
+    : store.plans,
+)
+const titles = computed(() => sourceTitles(visiblePlans.value))
 const selectedPlan = computed(
-  () => store.plans.find((plan) => plan.name === selectedName.value) ?? store.plans[0] ?? null,
+  () =>
+    visiblePlans.value.find((plan) => plan.name === selectedName.value) ??
+    visiblePlans.value[0] ??
+    null,
 )
 
 watch(
-  () => store.plans,
+  visiblePlans,
   (plans) => {
     if (!plans.some((plan) => plan.name === selectedName.value)) {
       selectedName.value = plans[0]?.name ?? ''
@@ -25,6 +42,10 @@ watch(
   },
   { immediate: true },
 )
+
+function displayName(fileName: string): string {
+  return fileName.replace(/\.txt$/i, '')
+}
 </script>
 
 <!--
@@ -53,6 +74,26 @@ watch(
           />
         </div>
       </div>
+
+      <!-- 车型筛选：单选，过滤总览列与详情方案列表 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-3">
+          <el-select
+            v-model="vehicleFilter"
+            size="small"
+            clearable
+            placeholder="车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
+        </div>
+      </div>
     </div>
 
     <el-alert
@@ -75,6 +116,7 @@ watch(
     <div class="w-[calc(11.5/12*100%)]">
       <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取 SLOT 映射…</p>
       <el-empty v-else-if="!store.hasData" description="该目录下还没有 SLOT 映射 txt 文件" />
+      <el-empty v-else-if="!visiblePlans.length" description="未找到适用该车型的映射" />
 
       <!-- 总览矩阵 -->
       <div v-else-if="viewMode === 'overview'" class="overflow-x-auto border border-line">
@@ -85,12 +127,12 @@ watch(
                 音源类型
               </th>
               <th
-                v-for="plan in store.plans"
+                v-for="plan in visiblePlans"
                 :key="plan.name"
                 class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap last:border-r-0"
                 :title="plan.filePath"
               >
-                {{ plan.name }}
+                {{ displayName(plan.name) }}
               </th>
             </tr>
           </thead>
@@ -100,7 +142,7 @@ watch(
                 {{ title }}
               </th>
               <td
-                v-for="plan in store.plans"
+                v-for="plan in visiblePlans"
                 :key="plan.name"
                 class="border-b border-r border-line px-3 py-2 text-center whitespace-nowrap last:border-r-0"
                 :title="formatSlots(scenarioSlots(plan, title))"
@@ -117,14 +159,14 @@ watch(
         <div class="col-span-3">
           <div class="flex max-h-[60vh] flex-col overflow-y-auto border border-line">
             <button
-              v-for="plan in store.plans"
+              v-for="plan in visiblePlans"
               :key="plan.name"
               type="button"
               class="border-b border-line px-3 py-2 text-left text-[11px] break-all outline-none last:border-b-0 hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-primary/40"
               :class="selectedPlan?.name === plan.name ? 'bg-surface-soft text-primary' : 'text-ink'"
               @click="selectedName = plan.name"
             >
-              {{ plan.name }}
+              {{ displayName(plan.name) }}
             </button>
           </div>
         </div>
@@ -132,10 +174,12 @@ watch(
         <div class="col-span-9 min-w-0">
           <div v-if="selectedPlan" class="border border-line">
             <div class="border-b border-line bg-surface-soft px-3 py-2">
-              <h2 class="text-[13px] font-medium break-all text-ink">{{ selectedPlan.name }}</h2>
-              <p class="mt-1 text-[11px] break-all text-ink-muted">
-                适用车型：{{ selectedPlan.vehicles.join('/') || '—' }}
-              </p>
+              <h2 class="text-[13px] font-medium break-all text-ink">
+                {{ displayName(selectedPlan.name) }}
+              </h2>
+            </div>
+            <div class="border-b border-line px-3 py-2 text-[11px] break-all text-ink">
+              适用车型：{{ selectedPlan.vehicles.join('/') || '—' }}
             </div>
             <el-alert
               v-if="selectedPlan.error"
