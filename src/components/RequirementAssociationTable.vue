@@ -105,9 +105,6 @@ function joinVehicles(vehicles: string[]): string {
           <span class="min-w-0 truncate text-[13px] text-ink" :title="requirement.name">
             {{ requirement.name }}
           </span>
-          <span class="shrink-0 text-[11px] text-ink-muted" :title="requirement.id">
-            {{ requirement.id }}
-          </span>
         </div>
         <div class="col-span-2 flex items-center justify-center px-2 py-2">
           <el-tag size="small" type="info" effect="plain">
@@ -141,12 +138,12 @@ function joinVehicles(vehicles: string[]): string {
         v-if="openIds.has(requirement.id)"
         class="border-b border-line bg-surface-soft/40 px-2 py-2"
       >
-        <p
-          v-if="requirement.detail"
-          class="mb-2 max-h-24 overflow-y-auto whitespace-pre-wrap px-2 text-[11px] leading-relaxed text-ink-muted"
-        >
-          {{ requirement.detail }}
-        </p>
+        <div class="mb-2 px-2">
+          <p class="text-[11px] font-medium text-ink">需求ID：{{ requirement.id }}</p>
+          <p class="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-muted">
+            {{ requirement.detail || '（表里没有填写需求详情）' }}
+          </p>
+        </div>
         <div class="grid grid-cols-12 items-center gap-0 border-b border-line/60">
           <div class="col-span-6 px-2 py-1.5 pl-8 text-[11px] font-medium text-ink-muted">
             变体内容

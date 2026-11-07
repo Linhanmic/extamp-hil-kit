@@ -49,6 +49,21 @@ describe('变体内容键', () => {
 })
 
 describe('parseRequirements', () => {
+  it('需求ID与名称导入时去掉所有空白字符', () => {
+    const result = parseRequirements(
+      table([
+        ['需求ID', '需求名称', '需求详情', 'HFAF'],
+        [' REQ\n_1 ', ' 功放\n 握手 ', '详情', '●'],
+        ['REQ_1', '', '', '●'],
+      ]),
+      MAPPING,
+    )
+
+    expect(result.requirements).toHaveLength(1)
+    expect(result.requirements[0]).toMatchObject({ id: 'REQ_1', name: '功放握手' })
+    expect(result.stats.mergedRows).toBe(1)
+  })
+
   it('按 ●、●变体、—、空格解析需求行，平台列整列忽略', () => {
     const result = parseRequirements(
       table([

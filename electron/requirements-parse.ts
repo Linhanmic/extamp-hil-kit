@@ -326,8 +326,9 @@ export function parseRequirements(
 
   dataRows.forEach((row, offset) => {
     const rowNumber = headerRow + offset + 1
-    const id = cellText(row, idCol)
-    const name = cellText(row, nameCol)
+    // 需求 ID / 名称作为匹配键与关联字段，导入时去掉所有空白字符（含空格、换行、全角空格）
+    const id = cellText(row, idCol).replace(/\s+/g, '')
+    const name = cellText(row, nameCol).replace(/\s+/g, '')
     const detail = cellText(row, detailCol)
 
     if (!id) {

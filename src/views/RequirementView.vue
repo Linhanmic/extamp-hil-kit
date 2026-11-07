@@ -14,20 +14,37 @@ const store = useRequirementsStore()
 const configsStore = useConfigsStore()
 const importVisible = ref(false)
 const keyword = ref('')
+const vehicleFilter = ref('')
 
 const available = computed(() => Boolean(window.desktop?.requirements))
 
+/** 车型筛选候选：需求各变体适用车型去重 */
+const vehicleOptions = computed(() => {
+  const names = new Set<string>()
+  for (const requirement of store.document?.requirements ?? []) {
+    for (const variant of requirement.variants) {
+      for (const vehicle of variant.vehicles) names.add(vehicle)
+    }
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+})
+
 const filteredRequirements = computed(() => {
   const query = keyword.value.trim().toLowerCase()
-  const requirements = store.document?.requirements ?? []
-  if (!query) return requirements
-  return requirements.filter(
-    (item) => item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query),
-  )
+  return (store.document?.requirements ?? []).filter((item) => {
+    if (query && !item.name.toLowerCase().includes(query)) return false
+    if (
+      vehicleFilter.value &&
+      !item.variants.some((variant) => variant.vehicles.includes(vehicleFilter.value))
+    ) {
+      return false
+    }
+    return true
+  })
 })
 
 const emptyText = computed(() =>
-  keyword.value.trim() ? '未找到匹配的需求' : '该项目还没有导入需求',
+  keyword.value.trim() || vehicleFilter.value ? '未找到匹配的需求' : '该项目还没有导入需求',
 )
 
 /** 配置值仍引用、但当前需求列表已不存在的需求 */
@@ -35,49 +52,54 @@ const orphanNames = computed(() =>
   missingRequirementNames(store.document?.requirements ?? [], configsStore.configurations),
 )
 
-// ISO 存 UTC，界面按本地时间展示
-function formatTime(value?: string): string {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('zh-CN', { hour12: false })
-}
-
 async function onImported() {
   await store.load()
 }
 </script>
 
 <!--
-  @grid A：标题行（标题 + 统计 + 导入按钮）与工具栏（搜索 + 更新时间）都是 Row 下按比例分列，
-  按钮组按 B 方案整组占一列。
+  @grid A：标题、筛选、表格共用 11.5/12 内容宽，导入按钮与表格右缘对齐。
+  标题 6 · 导入 6；需求名称输入 4 · 车型下拉 3。
 -->
 <template>
   <div class="flex flex-col gap-3">
-    <!-- 标题行 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-6 flex items-center gap-2">
-        <h1 class="text-lg font-medium text-ink">需求</h1>
-        <el-tag size="small" type="info" effect="plain">
-          {{ store.requirementCount }} 个需求
-        </el-tag>
-        <el-tag size="small" type="info" effect="plain"> {{ store.variantCount }} 个变体 </el-tag>
+    <div class="w-[calc(11.5/12*100%)]">
+      <!-- 标题行 -->
+      <div class="grid grid-cols-12 items-center gap-2">
+        <div class="col-span-6 flex items-center gap-2">
+          <h1 class="text-lg font-medium text-ink">需求</h1>
+          <el-tag size="small" type="info" effect="plain">
+            {{ store.requirementCount }} 个需求
+          </el-tag>
+          <el-tag size="small" type="info" effect="plain"> {{ store.variantCount }} 个变体 </el-tag>
+        </div>
+        <div v-if="available" class="col-span-6 justify-self-end">
+          <el-button size="small" type="primary" @click="importVisible = true">导入 Excel</el-button>
+        </div>
       </div>
-      <div v-if="available" class="col-span-6 justify-self-end">
-        <el-button size="small" type="primary" @click="importVisible = true">导入 Excel</el-button>
-      </div>
-    </div>
 
-    <!-- 工具栏 -->
-    <div class="grid grid-cols-12 items-center gap-2">
-      <div class="col-span-7">
-        <el-input v-model="keyword" size="small" clearable placeholder="搜索需求ID或名称" />
+      <!-- 工具栏：需求名称文本筛选 + 车型单选 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-4">
+          <el-input v-model="keyword" size="small" clearable placeholder="需求名称" />
+        </div>
+        <div class="col-span-3">
+          <el-select
+            v-model="vehicleFilter"
+            size="small"
+            clearable
+            placeholder="车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
+        </div>
       </div>
-      <p class="col-span-5 justify-self-end text-[11px] text-ink-muted">
-        <template v-if="store.hasData">
-          最近更新 {{ formatTime(store.document?.updatedAt) }}
-        </template>
-      </p>
     </div>
 
     <el-alert
