@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDesignGrid } from '@/composables/useDesignGrid'
 import ThemeSwitcher from '../ThemeSwitcher.vue'
 import RegionToggle from './RegionToggle.vue'
 import WindowControls from './WindowControls.vue'
@@ -16,14 +17,17 @@ const emit = defineEmits<{
   'update:secondSidebar': [value: boolean]
 }>()
 
-// 12 条轨道：前 11 条按 1fr 均分，最后一条固定为窗口控制按钮组的实际宽度（3 × 44px），
-// 避免控件列过宽导致按钮与前面的布局按钮之间出现空档
-const TITLEBAR_COLUMNS = 'repeat(11, minmax(0, 1fr)) 132px'
+const { visible: gridVisible, toggle: toggleGrid } = useDesignGrid()
+
+// 12 条弹性轨道 + 1 条固定宽度的窗口控制轨道（3 × 44px），
+// 弹性轨道留给标题与各控件，避免控件与窗口按钮之间出现空档
+const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
 </script>
 
 <!--
   @grid A：标题栏是水平组合容器，内部重新建立 12 列。
-  span 分配：左栏切换 1 · 标题 6 · 主题 2 · 面板切换 1 · 右栏切换 1 · 窗口控制 1（定宽轨道）
+  弹性轨道 span 分配：左栏切换 1 · 标题 6 · 设计网格 1 · 主题 2 · 面板切换 1 · 右栏切换 1 = 12
+  第 13 条轨道固定为窗口控制按钮组宽度。
   整条为窗口拖动区（-webkit-app-region: drag），交互控件单独标记 no-drag。
 -->
 <template>
@@ -44,6 +48,22 @@ const TITLEBAR_COLUMNS = 'repeat(11, minmax(0, 1fr)) 132px'
       <span class="truncate text-[13px] text-ink">工作区 / {{ props.title }}</span>
     </div>
 
+    <!-- Column span-1：设计网格覆盖层开关 -->
+    <button
+      type="button"
+      class="col-span-1 grid size-7 place-items-center justify-self-end self-center rounded text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+      :class="{ 'text-primary': gridVisible }"
+      :aria-pressed="gridVisible"
+      :title="`${gridVisible ? '隐藏' : '显示'}设计网格（12 列 × 48 行，Ctrl+Shift+G）`"
+      :aria-label="`${gridVisible ? '隐藏' : '显示'}设计网格`"
+      @click="toggleGrid"
+    >
+      <svg class="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+        <rect x="2.4" y="3.6" width="11.2" height="8.8" rx="1.8" />
+        <path d="M6.1 3.6v8.8M9.9 3.6v8.8M2.4 7h11.2M2.4 9.2h11.2" />
+      </svg>
+    </button>
+
     <!-- Column span-2：主题切换 -->
     <ThemeSwitcher class="col-span-2 self-center justify-self-end [-webkit-app-region:no-drag]" />
 
@@ -63,7 +83,7 @@ const TITLEBAR_COLUMNS = 'repeat(11, minmax(0, 1fr)) 132px'
       @update:visible="emit('update:secondSidebar', $event)"
     />
 
-    <!-- Column span-1（定宽轨道）：窗口控制按钮组 -->
-    <WindowControls class="col-span-1" />
+    <!-- 第 13 条轨道（定宽 132px）：窗口控制按钮组 -->
+    <WindowControls class="col-start-13" />
   </header>
 </template>

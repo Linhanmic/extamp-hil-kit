@@ -50,6 +50,7 @@ npm run lint        # oxlint + eslint
 - 可拖拽：左栏宽度、右栏宽度、面板高度均由 `SplitResizer` + `useLayoutSize` 控制，拖动上下限写在 `useLayoutSize.ts`；分隔条同时充当 1px 分隔线。
 - 桌面端专属：不做移动端适配，不写断点前缀。
 - 主题：`html.dark` 单一开关，同时驱动 Tailwind `dark:` 变体、Element Plus 深色变量与页面设计令牌。
+- 设计网格：`DesignGrid.vue` 提供覆盖全窗口的 12 列 × 48 行等距网格线，`fixed inset-0`、`z-index 9999`、`pointer-events: none`；标题栏按钮或 `Ctrl + Shift + G` 开关，默认关闭。
 - 品牌：界面内不显示 Logo，品牌名以 `font-brand`（Bahnschrift → Segoe UI 回退）黑色粗体显示在左栏顶部；HIL 标识只作为应用图标（`build/icon.ico`，黑色圆角底 + 白色字标），由 `build/generate-icon.py` 生成。
 
 ## 编辑器与类型

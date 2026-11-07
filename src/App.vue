@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppPanel from './components/layout/AppPanel.vue'
 import AppSecondSidebar from './components/layout/AppSecondSidebar.vue'
 import AppTitleBar from './components/layout/AppTitleBar.vue'
+import DesignGrid from './components/layout/DesignGrid.vue'
 import SplitResizer from './components/layout/SplitResizer.vue'
+import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
 
 const route = useRoute()
@@ -41,6 +43,19 @@ const contentColumns = computed(() => {
 })
 
 const onPanelResize = (delta: number) => resizePanel(delta, mainRef.value?.clientHeight ?? 0)
+
+// 设计网格：标题栏按钮之外再给一个快捷键，方便设计时随手开关
+const { toggle: toggleDesignGrid } = useDesignGrid()
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'g') {
+    event.preventDefault()
+    toggleDesignGrid()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
@@ -75,6 +90,9 @@ const onPanelResize = (delta: number) => resizePanel(delta, mainRef.value?.clien
         <SplitResizer v-show="visible.secondSidebar" direction="x" @resize="resizeSecondSidebar" />
         <AppSecondSidebar v-show="visible.secondSidebar" />
       </div>
+
+      <!-- 设计辅助层：12 列 48 行网格，位于最顶层且不拦截交互 -->
+      <DesignGrid />
     </div>
   </el-config-provider>
 </template>

@@ -15,6 +15,7 @@ declare module 'vue' {
     AppSecondSidebar: typeof import('./components/layout/AppSecondSidebar.vue')['default']
     AppSidebar: typeof import('./components/layout/AppSidebar.vue')['default']
     AppTitleBar: typeof import('./components/layout/AppTitleBar.vue')['default']
+    DesignGrid: typeof import('./components/layout/DesignGrid.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
