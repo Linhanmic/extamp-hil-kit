@@ -11,6 +11,7 @@ import type {
   Configuration,
 } from '../src/models/common'
 import { readConfigs, writeConfigs } from './config-store'
+import { readSettings } from './settings-store'
 import { readWorkspace } from './workspace'
 
 function errorMessage(error: unknown): string {
@@ -29,7 +30,9 @@ export function registerConfigsIpc() {
     if (!project) return { empty: true } satisfies ConfigsLoadOutcome
 
     try {
-      return readConfigs(project.path) satisfies ConfigsLoadOutcome
+      // 配置参数的位置由项目设置决定，缺省是 .hil-kit/config.json
+      const settings = readSettings(project.path).document?.settings
+      return readConfigs(project.path, settings?.configsPath ?? '') satisfies ConfigsLoadOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies ConfigsLoadOutcome
     }
@@ -45,7 +48,10 @@ export function registerConfigsIpc() {
       if (!Array.isArray(configurations)) {
         return { error: '配置参数结构不正确' } satisfies ConfigsSaveOutcome
       }
-      return { saved: writeConfigs(project.path, configurations) } satisfies ConfigsSaveOutcome
+      const settings = readSettings(project.path).document?.settings
+      return {
+        saved: writeConfigs(project.path, configurations, settings?.configsPath ?? ''),
+      } satisfies ConfigsSaveOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies ConfigsSaveOutcome
     }

@@ -157,3 +157,27 @@ describe('readRequirements', () => {
     expect(readRequirements(project).error).toMatch(/结构不正确/)
   })
 })
+
+
+describe('自定义数据文件位置', () => {
+  it('按设置里的绝对路径读写需求数据，默认位置不受影响', () => {
+    const project = temporaryProject()
+    const target = join(temporaryProject(), 'shared', 'requirements.json')
+
+    const saved = writeRequirements(project, parsedSample(), target)
+
+    expect(saved.filePath).toBe(target)
+    expect(readRequirements(project, target).document?.requirements).toHaveLength(4)
+    expect(readRequirements(project)).toEqual({ empty: true })
+  })
+
+  it('相对路径按项目根解析', () => {
+    const project = temporaryProject()
+    const relative = 'config/关联需求/requirements.json'
+
+    const saved = writeRequirements(project, parsedSample(), relative)
+
+    expect(saved.filePath).toBe(join(project, relative))
+    expect(readRequirements(project, relative).document?.requirements).toHaveLength(4)
+  })
+})

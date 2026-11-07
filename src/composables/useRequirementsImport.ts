@@ -3,6 +3,7 @@ import type {
   RequirementSheetProbe,
   RequirementsColumnMapping,
   RequirementsFileInfo,
+  RequirementsImportDefaults,
   RequirementsParseConfig,
   RequirementsParseResult,
   RequirementsSavedState,
@@ -27,6 +28,8 @@ export function useRequirementsImport() {
   const file = ref<RequirementsFileInfo | null>(null)
   const sheetName = ref('')
   const mapping = reactive<RequirementsColumnMapping>({ ...DEFAULT_MAPPING })
+  /** 设置页里配置的导入默认参数：文件、工作表与列位置，空 / 0 表示自动探测 */
+  const defaults = ref<RequirementsImportDefaults | null>(null)
   const probe = ref<RequirementSheetProbe | null>(null)
   const result = ref<RequirementsParseResult | null>(null)
   const saved = ref<RequirementsSavedState | null>(null)
@@ -55,6 +58,35 @@ export function useRequirementsImport() {
     dirty.value = true
   }
 
+  /**
+   * 套用设置页的导入默认参数。
+   *
+   * 还没选表时用它预填输入框；已经选了表就只记下来，等探测结束后把配置过的列盖回去
+   * ——设置里显式填过的位置代表用户意图，优先于自动探测。
+   */
+  function applyDefaults(next: RequirementsImportDefaults) {
+    defaults.value = { ...next }
+    if (file.value) return
+
+    if (next.sheetName) sheetName.value = next.sheetName
+    if (next.headerRow > 0) mapping.headerRow = next.headerRow
+    if (next.idCol) mapping.idCol = next.idCol
+    if (next.nameCol) mapping.nameCol = next.nameCol
+    if (next.detailCol) mapping.detailCol = next.detailCol
+    if (next.vehicleStartCol) mapping.vehicleStartCol = next.vehicleStartCol
+  }
+
+  /** 探测结果之上，用设置里配置过的列覆盖 */
+  function applyConfiguredColumns() {
+    const configured = defaults.value
+    if (!configured) return
+    if (configured.headerRow > 0) mapping.headerRow = configured.headerRow
+    if (configured.idCol) mapping.idCol = configured.idCol
+    if (configured.nameCol) mapping.nameCol = configured.nameCol
+    if (configured.detailCol) mapping.detailCol = configured.detailCol
+    if (configured.vehicleStartCol) mapping.vehicleStartCol = configured.vehicleStartCol
+  }
+
   async function chooseFile() {
     const api = window.desktop?.requirements
     if (!api) {
@@ -75,9 +107,12 @@ export function useRequirementsImport() {
       result.value = null
       saved.value = null
       dirty.value = true
-      // 优先挑名字像需求表的工作表，省一次手动切换
+      // 设置里配过的工作表优先；否则挑名字像需求表的，省一次手动切换
+      const configured = defaults.value?.sheetName
       const preferred =
-        outcome.file.sheets.find((name) => name.includes('需求')) ?? outcome.file.sheets[0]
+        configured && outcome.file.sheets.includes(configured)
+          ? configured
+          : (outcome.file.sheets.find((name) => name.includes('需求')) ?? outcome.file.sheets[0])
       sheetName.value = preferred ?? ''
       await inspect()
     } finally {
@@ -92,7 +127,11 @@ export function useRequirementsImport() {
     busy.value = true
     error.value = ''
     try {
-      const outcome = await api.probe(file.value.filePath, sheetName.value, headerRow)
+      const outcome = await api.probe(
+        file.value.filePath,
+        sheetName.value,
+        headerRow ?? (defaults.value?.headerRow || undefined),
+      )
       if (outcome.error || !outcome.probe) {
         error.value = outcome.error ?? '表头探测失败'
         probe.value = null
@@ -100,6 +139,7 @@ export function useRequirementsImport() {
       }
       probe.value = outcome.probe
       Object.assign(mapping, outcome.probe.mapping)
+      applyConfiguredColumns()
       result.value = null
       saved.value = null
       dirty.value = false
@@ -189,6 +229,7 @@ export function useRequirementsImport() {
     available,
     canPreview,
     dirty,
+    applyDefaults,
     chooseFile,
     selectSheet,
     inspect,

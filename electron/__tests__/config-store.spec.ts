@@ -263,3 +263,17 @@ describe('normalizeConfigurations', () => {
     )
   })
 })
+
+
+describe('自定义数据文件位置', () => {
+  it('按设置里的相对路径读写配置数据，默认位置不受影响', () => {
+    const project = temporaryProject()
+    const relative = 'config/配置参数/config.json'
+
+    const saved = writeConfigs(project, sampleConfigurations(), relative)
+
+    expect(saved.filePath).toBe(join(project, relative))
+    expect(readConfigs(project, relative).document?.configurations).toHaveLength(2)
+    expect(readConfigs(project)).toEqual({ empty: true })
+  })
+})

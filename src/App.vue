@@ -7,12 +7,14 @@ import AppPanel from './components/layout/AppPanel.vue'
 import AppSecondSidebar from './components/layout/AppSecondSidebar.vue'
 import AppTitleBar from './components/layout/AppTitleBar.vue'
 import DesignGrid from './components/layout/DesignGrid.vue'
+import SettingsDialog from './components/SettingsDialog.vue'
 import SplitResizer from './components/layout/SplitResizer.vue'
 import { useDesignGrid } from './composables/useDesignGrid'
 import { useLayoutSize } from './composables/useLayoutSize'
 import { useWorkspace } from './composables/useWorkspace'
 import { useConfigsStore } from './stores/configs'
 import { useRequirementsStore } from './stores/requirements'
+import { useSettingsStore } from './stores/settings'
 import LaunchView from './views/LaunchView.vue'
 
 const route = useRoute()
@@ -22,22 +24,28 @@ const routeTitle = computed(() => (route.meta.title as string | undefined) ?? '�
 const { project, ready, load } = useWorkspace()
 const hasProject = computed(() => project.value !== null)
 
-// 应用打开（或切换项目）时读回该项目已保存的需求与配置参数
+// 应用打开（或切换项目）时读回该项目的设置、需求与配置参数
+const settingsStore = useSettingsStore()
 const requirementsStore = useRequirementsStore()
 const configsStore = useConfigsStore()
 watch(
   () => project.value?.path,
   (path) => {
     if (path) {
+      void settingsStore.load()
       void requirementsStore.load()
       void configsStore.load()
       return
     }
+    settingsStore.clear()
     requirementsStore.clear()
     configsStore.clear()
   },
   { immediate: true },
 )
+
+// 标题栏的项目设置入口
+const settingsVisible = ref(false)
 
 // 未选项目时标题栏显示「启动」，选定后显示「项目名 / 页面名」
 const titlebarTitle = computed(() =>
@@ -107,7 +115,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         v-model:second-sidebar="visible.secondSidebar"
         :title="titlebarTitle"
         :locked="!hasProject"
+        @settings="settingsVisible = true"
       />
+
+      <!-- 项目设置：数据文件位置与需求导入默认参数 -->
+      <SettingsDialog v-model="settingsVisible" />
 
       <!-- 闸门：未选择 Gauge 项目时停在启动页 -->
       <LaunchView v-if="ready && !hasProject" />

@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { Configuration, RequirementsParseConfig } from '../src/models/common'
+import type {
+  Configuration,
+  ProjectSettings,
+  RequirementsParseConfig,
+  SettingsPickKind,
+} from '../src/models/common'
 
 // 渲染进程不直接接触 Node：只通过 contextBridge 暴露只读环境信息、窗口控制与工作区操作
 contextBridge.exposeInMainWorld('desktop', {
@@ -37,5 +42,11 @@ contextBridge.exposeInMainWorld('desktop', {
   configs: {
     load: () => ipcRenderer.invoke('configs:load'),
     save: (configurations: Configuration[]) => ipcRenderer.invoke('configs:save', configurations),
+  },
+  settings: {
+    load: () => ipcRenderer.invoke('settings:load'),
+    save: (settings: ProjectSettings) => ipcRenderer.invoke('settings:save', settings),
+    pickFile: (kind: SettingsPickKind) => ipcRenderer.invoke('settings:pick-file', kind),
+    pickDirectory: () => ipcRenderer.invoke('settings:pick-directory'),
   },
 })

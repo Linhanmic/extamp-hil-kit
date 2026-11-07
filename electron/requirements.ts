@@ -19,6 +19,7 @@ import type {
 import { parseRequirements, probeSheet } from './requirements-parse'
 import { listSheets, readSheetTable } from './requirements-sheet'
 import { readRequirements, writeRequirements } from './requirements-store'
+import { readSettings, resolveProjectPath } from './settings-store'
 import { readWorkspace } from './workspace'
 
 const EXCEL_FILTERS: Electron.FileFilter[] = [
@@ -45,7 +46,9 @@ export function registerRequirementsIpc() {
     if (!project) return { empty: true } satisfies RequirementsLoadOutcome
 
     try {
-      return readRequirements(project.path) satisfies RequirementsLoadOutcome
+      // 需求数据的位置由项目设置决定，缺省是 .hil-kit/requirements.json
+      const settings = readSettings(project.path).document?.settings
+      return readRequirements(project.path, settings?.requirementsPath ?? '') satisfies RequirementsLoadOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies RequirementsLoadOutcome
     }
@@ -59,6 +62,13 @@ export function registerRequirementsIpc() {
       filters: EXCEL_FILTERS,
       properties: ['openFile'],
     }
+    // 设置里配过默认需求表时，选择器直接从那里开始
+    const project = readWorkspace().current
+    const defaultFile = project
+      ? resolveProjectPath(project.path, readSettings(project.path).document?.settings.requirementsImport.filePath ?? '')
+      : ''
+    if (defaultFile) options.defaultPath = defaultFile
+
     const result = win
       ? await dialog.showOpenDialog(win, options)
       : await dialog.showOpenDialog(options)
@@ -100,7 +110,8 @@ export function registerRequirementsIpc() {
 
     try {
       const result = parseFile(config)
-      const saved = writeRequirements(project.path, result)
+      const settings = readSettings(project.path).document?.settings
+      const saved = writeRequirements(project.path, result, settings?.requirementsPath ?? '')
       return { saved } satisfies RequirementsSaveOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies RequirementsSaveOutcome

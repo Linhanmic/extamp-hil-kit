@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'ele
 import { join } from 'node:path'
 import { registerConfigsIpc } from './configs'
 import { registerRequirementsIpc } from './requirements'
+import { registerSettingsIpc } from './settings'
 import { registerWorkspaceIpc } from './workspace'
 
 // vite-plugin-electron 在开发模式下注入该变量；生产构建下为空，改为加载本地文件
@@ -106,6 +107,7 @@ if (!app.requestSingleInstanceLock()) {
     registerWorkspaceIpc()
     registerRequirementsIpc()
     registerConfigsIpc()
+    registerSettingsIpc()
     createWindow()
 
     app.on('activate', () => {

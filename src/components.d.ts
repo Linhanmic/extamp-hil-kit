@@ -48,6 +48,8 @@ declare module 'vue' {
     RequirementTable: typeof import('./components/RequirementTable.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SettingsDialog: typeof import('./components/SettingsDialog.vue')['default']
+    SettingsPathField: typeof import('./components/SettingsPathField.vue')['default']
     SplitResizer: typeof import('./components/layout/SplitResizer.vue')['default']
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
     TheWelcome: typeof import('./components/TheWelcome.vue')['default']

@@ -9,7 +9,7 @@
  * 由关联变体解析出的车型不落盘，由读取方合并计算。结构约定见 docs/config-json.md。
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname } from 'node:path'
 import type {
   ConfigsDocument,
   ConfigsLoadOutcome,
@@ -17,6 +17,7 @@ import type {
   Configuration,
   VariantRef,
 } from '../src/models/common'
+import { resolveProjectPath } from './settings-store'
 
 /** 配置数据的当前结构版本 */
 const SCHEMA_VERSION = 1
@@ -24,10 +25,12 @@ const SCHEMA_VERSION = 1
 /** 工具集在项目目录下的数据目录 */
 export const DATA_DIR = '.hil-kit'
 export const CONFIGS_FILE = 'config.json'
+/** 设置里没配置时的默认位置（相对项目根） */
+export const DEFAULT_CONFIGS_PATH = `${DATA_DIR}/${CONFIGS_FILE}`
 
-/** 配置数据的落盘路径 */
-export function configsFilePath(projectPath: string): string {
-  return join(projectPath, DATA_DIR, CONFIGS_FILE)
+/** 配置数据的落盘路径：优先用设置里的路径，空串回落到默认位置 */
+export function configsFilePath(projectPath: string, filePath = ''): string {
+  return resolveProjectPath(projectPath, filePath, DEFAULT_CONFIGS_PATH)
 }
 
 /** 落盘形态的配置值：不带 config_key */
@@ -60,8 +63,8 @@ function readCreatedAt(targetPath: string): string | null {
  * 由界面提示重新维护，而不是把半份数据当可信对象。读出来的配置值补上
  * 所属配置项的 config_key，模型与界面都不需要再传外层上下文。
  */
-export function readConfigs(projectPath: string): ConfigsLoadOutcome {
-  const targetPath = configsFilePath(projectPath)
+export function readConfigs(projectPath: string, filePath = ''): ConfigsLoadOutcome {
+  const targetPath = configsFilePath(projectPath, filePath)
 
   let raw: unknown
   try {
@@ -216,9 +219,10 @@ function toStoredConfiguration(configuration: Configuration): StoredConfiguratio
 export function writeConfigs(
   projectPath: string,
   configurations: Configuration[],
+  filePath = '',
 ): ConfigsSavedState {
   const normalized = normalizeConfigurations(configurations)
-  const targetPath = configsFilePath(projectPath)
+  const targetPath = configsFilePath(projectPath, filePath)
   const updatedAt = new Date().toISOString()
   // 已有文件保留首次保存时间，损坏或缺失时按首次保存处理
   const createdAt = readCreatedAt(targetPath) ?? updatedAt
@@ -230,7 +234,7 @@ export function writeConfigs(
     configurations: normalized.map(toStoredConfiguration),
   }
 
-  mkdirSync(join(projectPath, DATA_DIR), { recursive: true })
+  mkdirSync(dirname(targetPath), { recursive: true })
   writeFileSync(targetPath, JSON.stringify(document, null, 2), 'utf8')
 
   return {

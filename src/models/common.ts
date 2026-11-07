@@ -56,6 +56,59 @@ export interface ConfigsSaveOutcome {
   error?: string
   saved?: ConfigsSavedState
 }
+/** 需求分析表导入的默认参数：空串 / 0 表示导入时自动探测或每次选择 */
+export interface RequirementsImportDefaults {
+  filePath: string//需求分析表默认路径，空表示每次选择
+  sheetName: string//默认工作表名，空表示优先挑名字含「需求」的表
+  headerRow: number//表头行号，0 表示自动探测
+  idCol: string//需求ID列（Excel 列字母），空表示自动探测
+  nameCol: string//需求名称列
+  detailCol: string//需求详情列
+  vehicleStartCol: string//车型起始列
+}
+/** 项目设置：各业务数据的位置 + 需求导入默认参数；路径可相对项目根或绝对路径，空表示用默认值 */
+export interface ProjectSettings {
+  requirementsPath: string//需求 json
+  configsPath: string//配置参数 json
+  snapshotDir: string//扬声器快照所在目录
+  volumeTablePath: string//音量表文件
+  slotMappingPath: string//SLOT 映射配置文件
+  requirementsImport: RequirementsImportDefaults
+}
+/** settings.json 的文件结构：结构约定见 docs/settings-json.md */
+export interface ProjectSettingsDocument {
+  schemaVersion: number
+  updatedAt: string
+  settings: ProjectSettings
+}
+/** 读取设置的结果：文件不可用时仍会带回默认值，error 只用于提示 */
+export interface SettingsLoadOutcome {
+  error?: string
+  document?: ProjectSettingsDocument
+}
+/** 保存设置后的摘要 */
+export interface SettingsSavedState {
+  filePath: string//落盘绝对路径
+  updatedAt: string//ISO 8601 UTC
+}
+/** 保存设置的结果 */
+export interface SettingsSaveOutcome {
+  error?: string
+  saved?: SettingsSavedState
+}
+/** 选择文件 / 目录的结果：取消或失败都通过字段回传 */
+export interface SettingsPickOutcome {
+  canceled?: boolean
+  error?: string
+  path?: string
+}
+/** 设置页里可以挑文件的几类目标，主进程据此决定标题与文件过滤 */
+export type SettingsPickKind =
+  | 'requirements-json'
+  | 'configs-json'
+  | 'volume-table'
+  | 'slot-mapping'
+  | 'requirements-sheet'
 /** 需求表的列位置配置（不含文件位置），表头探测后可在导入界面确认与调整 */
 export interface RequirementsColumnMapping {
   headerRow: number// 表头所在行号

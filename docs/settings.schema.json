@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "外置功放 HIL 项目设置",
+  "description": "设置页落盘的数据文件：<Gauge 项目>/.hil-kit/settings.json。结构约定见 docs/settings-json.md。",
+  "type": "object",
+  "required": ["schemaVersion", "updatedAt", "settings"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "结构版本，结构变更时递增"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "最近一次保存时间，ISO 8601 UTC；还没保存过时为空串"
+    },
+    "settings": { "$ref": "#/$defs/settings" }
+  },
+  "$defs": {
+    "settings": {
+      "type": "object",
+      "required": [
+        "requirementsPath",
+        "configsPath",
+        "snapshotDir",
+        "volumeTablePath",
+        "slotMappingPath",
+        "requirementsImport"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "requirementsPath": {
+          "type": "string",
+          "description": "需求 json 的位置；相对路径按项目根解析，空串表示默认 .hil-kit/requirements.json"
+        },
+        "configsPath": {
+          "type": "string",
+          "description": "配置参数 json 的位置；相对路径按项目根解析，空串表示默认 .hil-kit/config.json"
+        },
+        "snapshotDir": {
+          "type": "string",
+          "description": "扬声器快照所在目录；空串表示还没配置"
+        },
+        "volumeTablePath": {
+          "type": "string",
+          "description": "音量表文件；空串表示还没配置"
+        },
+        "slotMappingPath": {
+          "type": "string",
+          "description": "SLOT 映射配置文件；空串表示还没配置"
+        },
+        "requirementsImport": { "$ref": "#/$defs/requirementsImport" }
+      }
+    },
+    "requirementsImport": {
+      "type": "object",
+      "required": [
+        "filePath",
+        "sheetName",
+        "headerRow",
+        "idCol",
+        "nameCol",
+        "detailCol",
+        "vehicleStartCol"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "filePath": {
+          "type": "string",
+          "description": "需求分析表默认路径，导入时文件选择器从这里开始；空串表示每次自己挑"
+        },
+        "sheetName": {
+          "type": "string",
+          "description": "默认工作表名；空串表示优先挑名字含「需求」的工作表"
+        },
+        "headerRow": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "表头行号（1 基），0 表示导入时自动探测"
+        },
+        "idCol": {
+          "type": "string",
+          "pattern": "^([A-Z]{1,3})?$",
+          "description": "需求ID列（Excel 列字母，大写），空串表示自动探测"
+        },
+        "nameCol": {
+          "type": "string",
+          "pattern": "^([A-Z]{1,3})?$",
+          "description": "需求名称列，空串表示自动探测"
+        },
+        "detailCol": {
+          "type": "string",
+          "pattern": "^([A-Z]{1,3})?$",
+          "description": "需求详情列，空串表示自动探测"
+        },
+        "vehicleStartCol": {
+          "type": "string",
+          "pattern": "^([A-Z]{1,3})?$",
+          "description": "车型起始列，空串表示自动探测"
+        }
+      }
+    }
+  }
+}

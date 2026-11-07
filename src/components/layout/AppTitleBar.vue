@@ -17,6 +17,7 @@ const emit = defineEmits<{
   'update:sidebar': [value: boolean]
   'update:panel': [value: boolean]
   'update:secondSidebar': [value: boolean]
+  settings: []
 }>()
 
 const { visible: gridVisible, toggle: toggleGrid } = useDesignGrid()
@@ -28,7 +29,7 @@ const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
 
 <!--
   @grid A：标题栏是水平组合容器，内部重新建立 12 列。
-  按设计网格分配：左栏切换 1 份 · 标题 9 份 · 设计网格 1 份 ·
+  按设计网格分配：左栏切换 1 份 · 标题 8 份 · 项目设置 1 份 · 设计网格 1 份 ·
   主题 + 面板 + 右栏控制组 1 份（三者共同只占 1 份）；窗口控制为第 13 条定宽轨道。
   高度取 48 行中的 3 行（6.25dvh）。
   整条为窗口拖动区（-webkit-app-region: drag），交互控件单独标记 no-drag。
@@ -47,13 +48,30 @@ const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
       @update:visible="emit('update:sidebar', $event)"
     />
 
-    <!-- Column span-9（闸门下 11）：项目名 / 当前页面 -->
+    <!-- Column span-8（闸门下 11）：项目名 / 当前页面 -->
     <div
       class="flex min-w-0 items-center"
-      :class="props.locked ? 'col-span-11 pl-2' : 'col-span-9'"
+      :class="props.locked ? 'col-span-11 pl-2' : 'col-span-8'"
     >
       <span class="truncate text-[13px] text-ink">{{ props.title }}</span>
     </div>
+
+    <!-- Column span-1：项目设置（启动页闸门下隐藏） -->
+    <button
+      v-if="!props.locked"
+      type="button"
+      class="col-span-1 grid size-6 place-items-center justify-self-end self-center rounded text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+      title="项目设置（数据文件位置与需求导入默认参数）"
+      aria-label="项目设置"
+      @click="emit('settings')"
+    >
+      <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="8" cy="8" r="2.1" />
+        <path
+          d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1"
+        />
+      </svg>
+    </button>
 
     <!-- Column span-1：设计网格覆盖层开关 -->
     <button

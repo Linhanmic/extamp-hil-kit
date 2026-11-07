@@ -16,6 +16,8 @@ electron/               Electron 主进程侧（不参与渲染进程打包）
   requirements-store.ts 解析结果落盘到 <项目>/.hil-kit/requirements.json
   configs.ts            配置参数 IPC：读回与整份写回 .hil-kit/config.json
   config-store.ts       配置参数落盘读写：结构校验、配置值补齐 / 去掉 config_key
+  settings.ts           项目设置 IPC：读写设置与选择文件 / 目录
+  settings-store.ts     项目设置落盘读写、路径解析（相对路径按项目根算）
 src/                    渲染进程（Vue 应用）
   App.vue               壳层：标题栏 + 启动页闸门 + 可拖拽三栏内容区
   components/
@@ -25,6 +27,8 @@ src/                    渲染进程（Vue 应用）
   composables/          useTheme（主题）、useLayoutSize（区域尺寸）、useDesignGrid（设计网格）、
                         useWorkspace（Gauge 项目选择与持久化）、useRequirementsImport（需求导入流程）
   config/navigation.ts  侧栏导航项与顺序（路由与侧栏共用同一份定义）
+  config/settings-defaults.ts  项目设置的默认值（主进程与渲染层共用）
+  stores/               requirements（需求数据）、configs（配置参数）、settings（项目设置）
   models/               数据模型：纯类型模块，common.ts 放共享基础类型，领域模型按需补充
   views/                LaunchView（启动页）、RequirementView（需求）、ConfigView（配置参数）、
                         FeatureView（其余导航项占位页）、Home/About
@@ -36,6 +40,8 @@ docs/data-model.md      数据模型模块的组织方式与约定
 docs/requirements-json.md  requirements.json 的结构约定（JSON Schema 与导入语义）
 docs/config-json.md     config.json 的结构约定（配置参数页落盘结构）
 docs/config.schema.json config.json 的 JSON Schema，编辑器里可直接对数据文件校验
+docs/settings-json.md    settings.json 的结构约定（项目设置与路径解析）
+docs/settings.schema.json settings.json 的 JSON Schema
 testdatas/              需求分析表样例（需求导入的回归测试跑真实表格）
 dist/                   渲染进程构建产物（git 忽略）
 dist-electron/          主进程 / 预加载构建产物（git 忽略）
@@ -75,7 +81,7 @@ npm run lint        # oxlint + eslint
 1. **选择文件** —— 主进程弹文件选择器，只读工作表名后返回，渲染层优先选中名字带「需求」的工作表。
 2. **表头探测** —— 前 30 行里找同时含「需求ID」「需求名称」的表头行；需求ID / 名称 / 详情列按同义词表匹配，车型起始列取详情列之后第一个表头含「平台」或数据区出现 `●` / `—` 的列（`功能安全` 这类只写 `QM` 的列因此不会被误判）。
 3. **解析预览** —— 需求行 × 车型列的两维解析，结果在弹窗里展开核对：需求数、变体数、车型数、跳过行与逐行告警。
-4. **导入保存** —— 写入 `<项目>/.hil-kit/requirements.json`：首次导入写 `createdAt`，之后每次导入都是同一份文件的更新（`createdAt` 不变、`requirements` 整体替换、`updatedAt` 刷新）。文件里只存需求与变体，不存车型全集、来源路径与列配置。结构见 [docs/requirements-json.md](docs/requirements-json.md)。
+4. **导入保存** —— 写入 `<项目>/.hil-kit/requirements.json`（默认位置，可在「项目设置」里改）：首次导入写 `createdAt`，之后每次导入都是同一份文件的更新（`createdAt` 不变、`requirements` 整体替换、`updatedAt` 刷新）。文件里只存需求与变体，不存车型全集、来源路径与列配置。结构见 [docs/requirements-json.md](docs/requirements-json.md)。
 
 弹窗关闭时清掉预览与「已导入」提示但保留文件与列映射，下次打开可以接着用；导入成功后页面数据自动刷新。
 
@@ -103,11 +109,25 @@ Excel 读取用 SheetJS，但走「Node 读字节 + `XLSX.read(buffer)`」而不
 
 引用会随需求数据变化：需求还没导入、需求改名、或变体已被重新导入覆盖时，标签标为「失效」；需求表里出现同名需求时按「同名需求歧义」提示。这两种情况都保留引用、不静默删除，由用户决定移除还是重新关联。页面上「N 个引用待处理」的标签统计的就是这类配置值。
 
-落盘位置 `<项目>/.hil-kit/config.json`，采用「读 → 改 → 写」编辑器模型：每次增删改都把整份文件写回，首次保存写 `createdAt`，之后只刷新 `updatedAt`。写入前主进程校验结构、配置项唯一、配置值唯一，并把名称去空白、车型与变体引用去重；校验不过不写文件，错误直接回到页面。结构见 [docs/config-json.md](docs/config-json.md)，机器可校验的版本见 [docs/config.schema.json](docs/config.schema.json)。
+落盘位置默认 `<项目>/.hil-kit/config.json`（可在「项目设置」里改），采用「读 → 改 → 写」编辑器模型：每次增删改都把整份文件写回，首次保存写 `createdAt`，之后只刷新 `updatedAt`。写入前主进程校验结构、配置项唯一、配置值唯一，并把名称去空白、车型与变体引用去重；校验不过不写文件，错误直接回到页面。结构见 [docs/config-json.md](docs/config-json.md)，机器可校验的版本见 [docs/config.schema.json](docs/config.schema.json)。
 
 **已保存的数据会自动读回**：应用启动、切换项目时 `stores/configs.ts` 调 `configs:load` 读该项目的 `config.json`，配置参数页直接列出配置项；文件损坏或版本不支持时提示重新维护。
 
 界面上的读写都经主进程（`electron/config-store.ts`）：落盘结构与模型只差一个字段——配置值不重复写 `config_key`（归属由所在配置项确定），读取时按所属配置项补齐、写入时去掉。传给 IPC 前 store 会把数据转成纯对象，Vue 响应式代理不能被结构化克隆。
+
+## 项目设置（标题栏齿轮按钮）
+
+标题栏右侧的齿轮按钮打开「项目设置」弹窗，配置这个项目的数据都放在哪，以及需求分析表的导入默认参数。设置按项目保存到 `<项目>/.hil-kit/settings.json`，切换项目就跟着切换；结构见 [docs/settings-json.md](docs/settings-json.md) 与 [docs/settings.schema.json](docs/settings.schema.json)。
+
+| 分组 | 设置项 | 谁在用 |
+| --- | --- | --- |
+| 数据文件 | 需求 JSON、配置参数 JSON | `requirements:load/save`、`configs:load/save` 的读写位置 |
+| 其他业务数据 | 扬声器快照目录、音量表文件、SLOT 映射配置文件 | 对应功能（待接入） |
+| 需求分析表导入 | 默认文件、工作表名、表头行、四个列位置 | 导入弹窗的起始路径与列映射默认值 |
+
+路径可以写相对项目根的（如 `config/SLOT映射/mapping.ini`），也可以写绝对路径；相对路径在读写时解析，弹窗里会显示解析出来的完整位置。需求与配置参数的 json 留空表示沿用 `.hil-kit` 下的默认文件，其余三项留空表示「还没配置」。导入默认参数里的工作表名、表头行、列位置留空或填 0 表示按表自动探测——设置里显式填过的列会覆盖探测结果，代表用户意图优先。
+
+保存后主进程整份写回设置，渲染层随即按新路径重读需求与配置参数，页面上的数据跟着换。文件缺失或损坏时读取一律带回默认值，只在弹窗和页面上提示原因，不让设置把整个工具台卡住。
 
 ## Electron 约定
 

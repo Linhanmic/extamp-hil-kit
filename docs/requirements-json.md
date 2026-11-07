@@ -1,6 +1,6 @@
 # requirements.json 结构
 
-需求导入的落盘文件，位置 `<Gauge 项目>/.hil-kit/requirements.json`。解析规则见 README 的「需求导入」，本文件只约定落盘结构。
+需求导入的落盘文件，默认位置 `<Gauge 项目>/.hil-kit/requirements.json`，可在「项目设置」里改成本项目自己的位置（[settings-json.md](settings-json.md)）。解析规则见 README 的「需求导入」，本文件只约定落盘结构。
 
 ## 导入语义
 

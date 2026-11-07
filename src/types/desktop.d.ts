@@ -2,12 +2,17 @@ import type {
   ConfigsLoadOutcome,
   ConfigsSaveOutcome,
   Configuration,
+  ProjectSettings,
   RequirementsChooseOutcome,
   RequirementsLoadOutcome,
   RequirementsParseConfig,
   RequirementsPreviewOutcome,
   RequirementsProbeOutcome,
   RequirementsSaveOutcome,
+  SettingsLoadOutcome,
+  SettingsPickKind,
+  SettingsPickOutcome,
+  SettingsSaveOutcome,
 } from '@/models'
 
 export interface WorkspaceProject {
@@ -66,6 +71,16 @@ export interface DesktopBridge {
     load: () => Promise<ConfigsLoadOutcome>
     /** 整份写回配置参数到 .hil-kit/config.json */
     save: (configurations: Configuration[]) => Promise<ConfigsSaveOutcome>
+  }
+  settings: {
+    /** 读取当前项目的设置（文件缺失时带回默认值） */
+    load: () => Promise<SettingsLoadOutcome>
+    /** 整份写回设置到 .hil-kit/settings.json */
+    save: (settings: ProjectSettings) => Promise<SettingsSaveOutcome>
+    /** 打开文件选择器，返回绝对路径 */
+    pickFile: (kind: SettingsPickKind) => Promise<SettingsPickOutcome>
+    /** 打开目录选择器，返回绝对路径 */
+    pickDirectory: () => Promise<SettingsPickOutcome>
   }
 }
 

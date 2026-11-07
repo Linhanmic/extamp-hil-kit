@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import RequirementTable from './RequirementTable.vue'
 import { useRequirementsImport } from '@/composables/useRequirementsImport'
+import { useSettingsStore } from '@/stores/settings'
 import type { RequirementsColumnMapping } from '@/models'
 
 /**
  * 导入需求分析表（参考 tauri-app 的导入弹窗）：选文件 → 工作表 → 列映射 → 预览 → 导入。
  * 解析、Excel 读取与写文件都在主进程完成，这里只配置与核对。
+ * 打开时套用设置页里的导入默认参数（工作表、表头行与列位置）。
  */
 const visible = defineModel<boolean>({ default: false })
 const emit = defineEmits<{ imported: [] }>()
+
+const settingsStore = useSettingsStore()
 
 const {
   file,
@@ -22,6 +26,7 @@ const {
   error,
   busy,
   dirty,
+  applyDefaults,
   chooseFile,
   selectSheet,
   inspect,
@@ -30,6 +35,10 @@ const {
   preview,
   save,
 } = useRequirementsImport()
+
+watch(visible, (open) => {
+  if (open) applyDefaults(settingsStore.settings.requirementsImport)
+})
 
 const sheets = computed(() => file.value?.sheets ?? [])
 const vehicleOptions = computed(() => probe.value?.columns ?? [])

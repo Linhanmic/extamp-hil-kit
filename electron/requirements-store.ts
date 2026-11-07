@@ -8,7 +8,7 @@
  * updatedAt 刷新为本次导入时间。
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname } from 'node:path'
 import type {
   Requirement,
   RequirementsDocument,
@@ -17,6 +17,7 @@ import type {
   RequirementsSavedState,
   Variant,
 } from '../src/models/common'
+import { resolveProjectPath } from './settings-store'
 
 /** 需求数据的当前结构版本 */
 const SCHEMA_VERSION = 1
@@ -24,10 +25,12 @@ const SCHEMA_VERSION = 1
 /** 工具集在项目目录下的数据目录 */
 export const DATA_DIR = '.hil-kit'
 export const REQUIREMENTS_FILE = 'requirements.json'
+/** 设置里没配置时的默认位置（相对项目根） */
+export const DEFAULT_REQUIREMENTS_PATH = `${DATA_DIR}/${REQUIREMENTS_FILE}`
 
-/** 需求数据的落盘路径 */
-export function requirementsFilePath(projectPath: string): string {
-  return join(projectPath, DATA_DIR, REQUIREMENTS_FILE)
+/** 需求数据的落盘路径：优先用设置里的路径，空串回落到默认位置 */
+export function requirementsFilePath(projectPath: string, filePath = ''): string {
+  return resolveProjectPath(projectPath, filePath, DEFAULT_REQUIREMENTS_PATH)
 }
 
 /** 读取已有文件里记录的首次导入时间；文件缺失或结构不可用时返回 null */
@@ -46,8 +49,8 @@ function readCreatedAt(targetPath: string): string | null {
  * 文件不存在 → `empty`（还没导入过）；存在但结构/版本不可用 → `error`，
  * 由界面提示重新导入，而不是把半份数据当可信对象用。
  */
-export function readRequirements(projectPath: string): RequirementsLoadOutcome {
-  const targetPath = requirementsFilePath(projectPath)
+export function readRequirements(projectPath: string, filePath = ''): RequirementsLoadOutcome {
+  const targetPath = requirementsFilePath(projectPath, filePath)
 
   let raw: unknown
   try {
@@ -115,8 +118,9 @@ function isRequirement(value: unknown): value is Requirement {
 export function writeRequirements(
   projectPath: string,
   result: RequirementsParseResult,
+  filePath = '',
 ): RequirementsSavedState {
-  const targetPath = requirementsFilePath(projectPath)
+  const targetPath = requirementsFilePath(projectPath, filePath)
   const updatedAt = new Date().toISOString()
   const createdAt = readCreatedAt(targetPath) ?? updatedAt
 
@@ -129,7 +133,7 @@ export function writeRequirements(
     requirements: result.requirements,
   }
 
-  mkdirSync(join(projectPath, DATA_DIR), { recursive: true })
+  mkdirSync(dirname(targetPath), { recursive: true })
   writeFileSync(targetPath, JSON.stringify(document, null, 2), 'utf8')
 
   return {

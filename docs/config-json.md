@@ -1,6 +1,6 @@
 # config.json 结构
 
-配置参数页的数据落盘文件，位置 `<Gauge 项目>/.hil-kit/config.json`，与 `requirements.json` 同目录。配置项与配置值**全部由「配置参数」页面手工维护**（不从 Excel 导入），本文件只约定落盘结构；机器可校验的版本见 [config.schema.json](config.schema.json)。
+配置参数页的数据落盘文件，默认位置 `<Gauge 项目>/.hil-kit/config.json`，与 `requirements.json` 同目录；可在「项目设置」里改成本项目自己的位置（[settings-json.md](settings-json.md)）。配置项与配置值**全部由「配置参数」页面手工维护**（不从 Excel 导入），本文件只约定落盘结构；机器可校验的版本见 [config.schema.json](config.schema.json)。
 
 ## 维护语义
 
