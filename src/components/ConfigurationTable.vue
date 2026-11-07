@@ -5,7 +5,7 @@ import type { ConfigurationRow } from '@/stores/configs'
 /**
  * 配置参数表（对齐 Excel 结构稿）：
  * 外层一行一个配置项（配置项 · 状态 · 操作），展开后是配置值子表
- * （配置值 · 关联需求 · 适用车型 · 状态 · 操作），配置值再展开是只读变体明细。
+ * （配置值 · 关联需求 · 适用车型 · 状态 · 操作），配置值再展开是变体明细。
  * 所有水平布局走 12 列栅格；嵌套层复用外层 12 列，span 按列对齐。
  */
 defineProps<{ rows: ConfigurationRow[] }>()
@@ -16,6 +16,9 @@ const emit = defineEmits<{
   deleteConfiguration: [configKey: string]
   editValue: [configKey: string, value: string]
   deleteValue: [configKey: string, value: string]
+  /** 打开配置值表单以便追加关联变体 */
+  addVariant: [configKey: string, value: string]
+  removeVariant: [configKey: string, value: string, requirementName: string, variantKey: string]
 }>()
 
 /** 展开的配置项 config_key */
@@ -73,8 +76,7 @@ function joinRefs(
 <template>
   <!-- @grid A：外层表头 / 数据行统一 12 列；嵌套子表复用同一 12 列做列对齐 -->
   <div class="min-w-0 border border-line">
-    <!-- 表头：配置项 9 · 状态 1.5 → 用 9/2/1 近似，状态与操作各占可对齐轨道 -->
-    <!-- 实际 span：配置项 9 · 状态 2 · 操作 1（操作内再分编辑/删除），合计 12 -->
+    <!-- 表头：配置项 9 · 状态 2 · 操作 1 -->
     <div
       class="grid grid-cols-12 items-center gap-0 border-b border-line bg-surface-soft text-[11px] font-medium text-ink"
     >
@@ -150,7 +152,7 @@ function joinRefs(
 
       <!-- 展开：配置值子表 -->
       <div v-if="openKeys.has(row.config_key)" class="border-b border-line bg-surface-soft/40">
-        <!-- 子表头：与外层 12 列对齐——配置值 3 · 关联需求 3 · 适用车型 3 · 状态 2 · 操作 1 -->
+        <!-- 子表头：配置值 3 · 关联需求 3 · 适用车型 3 · 状态 2 · 操作 1 -->
         <div class="grid grid-cols-12 items-center gap-0 border-b border-line/60">
           <div class="col-span-3 px-3 py-1.5 pl-8 text-[11px] font-medium text-ink-muted">
             配置值
@@ -237,7 +239,8 @@ function joinRefs(
                 {{ value.resolved.hasIssue ? '待处理' : '正常' }}
               </el-tag>
             </div>
-            <div class="col-span-1 flex flex-col items-center gap-0 px-1 py-1">
+            <!-- 编辑 / 删除同一行 -->
+            <div class="col-span-1 flex flex-nowrap items-center justify-center gap-0 px-0.5 py-2">
               <el-button
                 type="primary"
                 link
@@ -260,7 +263,7 @@ function joinRefs(
             </div>
           </div>
 
-          <!-- 变体明细（只读）：需求名称 · 变体键 | 车型 -->
+          <!-- 变体明细：需求名称 · 变体键 | 车型（样式与配置值行一致） -->
           <div
             v-if="openValueKeys.has(valueRowKey(row.config_key, value.value))"
             class="border-b border-line/30"
@@ -269,28 +272,28 @@ function joinRefs(
               v-if="!value.resolved.refs.length"
               class="px-3 py-1.5 pl-14 text-[11px] text-ink-muted"
             >
-              未关联需求变体；可在配置值里关联变体或手工填写车型
+              未关联需求变体；可点下方按钮关联，或在配置值里维护
             </p>
             <div
               v-for="ref in value.resolved.refs"
               :key="`${ref.requirement_name}-${ref.variant_key}`"
               class="grid grid-cols-12 items-center gap-0"
             >
-              <!-- 需求名称 3 · 变体键 3 · 车型 3 · 状态 2 · 操作 1（操作留空） -->
+              <!-- 需求名称 3 · 变体键 3 · 车型 3 · 状态 2 · 操作 1（仅删除） -->
               <div class="col-span-3 flex min-w-0 items-center gap-2 px-2 py-1.5 pl-14">
                 <span class="min-w-0 truncate text-[11px] text-ink" :title="ref.requirement_name">
                   {{ ref.requirement_name }}
                 </span>
               </div>
-              <div class="col-span-3 min-w-0 px-2 py-1.5">
-                <el-tag size="small" :type="ref.status === 'ok' ? 'info' : 'danger'" effect="plain">
-                  {{ ref.label }}
-                  <template v-if="ref.status === 'missing'">（失效）</template>
-                  <template v-else-if="ref.status === 'ambiguous'">（同名需求歧义）</template>
-                </el-tag>
+              <div class="col-span-3 min-w-0 px-2 py-1.5 text-[11px] text-ink" :title="ref.label">
+                {{ ref.label }}
+                <span v-if="ref.status === 'missing'" class="text-ink-muted">（失效）</span>
+                <span v-else-if="ref.status === 'ambiguous'" class="text-ink-muted">
+                  （同名需求歧义）
+                </span>
               </div>
               <div
-                class="col-span-3 min-w-0 px-2 py-1.5 text-[11px] text-ink-muted"
+                class="col-span-3 min-w-0 px-2 py-1.5 text-[11px] text-ink"
                 :title="joinVehicles(ref.vehicles)"
               >
                 {{ joinVehicles(ref.vehicles) }}
@@ -304,6 +307,42 @@ function joinRefs(
                   {{ ref.status === 'ok' ? '正常' : ref.status === 'ambiguous' ? '歧义' : '失效' }}
                 </el-tag>
               </div>
+              <div class="col-span-1 flex items-center justify-center px-1 py-1.5">
+                <el-popconfirm
+                  :title="`移除关联变体「${ref.requirement_name} · ${ref.label}」？`"
+                  confirm-button-text="删除"
+                  cancel-button-text="取消"
+                  width="240"
+                  @confirm="
+                    emit(
+                      'removeVariant',
+                      row.config_key,
+                      value.value,
+                      ref.requirement_name,
+                      ref.variant_key,
+                    )
+                  "
+                >
+                  <template #reference>
+                    <el-button type="danger" link size="small">删除</el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
+            </div>
+
+            <!-- 新增关联变体：样式对齐「新增配置值」 -->
+            <div class="grid grid-cols-12 items-center gap-0 py-1.5">
+              <div class="col-span-9 pl-14">
+                <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="emit('addVariant', row.config_key, value.value)"
+                >
+                  ＋ 新增关联变体
+                </el-button>
+              </div>
+              <div class="col-span-2" />
               <div class="col-span-1" />
             </div>
           </div>

@@ -405,6 +405,50 @@ export const useConfigsStore = defineStore('configs', () => {
     )
   }
 
+  /** 从配置值里去掉一条变体引用（配置值本身保留） */
+  async function removeRelayVariant(
+    configKey: string,
+    value: string,
+    requirementName: string,
+    variantKey: string,
+  ): Promise<SaveResult> {
+    const configuration = configurations.value.find((item) => item.config_key === configKey)
+    if (!configuration) return missingConfiguration(configKey)
+    const target = configuration.config_value.find((item) => item.value === value)
+    if (!target) return { ok: false, error: `配置值「${value}」不存在` }
+    if (
+      !target.relay_variants.some(
+        (ref) => ref.requirement_name === requirementName && ref.variant_key === variantKey,
+      )
+    ) {
+      return { ok: false, error: '该关联变体不存在' }
+    }
+
+    return persist(
+      configurations.value.map((item) =>
+        item.config_key === configKey
+          ? {
+              ...item,
+              config_value: item.config_value.map((entry) =>
+                entry.value === value
+                  ? {
+                      ...entry,
+                      relay_variants: entry.relay_variants.filter(
+                        (ref) =>
+                          !(
+                            ref.requirement_name === requirementName &&
+                            ref.variant_key === variantKey
+                          ),
+                      ),
+                    }
+                  : entry,
+              ),
+            }
+          : item,
+      ),
+    )
+  }
+
   return {
     document,
     loading,
@@ -427,5 +471,6 @@ export const useConfigsStore = defineStore('configs', () => {
     addConfigValue,
     updateConfigValue,
     removeConfigValue,
+    removeRelayVariant,
   }
 })

@@ -112,6 +112,20 @@ function openEditValue(configKey: string, value: string) {
   editingValue.value = found
   valueVisible.value = true
 }
+
+/** 新增关联变体：打开该配置值表单，在变体区追加引用后保存 */
+function openAddVariant(configKey: string, value: string) {
+  openEditValue(configKey, value)
+}
+
+async function onRemoveVariant(
+  configKey: string,
+  value: string,
+  requirementName: string,
+  variantKey: string,
+) {
+  await store.removeRelayVariant(configKey, value, requirementName, variantKey)
+}
 </script>
 
 <!--
@@ -203,9 +217,9 @@ function openEditValue(configKey: string, value: string) {
       description="导入需求分析表后，配置值可以关联需求变体，适用车型会自动跟着需求数据更新。"
     />
 
-    <!-- 列表区：整块占 12 列 -->
+    <!-- 列表区：右边界收到右侧第二栅格（12 列中占 10 列） -->
     <div class="grid grid-cols-12">
-      <div class="col-span-12 min-w-0">
+      <div class="col-span-10 min-w-0">
         <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的配置参数…</p>
         <ConfigurationTable
           v-else-if="filteredRows.length"
@@ -215,6 +229,8 @@ function openEditValue(configKey: string, value: string) {
           @delete-configuration="store.removeConfiguration"
           @edit-value="openEditValue"
           @delete-value="store.removeConfigValue"
+          @add-variant="openAddVariant"
+          @remove-variant="onRemoveVariant"
         />
         <el-empty v-else :description="emptyText" />
       </div>
