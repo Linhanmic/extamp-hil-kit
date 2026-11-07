@@ -82,7 +82,7 @@ function joinRefs(
     >
       <div class="col-span-9 px-3 py-2">配置项</div>
       <div class="col-span-2 px-2 py-2 text-center">状态</div>
-      <div class="col-span-1 px-2 py-2 text-center">操作</div>
+      <div class="col-span-1 px-3 py-2 pr-4 text-center">操作</div>
     </div>
 
     <template v-for="row in rows" :key="row.config_key">
@@ -127,7 +127,7 @@ function joinRefs(
             {{ statusText(row.issueCount) }}
           </el-tag>
         </div>
-        <div class="col-span-1 flex items-center justify-center gap-0 px-1 py-2">
+        <div class="col-span-1 flex items-center justify-center gap-0 py-2 pr-4 pl-1">
           <el-button
             type="primary"
             link
@@ -166,7 +166,7 @@ function joinRefs(
           <div class="col-span-2 px-2 py-1.5 text-center text-[11px] font-medium text-ink-muted">
             状态
           </div>
-          <div class="col-span-1 px-2 py-1.5 text-center text-[11px] font-medium text-ink-muted">
+          <div class="col-span-1 py-1.5 pr-4 pl-2 text-center text-[11px] font-medium text-ink-muted">
             操作
           </div>
         </div>
@@ -240,7 +240,7 @@ function joinRefs(
               </el-tag>
             </div>
             <!-- 编辑 / 删除同一行 -->
-            <div class="col-span-1 flex flex-nowrap items-center justify-center gap-0 px-0.5 py-2">
+            <div class="col-span-1 flex flex-nowrap items-center justify-center gap-0 py-2 pr-4 pl-0.5">
               <el-button
                 type="primary"
                 link
@@ -307,7 +307,7 @@ function joinRefs(
                   {{ ref.status === 'ok' ? '正常' : ref.status === 'ambiguous' ? '歧义' : '失效' }}
                 </el-tag>
               </div>
-              <div class="col-span-1 flex items-center justify-center px-1 py-1.5">
+              <div class="col-span-1 flex items-center justify-center py-1.5 pr-4 pl-1">
                 <el-popconfirm
                   :title="`移除关联变体「${ref.requirement_name} · ${ref.label}」？`"
                   confirm-button-text="删除"
