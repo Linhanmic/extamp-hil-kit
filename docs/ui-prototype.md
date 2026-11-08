@@ -28,9 +28,9 @@
 | 12 | 测试任务（新建/编辑场景） | (0, 4468) | `views/NewTaskView.vue` + `stores/tasks.ts` |
 | 13 | 测试队列（混合状态） | (1276, 4468) | `views/QueueView.vue` + `stores/queue.ts` |
 | 14 | 测试队列（执行中） | (2552, 4468) | 同上，running 态 + 底部终端输出 |
-| 15 | Gauge 测试项目（总览） | (0, 5336) | `views/SpecView.vue` 的拟扩展：项目级结构 + 规格清单 |
-| 16 | Gauge 项目结构（spec → scenario → step） | (1276, 5336) | 同上，`spec/spec-file.ts` 的结构化展示 |
-| 17 | Gauge 概念与引用 | (2552, 5336) | `views/ConceptView.vue` 的拟扩展：cpt 定义 + 引用链 |
+| 15 | 项目浏览器（索引 + 检索） | (0, 5336) | `views/SpecView.vue` 的拟扩展：全局搜索 + 组合筛选 + 目录索引 / 命中结果 |
+| 16 | Spec 详情（按需展开） | (1276, 5336) | 同上，场景虚拟列表 + 选中场景 steps / 折叠数据表 |
+| 17 | 概念索引与影响面 | (2552, 5336) | `views/ConceptView.vue` 的拟扩展：反向引用 + 嵌套展开 + 告警 |
 
 音量表与快照仍与「出声位置」共用「标题行 → 搜索工具栏 → 卡片列表」骨架，参考 07 号屏。
 SLOT 映射因为要一屏看清「所有映射情况 × 对应车型」，单独出 10、11 两屏，不再复用卡片列表骨架。
@@ -38,9 +38,11 @@ SLOT 映射因为要一屏看清「所有映射情况 × 对应车型」，单�
 第 4 行（y = 4468）为后补的三屏：代码里「新建任务」与「测试队列」已落地，
 原先「占位页、不出图」的判断失效，故按当前实现补齐 12～14 号屏。
 
-第 5 行（y = 5336）为 Gauge **测试项目**展示的三屏：展示一个真实 Gauge 项目里的
-`specs/*.spec`、`concepts/*.cpt` 与 scenario 的层级和引用关系，不是展示 Gauge 框架源码架构。
-依据见第 8 章。
+第 5 行（y = 5336）为 Gauge **测试项目**展示的三屏：不是展示 Gauge 框架源码架构，
+而是展示 `specs/*.spec`、`concepts/*.cpt` 与 scenario 的层级和引用关系。
+首版按小项目内容快照绘制，经用户指出「不适合大型 gauge 测试项目」后**已整批重画为
+大型项目形态**（索引优先 + 主详情 + 全局搜索/组合筛选，底部终端收起）；
+规模数字为示意，页头有「规模模拟」标记。依据见第 8 章。
 
 ---
 
@@ -222,7 +224,12 @@ SLOT 映射因为要一屏看清「所有映射情况 × 对应车型」，单�
 
 ---
 
-## 8. Gauge 测试项目展示三屏的设计依据
+## 8. Gauge 测试项目展示三屏（大型项目形态）
+
+> **本章已于同日重写**。首版三屏按「示例项目的内容快照」绘制，用户指出
+> 「当前展示形式不适合大型 gauge 测试项目」，故重画 15～17 号屏，首版截图不再保留。
+> 改造范围与优先级经用户确认：**重画 15–17**；首要目标 **「找得到」**
+> （全局搜索 + tags / 适用条件组合筛选）。当前设计以「索引 + 按需详情」为展示单元。
 
 ### 8.1 方向澄清与数据源
 
@@ -238,7 +245,13 @@ SLOT 映射因为要一屏看清「所有映射情况 × 对应车型」，单�
 | 语法与层级 | `wiki/Core-Concepts.md`、`parser/conceptParser.go`、`parser/lex.go` |
 | 数据模型 | `gauge/specification.go` / `scenario.go` / `step.go` / `concept.go` / `table.go` |
 
-### 8.2 统计口径（三屏所有数字均来自真实文件）
+### 8.2 真实项目基线（用于校验解析器，不是画布上的规模）
+
+下表是 `外置功放专用HIL` 这个**真实示例项目**的口径，只用来核对 Gauge 语法与解析结果。
+画布 15～17 号屏表达的是**大型项目的规模模拟**（246 份 spec / 1,842 个场景 / 9 个概念 /
+42 处概念反向引用），三屏页头均带橙色「规模模拟」标记。规模数字、深层目录、引用次数、
+增量解析耗时、索引占用均为**示意**，不是真实项目数据；文件名、`tags`、`适用条件:`、
+概念标题、步骤语法、告警类型仍取自真实文件与 Gauge 规则。
 
 | 指标 | 值 | 明细 |
 | --- | --- | --- |
@@ -249,18 +262,47 @@ SLOT 映射因为要一屏看清「所有映射情况 × 对应车型」，单�
 | Concept Steps | 2 | `Set current user to <username>` / `Verify user session is active` |
 | 内联数据表 | 1 | `example.spec` 的 `Word / Vowel Count`，5 行数据 |
 
-### 8.3 三屏结构
+### 8.3 为什么要重画：展示单元错了
+
+首版以「一份文件的完整内容」为展示单元，只适合示例项目。大型项目下会整体失效：
+
+| 首版做法 | 大型项目下的问题 |
+| --- | --- |
+| 15 屏把全部 spec 平铺成清单 + 4 张固定统计卡 | 几百上千份一屏装不下；统计是全量扫描的死数字，不能随筛选联动、不能下钻 |
+| 16 屏把整份 spec 结构树完整铺开 | 单文件几十个场景、上百步骤就溢出；没有折叠层级、虚拟滚动、命中过滤 |
+| 17 屏只画一条概念引用链 | concept 是 N:M 且可嵌套调用；看不到「改这个概念影响哪些用例」 |
+| 底部面板固定常驻 240px | 占掉 31% 高度，浏览索引时纯浪费 |
+| 侧栏固定 294px + 任务列表占位 | `specs/车型/功能域/...` 深层目录放不下 |
+
+### 8.4 大型项目形态的六条信息架构原则
+
+1. **索引优先**：默认只加载文件名 / 场景标题级索引，单文件正文点击才读取。
+2. **主详情（Master-Detail）**：左侧可折叠、可虚拟滚动的索引（每层带数量与命中标记），
+   右侧只显示选中项；永不一次铺开全量。
+3. **筛选是一等公民**：全局搜索置顶，tags / 适用条件 / 目录 / 概念引用可组合；
+   聚合条随筛选联动，数字可点击下钻。
+4. **分层展开**：项目 → 目录 → spec → scenario → step，默认折叠，支持跳源文本行号。
+5. **概念改为影响面分析**：反向引用列表（可分页）+ 嵌套展开树 + 未解析 / 循环引用告警。
+6. **性能可见 + 空间还给内容**：增量解析、索引缓存状态、虚拟列表占位；
+   底部终端改为**默认收起的可折叠抽屉**（三屏实例 `height: 37`，只留标签栏，
+   `;3:128` 内容区 `visible: false`），主内容区从 443px 增到约 646px。
+
+### 8.5 重画后的三屏结构
 
 | 屏 | 侧栏高亮 | 信息结构 |
 | --- | --- | --- |
-| 15 总览 | 规格书 `7:399` | 页头 → 4 张统计卡 → 左「项目结构树」/ 右「规格清单」→ 配置脚注；底部终端为项目解析结果 |
-| 16 结构 | 规格书 `7:399` | 页头 → `Specification → Scenario → Step → Table` 层级条 → 左「结构树」/ 右「场景语法分解 + 数据表」→ 语法脚注 |
-| 17 引用 | 封装库 `7:492` | 页头 → `Spec Step → Concept Heading → Concept Steps` 引用链 → 左「概念定义」/ 右「引用展开」→ 规则脚注 |
+| 15 项目浏览器 | 规格书 `7:399` | 检索头（标题 + 全局搜索框 + 规模标记）→ 组合筛选 chips → 可下钻聚合条 → 左「目录索引树」/ 右「命中结果虚拟列表」；结果按目录分组，带命中片段与行号 |
+| 16 Spec 详情 | 规格书 `7:399` | 面包屑 + 筛选上下文条 → 左「场景索引（6 行，选中 1 个）」/ 右「选中场景详情」；steps 只展开当前场景，数据表与概念引用为折叠条，另有下钻 chips 与载入状态条 |
+| 17 概念影响面 | 封装库 `7:492` | 检索头 → 聚合条（含未解析 / 循环引用告警）→ 左「概念索引（按被引用次数排序）」/ 右「影响面」：影响摘要、可分页反向引用列表、嵌套展开树、未解析引用明细 |
 
 15、16 号屏沿用「规格书」选中态，17 号屏切到「封装库」，与 `navigation.ts` 的
-`spec` / `concept` 两个入口一致。三屏底部终端只覆盖实例内 `;3:129` 文字。
+`spec` / `concept` 两个入口一致。三屏互相串联：15 的结果行 → 16 的文件详情 →
+16 的「概念引用」折叠条 → 17 的概念索引与影响面 → 17 的引用行跳回 16。
 
-### 8.4 Gauge 纯文本语法在设计里的表达
+等宽字体下 `▾` / `▸` / `│` 会 fallback 成 `·` / `-` / `|`，破坏树形层级，
+故树与折叠条统一改用 ASCII `[+]` / `[-]` + 空格缩进。
+
+### 8.6 Gauge 纯文本语法在设计里的表达
 
 | 语法 | 含义 | 设计表达 |
 | --- | --- | --- |
@@ -270,9 +312,9 @@ SLOT 映射因为要一屏看清「所有映射情况 × 对应车型」，单�
 | `适用条件:` | 条件行；文件首行作用于整份 spec，之后归单个场景 | 灰字元信息，16 号屏标注「继承 spec 顶部」 |
 | `tags:` | 标签行 | 灰字元信息，长标签列表截断显示 |
 | `\|…\|` | 内联数据表，作为 Table Argument 传给 step | 等宽源文本表格 |
-| `<param>` | cpt 动态参数 | 17 号屏参数绑定块 |
+| `<param>` | cpt 动态参数 | 17 号屏概念标题与引用行的实参列 |
 
-### 8.5 概念引用链（17 号屏核心）
+### 8.7 概念引用链与影响面
 
 ```
 specs/smoke.spec  L14   * Login as "demo_user"
@@ -285,28 +327,48 @@ specs/concepts/login.cpt  L1   # Login as <username>
 
 Gauge 核心里这个展开由 `Step.IsConcept = true` 与 `Step.ConceptSteps` 完成
 （`gauge/step.go`），概念文件由 `parser/conceptParser.go` 解析成 `[]*gauge.Step`。
-设计稿把这条不可见的运行时链路显式画出来，便于定位「某个 spec 步骤实际执行了什么」。
 
-### 8.6 与现有实现的关系（待实现侧确认）
+首版只把这条链画成一条，大型项目里表达不了 N:M 引用。重画后 17 号屏改为
+**以概念为中心的反向视图**：左列概念索引按被引用次数排序，右侧给出
+「改此概念影响 12 份 spec / 42 个场景 / 6 个 tags」的摘要、可分页的反向引用列表、
+嵌套调用树，以及未解析引用与循环引用告警。引用行带实参、tags 与行号，可跳回 16 号屏。
+
+### 8.8 与现有实现的关系（待实现侧确认）
 
 | 优先级 | 设计里画了、代码还没有 | 说明 |
 | --- | --- | --- |
-| P1 | 15 号屏的「重新解析 / 打开目录」、项目级统计、规格清单里的 `适用条件` 与 `tags` 聚合 | 当前 `SpecView.vue` 是单棵树，没有项目总览维度 |
-| P1 | 16 号屏的 `tags` / 内联数据表 / `*` 步骤结构化分解 | `spec/spec-file.ts` 已能解析 `##` 场景标题与 `适用条件:`，其余需要扩展 |
-| P1 | 17 号屏的概念引用解析、参数绑定、展开预览 | 工具台目前不解析 `.cpt`；要展示需自行建立 concept 索引 |
-| P2 | 6 个 scenario / 7 个 step 的全局计数 | 需一次全量扫描，可在解析时顺带产出 |
+| P0 | **项目级索引与增量解析** | 当前 `SpecView.vue` 是单棵树，没有「先索引、后读正文」的分层；这是其余一切的前提 |
+| P0 | 全局搜索 + tags / 适用条件 / 目录组合筛选，聚合随筛选联动、可下钻 | 15 号屏的主交互，代码里没有对应能力 |
+| P1 | 16 号屏的场景虚拟列表、按需载入单场景 steps、数据表与概念折叠条 | `spec/spec-file.ts` 已能解析 `##` 与 `适用条件:`，其余需扩展 |
+| P1 | 17 号屏的概念索引、反向引用、嵌套展开、未解析 / 循环引用告警 | 工具台目前完全不解析 `.cpt`，需自建 concept 索引 |
+| P2 | 底部终端收起/展开、增量解析进度与索引缓存状态 | 三屏已按收起态绘制，需要实现侧提供状态 |
 
-**建议的数据契约**：
+**建议的数据契约**（在首版文档契约基础上补索引层）：
 
 ```ts
-interface SpecDocument { filePath: string; heading: string; condition?: string; tags: string[];
-                         contexts: Step[]; scenarios: Scenario[] }
+// 常驻内存的轻量索引：只含定位信息，不含 step 正文
+interface SpecIndexEntry { filePath: string; heading: string; condition?: string;
+                           tags: string[]; scenarioCount: number; hitCount?: number }
+interface ScenarioIndexEntry { specPath: string; heading: string; lineNo: number;
+                               tags: string[]; condition?: string }
+interface ConceptIndexEntry { filePath: string; heading: string; params: string[];
+                              referenceCount: number; stepCount: number }
+interface ProjectIndex { specs: SpecIndexEntry[]; scenarios: ScenarioIndexEntry[];
+                         concepts: ConceptIndexEntry[]; unresolvedRefs: UnresolvedRef[];
+                         cycles: ConceptCycle[]; builtAt: string; incremental: boolean }
+
+// 按需读取，只在用户展开时加载
+interface SpecDocument { filePath: string; heading: string; condition?: string;
+                         tags: string[]; contexts: Step[]; scenarios: Scenario[] }
 interface Scenario { heading: string; lineNo: number; condition?: string;
                      tags: string[]; steps: Step[]; table?: DataTable }
 interface Concept { filePath: string; heading: string; params: string[]; steps: Step[] }
 interface ConceptReference { specPath: string; lineNo: number; stepText: string;
                              conceptHeading: string; bindings: Record<string, string> }
 ```
+
+关键约束：索引一次性构建、增量更新；列表只渲染可见行；`SpecDocument` 与 `Concept`
+按文件缓存；影响面只基于索引计算，不触发正文读取。
 
 与 SLOT 映射、测试任务两批一样，本次只交付设计稿与文档，未改业务代码。
 另外「旧屏侧栏漂移统一刷新」仍未处理，见第 2 章。

@@ -21,7 +21,6 @@ declare module 'vue' {
     ConfigValueFormDialog: typeof import('./components/ConfigValueFormDialog.vue')['default']
     DesignGrid: typeof import('./components/layout/DesignGrid.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
-    ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
