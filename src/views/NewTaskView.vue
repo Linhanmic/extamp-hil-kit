@@ -3,16 +3,19 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import SpecTreeNodeItem from '@/components/SpecTreeNodeItem.vue'
 import { buildSpecTree, specDisplayName } from '@/spec/tree'
+import { useConfigsStore } from '@/stores/configs'
 import { useSpecsStore } from '@/stores/specs'
 import { useTasksStore } from '@/stores/tasks'
 import type { TaskScenario } from '@/models'
 
 /** 新建任务：按 spec 文件选择具体场景，保存后可用 Gauge 单独运行 */
 const specsStore = useSpecsStore()
+const configsStore = useConfigsStore()
 const tasksStore = useTasksStore()
 
 const taskName = ref('')
 const selectedTaskId = ref('')
+const runVehicle = ref('')
 const selectedPath = ref('')
 const selectedKeys = ref(new Set<string>())
 const treeOpen = ref(true)
@@ -90,14 +93,14 @@ async function save(): Promise<string | null> {
 async function runTask() {
   const id = await save()
   if (!id) return
-  const result = await tasksStore.run(selectedScenarios.value)
+  const result = await tasksStore.run(selectedScenarios.value, runVehicle.value)
   if (result.ok) ElMessage.success('任务运行完成')
   else ElMessage.error(result.error)
 }
 
 async function runScenariosOnly() {
   if (!selectedScenarios.value.length) return
-  const result = await tasksStore.run(selectedScenarios.value)
+  const result = await tasksStore.run(selectedScenarios.value, runVehicle.value)
   if (result.ok) ElMessage.success('选中场景运行完成')
   else ElMessage.error(result.error)
 }
@@ -158,6 +161,30 @@ async function runScenariosOnly() {
             运行任务
           </el-button>
         </div>
+      </div>
+
+      <!-- 运行车型：通过 Gauge --tags 选择当前车型的用例 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-3">
+          <el-select
+            v-model="runVehicle"
+            size="small"
+            clearable
+            filterable
+            placeholder="运行车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in configsStore.vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
+        </div>
+        <p class="col-span-6 text-[11px] text-ink-muted">
+          运行车型会作为 gauge --tags 标签，只执行该车型适用的场景。
+        </p>
       </div>
     </div>
 

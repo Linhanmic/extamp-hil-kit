@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import SpecTreeNodeItem from '@/components/SpecTreeNodeItem.vue'
 import { buildSpecTree, specCheckState, specDisplayName, specFilePaths } from '@/spec/tree'
 import type { SpecTreeNode } from '@/spec/tree'
+import { useConfigsStore } from '@/stores/configs'
 import { useTasksStore } from '@/stores/tasks'
 import { useSpecsStore } from '@/stores/specs'
 
@@ -12,9 +13,11 @@ import { useSpecsStore } from '@/stores/specs'
  * 新增/减少只比较车型，非车型的 Gauge 标签不计入。
  */
 const store = useSpecsStore()
+const configsStore = useConfigsStore()
 const tasksStore = useTasksStore()
 const applying = ref(false)
 const specRunning = ref(false)
+const runVehicle = ref('')
 const selectedPath = ref('')
 const treeOpen = ref(true)
 const collapseVersion = ref(0)
@@ -91,7 +94,7 @@ const selectedChangedCount = computed(() => selectedRows.value.filter((row) => r
 async function runSpec() {
   if (!selectedEntry.value) return
   specRunning.value = true
-  const result = await tasksStore.runSpec(selectedEntry.value.path)
+  const result = await tasksStore.runSpec(selectedEntry.value.path, runVehicle.value)
   specRunning.value = false
   if (result.ok) ElMessage.success('规格书运行完成')
   else ElMessage.error(result.error)
@@ -100,7 +103,10 @@ async function runSpec() {
 async function runScenario(heading: string) {
   if (!selectedEntry.value) return
   specRunning.value = true
-  const result = await tasksStore.run([{ path: selectedEntry.value.path, heading }])
+  const result = await tasksStore.run(
+    [{ path: selectedEntry.value.path, heading }],
+    runVehicle.value,
+  )
   specRunning.value = false
   if (result.ok) ElMessage.success('场景运行完成')
   else ElMessage.error(result.error)
@@ -148,6 +154,30 @@ async function onApply() {
             更新场景标签
           </el-button>
         </div>
+      </div>
+
+      <!-- 运行车型：作为 gauge --tags 只运行该车型适用场景 -->
+      <div class="mt-3 grid grid-cols-12 items-center gap-2">
+        <div class="col-span-3">
+          <el-select
+            v-model="runVehicle"
+            size="small"
+            clearable
+            filterable
+            placeholder="运行车型：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="vehicle in configsStore.vehicleOptions"
+              :key="vehicle"
+              :label="vehicle"
+              :value="vehicle"
+            />
+          </el-select>
+        </div>
+        <p class="col-span-8 text-[11px] text-ink-muted">
+          选择运行车型后，Gauge 会按 tags 中的车型标签自动筛选适用场景。
+        </p>
       </div>
     </div>
 

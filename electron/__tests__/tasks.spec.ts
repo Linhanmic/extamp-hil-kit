@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { parseGaugeArguments, readTasks, writeTasks } from '../tasks'
+import { buildGaugeRunArgs, parseGaugeArguments, readTasks, writeTasks } from '../tasks'
 import type { TestTask } from '../../src/models'
 
 const temporaryDirs: string[] = []
@@ -28,6 +28,31 @@ function task(overrides: Partial<TestTask> = {}): TestTask {
     ...overrides,
   }
 }
+
+describe('buildGaugeRunArgs', () => {
+  it('场景与运行车型分别转成 --scenario 与 --tags', () => {
+    expect(buildGaugeRunArgs(['/specs/a.spec', '/specs/b.spec'], ['A', 'B'], 'HFAF')).toEqual([
+      'run',
+      '/specs/a.spec',
+      '/specs/b.spec',
+      '--scenario',
+      'A',
+      '--scenario',
+      'B',
+      '--tags',
+      'HFAF',
+    ])
+  })
+
+  it('未选车型时不添加 --tags', () => {
+    expect(buildGaugeRunArgs(['/specs/a.spec'], ['A'], '')).toEqual([
+      'run',
+      '/specs/a.spec',
+      '--scenario',
+      'A',
+    ])
+  })
+})
 
 describe('parseGaugeArguments', () => {
   it('按空白拆分并保留引号内内容', () => {

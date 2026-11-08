@@ -78,8 +78,9 @@ contextBridge.exposeInMainWorld('desktop', {
   tasks: {
     load: () => ipcRenderer.invoke('tasks:load'),
     save: (tasks: TestTask[]) => ipcRenderer.invoke('tasks:save', tasks),
-    run: (scenarios: TaskScenario[]) => ipcRenderer.invoke('tasks:run', scenarios),
-    runSpec: (path: string) => ipcRenderer.invoke('tasks:run-spec', path),
+    run: (scenarios: TaskScenario[], tags?: string) =>
+      ipcRenderer.invoke('tasks:run', scenarios, tags),
+    runSpec: (path: string, tags?: string) => ipcRenderer.invoke('tasks:run-spec', path, tags),
   },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),

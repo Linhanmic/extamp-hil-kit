@@ -113,7 +113,23 @@ export function writeTasks(projectPath: string, tasks: TestTask[]): TasksSaveOut
   }
 }
 
-function runGauge(projectPath: string, scenarios: TaskScenario[]): Promise<TaskRunOutcome> {
+/** 组装 gauge run 参数；车型通过 --tags 传给 Gauge，实现按车型自动选用例 */
+export function buildGaugeRunArgs(
+  specPaths: string[],
+  scenarioHeadings: string[] = [],
+  tags = '',
+): string[] {
+  const args = ['run', ...specPaths]
+  for (const heading of scenarioHeadings) args.push('--scenario', heading)
+  if (tags.trim()) args.push('--tags', tags.trim())
+  return args
+}
+
+function runGauge(
+  projectPath: string,
+  scenarios: TaskScenario[],
+  tags = '',
+): Promise<TaskRunOutcome> {
   for (const scenario of scenarios) {
     if (!insideSpecs(projectPath, scenario.path)) {
       return Promise.resolve({
@@ -126,13 +142,16 @@ function runGauge(projectPath: string, scenarios: TaskScenario[]): Promise<TaskR
   }
 
   const specPaths = [...new Set(scenarios.map((scenario) => scenario.path))]
-  const args = ['run', ...specPaths]
-  for (const scenario of scenarios) args.push('--scenario', scenario.heading)
+  const args = buildGaugeRunArgs(specPaths, scenarios.map((scenario) => scenario.heading), tags)
   return executeGauge(projectPath, args)
 }
 
 /** 整份 spec 文件运行，不传 --scenario */
-function runSpecGauge(projectPath: string, specPath: string): Promise<TaskRunOutcome> {
+function runSpecGauge(
+  projectPath: string,
+  specPath: string,
+  tags = '',
+): Promise<TaskRunOutcome> {
   if (!insideSpecs(projectPath, specPath)) {
     return Promise.resolve({
       error: `规格书路径不在 specs 目录内：${specPath}`,
@@ -141,7 +160,7 @@ function runSpecGauge(projectPath: string, specPath: string): Promise<TaskRunOut
       stderr: '',
     })
   }
-  return executeGauge(projectPath, ['run', specPath])
+  return executeGauge(projectPath, buildGaugeRunArgs([specPath], [], tags))
 }
 
 function executeGauge(projectPath: string, args: string[]): Promise<TaskRunOutcome> {
@@ -200,7 +219,7 @@ export function registerTasksIpc() {
     return writeTasks(project.path, tasks)
   })
 
-  handle('tasks:run', async (_event, scenarios: TaskScenario[]) => {
+  handle('tasks:run', async (_event, scenarios: TaskScenario[], tags?: string) => {
     const project = readWorkspace().current
     if (!project) {
       return { error: '还没有绑定 Gauge 项目', command: '', stdout: '', stderr: '' }
@@ -208,14 +227,14 @@ export function registerTasksIpc() {
     if (!Array.isArray(scenarios) || !scenarios.length) {
       return { error: '请先选择要运行的场景', command: '', stdout: '', stderr: '' }
     }
-    return runGauge(project.path, scenarios)
+    return runGauge(project.path, scenarios, typeof tags === 'string' ? tags : '')
   })
 
-  handle('tasks:run-spec', async (_event, specPath: string) => {
+  handle('tasks:run-spec', async (_event, specPath: string, tags?: string) => {
     const project = readWorkspace().current
     if (!project) {
       return { error: '还没有绑定 Gauge 项目', command: '', stdout: '', stderr: '' }
     }
-    return runSpecGauge(project.path, specPath)
+    return runSpecGauge(project.path, specPath, typeof tags === 'string' ? tags : '')
   })
 }

@@ -17,8 +17,8 @@ describe('测试队列', () => {
   it('按顺序执行，并允许执行中继续入队', async () => {
     const calls: string[] = []
     const completions: (() => void)[] = []
-    const run = vi.fn<DesktopBridge['tasks']['run']>((scenarios) => {
-      calls.push(scenarios[0]!.heading)
+    const run = vi.fn<DesktopBridge['tasks']['run']>((scenarios, tags) => {
+      calls.push(`${scenarios[0]!.heading}:${tags ?? ''}`)
       return new Promise<TaskRunOutcome>((resolve) => {
         completions.push(() => resolve(outcome(0)))
       })
@@ -28,10 +28,10 @@ describe('测试队列', () => {
     } as unknown as DesktopBridge
 
     const store = useQueueStore()
-    store.enqueueScenario({ path: '/specs/a.spec', heading: 'A' })
-    store.enqueueScenario({ path: '/specs/a.spec', heading: 'B' })
+    store.enqueueScenario({ path: '/specs/a.spec', heading: 'A' }, 'HFAF')
+    store.enqueueScenario({ path: '/specs/a.spec', heading: 'B' }, 'HFAF')
     const started = store.start()
-    store.enqueueScenario({ path: '/specs/b.spec', heading: 'C' })
+    store.enqueueScenario({ path: '/specs/b.spec', heading: 'C' }, 'YU2')
 
     for (let index = 0; index < 3; index++) {
       await Promise.resolve()
@@ -39,7 +39,7 @@ describe('测试队列', () => {
     }
     await started
 
-    expect(calls).toEqual(['A', 'B', 'C'])
+    expect(calls).toEqual(['A:HFAF', 'B:HFAF', 'C:YU2'])
     expect(store.items.map((item) => item.status)).toEqual(['success', 'success', 'success'])
     expect(store.pendingCount).toBe(0)
     expect(store.running).toBe(false)

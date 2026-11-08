@@ -139,10 +139,10 @@ export interface DesktopBridge {
     load: () => Promise<TasksLoadOutcome>
     /** 整份保存任务 */
     save: (tasks: TestTask[]) => Promise<TasksSaveOutcome>
-    /** 调用 Gauge CLI 运行选中场景 */
-    run: (scenarios: TaskScenario[]) => Promise<TaskRunOutcome>
-    /** 运行整份 spec 文件 */
-    runSpec: (path: string) => Promise<TaskRunOutcome>
+    /** 调用 Gauge CLI 运行选中场景；tags 为运行车型标签 */
+    run: (scenarios: TaskScenario[], tags?: string) => Promise<TaskRunOutcome>
+    /** 运行整份 spec 文件；tags 为运行车型标签 */
+    runSpec: (path: string, tags?: string) => Promise<TaskRunOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */

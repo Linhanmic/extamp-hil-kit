@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useConfigsStore } from '@/stores/configs'
 import { useSpecsStore } from '@/stores/specs'
 import { useTasksStore } from '@/stores/tasks'
 import { useQueueStore, type QueueKind, type QueueStatus } from '@/stores/queue'
 
 /** 测试队列：任务 / 单场景 / 整份规格书按顺序执行 */
 const specsStore = useSpecsStore()
+const configsStore = useConfigsStore()
 const tasksStore = useTasksStore()
 const queueStore = useQueueStore()
 
+const queueVehicle = ref('')
 const selectedTaskId = ref('')
 const scenarioSpecPath = ref('')
 const scenarioHeading = ref('')
@@ -41,20 +44,23 @@ function statusType(status: QueueStatus) {
 function addTask() {
   const task = tasksStore.tasks.find((item) => item.id === selectedTaskId.value)
   if (!task) return
-  queueStore.enqueueTask(task)
+  queueStore.enqueueTask(task, queueVehicle.value)
   selectedTaskId.value = ''
 }
 
 function addScenario() {
   if (!scenarioSpecPath.value || !scenarioHeading.value) return
-  queueStore.enqueueScenario({ path: scenarioSpecPath.value, heading: scenarioHeading.value })
+  queueStore.enqueueScenario(
+    { path: scenarioSpecPath.value, heading: scenarioHeading.value },
+    queueVehicle.value,
+  )
   scenarioHeading.value = ''
 }
 
 function addSpec() {
   const entry = specsStore.entries.find((item) => item.path === wholeSpecPath.value)
   if (!entry) return
-  queueStore.enqueueSpec(entry.path, entry.name)
+  queueStore.enqueueSpec(entry.path, entry.name, queueVehicle.value)
   wholeSpecPath.value = ''
 }
 </script>
@@ -92,6 +98,28 @@ function addSpec() {
     <!-- 入队区 -->
     <div class="w-[calc(11.5/12*100%)] rounded-lg border border-line bg-surface-soft p-3">
       <div class="flex flex-col gap-2">
+        <div class="grid grid-cols-12 items-center gap-2">
+          <span class="col-span-2 text-[11px] text-ink-muted">运行车型</span>
+          <div class="col-span-8">
+            <el-select
+              v-model="queueVehicle"
+              size="small"
+              clearable
+              filterable
+              placeholder="全部车型（运行时传 gauge --tags）"
+              class="w-full"
+            >
+              <el-option
+                v-for="vehicle in configsStore.vehicleOptions"
+                :key="vehicle"
+                :label="vehicle"
+                :value="vehicle"
+              />
+            </el-select>
+          </div>
+          <span class="col-span-2 text-right text-[11px] text-ink-muted">入队时记录</span>
+        </div>
+
         <div class="grid grid-cols-12 items-center gap-2">
           <span class="col-span-2 text-[11px] text-ink-muted">任务</span>
           <div class="col-span-8">
@@ -186,6 +214,7 @@ function addSpec() {
             @click="queueStore.showOutput(item)"
           >
             {{ item.name }}
+            <span v-if="item.vehicle" class="text-ink-muted"> · {{ item.vehicle }}</span>
           </button>
           <div class="col-span-2 flex justify-center px-2 py-1.5">
             <el-tag size="small" :type="statusType(item.status)" effect="plain">

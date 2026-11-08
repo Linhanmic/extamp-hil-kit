@@ -66,16 +66,16 @@ export const useTasksStore = defineStore('tasks', () => {
     }
   }
 
-  async function run(scenarios: TaskScenario[]) {
+  async function run(scenarios: TaskScenario[], tags = '') {
     const api = window.desktop?.tasks
     if (!api?.run) return { ok: false as const, error: '运行只在桌面端可用' }
-    return execute(() => api.run(scenarios))
+    return execute(() => api.run(scenarios, tags))
   }
 
-  async function runSpec(path: string) {
+  async function runSpec(path: string, tags = '') {
     const api = window.desktop?.tasks
     if (!api?.runSpec) return { ok: false as const, error: '运行只在桌面端可用' }
-    return execute(() => api.runSpec(path))
+    return execute(() => api.runSpec(path, tags))
   }
 
   async function execute(call: () => Promise<TaskRunOutcome>) {

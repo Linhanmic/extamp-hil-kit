@@ -12,6 +12,8 @@ export interface QueueItem {
   name: string
   scenarios: TaskScenario[]
   specPath?: string
+  /** 运行时传给 Gauge --tags 的车型 */
+  vehicle: string
   status: QueueStatus
   output: string
 }
@@ -38,35 +40,38 @@ export const useQueueStore = defineStore('queue', () => {
   const successCount = computed(() => items.value.filter((item) => item.status === 'success').length)
   const failedCount = computed(() => items.value.filter((item) => item.status === 'failed').length)
 
-  function enqueueTask(task: TestTask) {
+  function enqueueTask(task: TestTask, vehicle = '') {
     items.value.push({
       id: crypto.randomUUID(),
       kind: 'task',
       name: task.name,
       scenarios: task.scenarios.map((scenario) => ({ ...scenario })),
+      vehicle,
       status: 'pending',
       output: '',
     })
   }
 
-  function enqueueScenario(scenario: TaskScenario) {
+  function enqueueScenario(scenario: TaskScenario, vehicle = '') {
     items.value.push({
       id: crypto.randomUUID(),
       kind: 'scenario',
       name: scenario.heading,
       scenarios: [{ ...scenario }],
+      vehicle,
       status: 'pending',
       output: '',
     })
   }
 
-  function enqueueSpec(path: string, name: string) {
+  function enqueueSpec(path: string, name: string, vehicle = '') {
     items.value.push({
       id: crypto.randomUUID(),
       kind: 'spec',
       name,
       scenarios: [],
       specPath: path,
+      vehicle,
       status: 'pending',
       output: '',
     })
@@ -112,10 +117,10 @@ export const useQueueStore = defineStore('queue', () => {
         const item = items.value.find((entry) => entry.status === 'pending')
         if (!item) break
         item.status = 'running'
-        tasksStore.output = `正在执行：${item.name}`
+        tasksStore.output = `正在执行：${item.name}${item.vehicle ? `（车型 ${item.vehicle}）` : ''}`
         const outcome = item.kind === 'spec'
-          ? await api.runSpec(item.specPath!)
-          : await api.run(item.scenarios)
+          ? await api.runSpec(item.specPath!, item.vehicle)
+          : await api.run(item.scenarios, item.vehicle)
         item.output = outcomeText(outcome)
         item.status = outcome.exitCode === 0 && !outcome.error ? 'success' : 'failed'
         tasksStore.output = item.output
