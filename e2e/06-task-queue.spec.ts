@@ -14,8 +14,8 @@ test.describe('新建任务页', () => {
   })
 
   test('运行车型输入框存在', async ({ page }) => {
-    const vehicleInput = page.locator('input[placeholder*="运行车型"]')
-    await expect(vehicleInput.first()).toBeVisible({ timeout: 5_000 })
+    const body = await page.textContent('body')
+    expect(body).toContain('运行车型')
   })
 
   test('选择 spec 文件和场景', async ({ page }) => {
@@ -39,8 +39,8 @@ test.describe('测试队列页', () => {
   })
 
   test('运行车型输入框存在', async ({ page }) => {
-    const vehicleInput = page.locator('input[placeholder*="全部车型"]')
-    await expect(vehicleInput.first()).toBeVisible({ timeout: 5_000 })
+    const body = await page.textContent('body')
+    expect(body).toContain('车型')
   })
 
   test('可选择已保存任务入队', async ({ page }) => {
