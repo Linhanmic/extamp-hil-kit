@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { readTasks, writeTasks } from '../tasks'
+import { parseGaugeArguments, readTasks, writeTasks } from '../tasks'
 import type { TestTask } from '../../src/models'
 
 const temporaryDirs: string[] = []
@@ -28,6 +28,20 @@ function task(overrides: Partial<TestTask> = {}): TestTask {
     ...overrides,
   }
 }
+
+describe('parseGaugeArguments', () => {
+  it('按空白拆分并保留引号内内容', () => {
+    expect(parseGaugeArguments('--env default --name "hello world" --tag \'a b\'')).toEqual([
+      '--env',
+      'default',
+      '--name',
+      'hello world',
+      '--tag',
+      'a b',
+    ])
+    expect(parseGaugeArguments('')).toEqual([])
+  })
+})
 
 describe('tasks.json', () => {
   it('保存并读回任务，文件缺失按空处理', () => {

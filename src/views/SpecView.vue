@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import SpecTreeNodeItem from '@/components/SpecTreeNodeItem.vue'
 import { buildSpecTree, specCheckState, specDisplayName, specFilePaths } from '@/spec/tree'
 import type { SpecTreeNode } from '@/spec/tree'
+import { useTasksStore } from '@/stores/tasks'
 import { useSpecsStore } from '@/stores/specs'
 
 /**
@@ -11,7 +12,9 @@ import { useSpecsStore } from '@/stores/specs'
  * 新增/减少只比较车型，非车型的 Gauge 标签不计入。
  */
 const store = useSpecsStore()
+const tasksStore = useTasksStore()
 const applying = ref(false)
+const specRunning = ref(false)
 const selectedPath = ref('')
 const treeOpen = ref(true)
 const collapseVersion = ref(0)
@@ -85,6 +88,24 @@ function vehicleText(vehicles: string[]): string {
 
 const selectedChangedCount = computed(() => selectedRows.value.filter((row) => row.changed).length)
 
+async function runSpec() {
+  if (!selectedEntry.value) return
+  specRunning.value = true
+  const result = await tasksStore.runSpec(selectedEntry.value.path)
+  specRunning.value = false
+  if (result.ok) ElMessage.success('规格书运行完成')
+  else ElMessage.error(result.error)
+}
+
+async function runScenario(heading: string) {
+  if (!selectedEntry.value) return
+  specRunning.value = true
+  const result = await tasksStore.run([{ path: selectedEntry.value.path, heading }])
+  specRunning.value = false
+  if (result.ok) ElMessage.success('场景运行完成')
+  else ElMessage.error(result.error)
+}
+
 async function onApply() {
   applying.value = true
   const result = await store.apply()
@@ -108,7 +129,15 @@ async function onApply() {
         <div class="col-span-7 flex flex-wrap items-center">
           <h1 class="text-lg font-medium text-ink">规格书</h1>
         </div>
-        <div class="col-span-5 justify-self-end">
+        <div class="col-span-5 flex justify-end gap-2">
+          <el-button
+            size="small"
+            :loading="specRunning"
+            :disabled="!selectedEntry"
+            @click="runSpec"
+          >
+            运行规格书
+          </el-button>
           <el-button
             size="small"
             type="primary"
@@ -212,10 +241,11 @@ async function onApply() {
 
             <div class="grid grid-cols-12 items-center border-b border-line bg-surface-soft/50 text-[11px] font-medium text-ink">
               <div class="col-span-3 px-3 py-2">场景</div>
-              <div class="col-span-3 px-2 py-2">适用条件</div>
+              <div class="col-span-2 px-2 py-2">适用条件</div>
               <div class="col-span-2 px-2 py-2">新增车型</div>
               <div class="col-span-2 px-2 py-2">减少车型</div>
               <div class="col-span-2 px-2 py-2 text-center">状态</div>
+              <div class="col-span-1 px-2 py-2 text-center">操作</div>
             </div>
 
             <div
@@ -226,7 +256,7 @@ async function onApply() {
               <p class="col-span-3 min-w-0 truncate px-3 py-2 text-[11px] text-ink" :title="row.heading">
                 {{ row.heading }}
               </p>
-              <p class="col-span-3 min-w-0 truncate px-2 py-2 text-[11px] text-ink-muted" :title="row.condition ?? ''">
+              <p class="col-span-2 min-w-0 truncate px-2 py-2 text-[11px] text-ink-muted" :title="row.condition ?? ''">
                 {{ row.condition || '（默认全部车型）' }}
               </p>
               <p class="col-span-2 min-w-0 truncate px-2 py-2 text-[11px] text-ink" :title="vehicleText(row.added)">
@@ -239,6 +269,17 @@ async function onApply() {
                 <el-tag v-if="row.notApplicable" size="small" type="warning" effect="plain">不适用</el-tag>
                 <el-tag v-else-if="row.changed" size="small" type="primary" effect="plain">待更新</el-tag>
                 <el-tag v-else size="small" type="info" effect="plain">无变化</el-tag>
+              </div>
+              <div class="col-span-1 flex justify-center px-1 py-2">
+                <el-button
+                  size="small"
+                  link
+                  type="primary"
+                  :loading="specRunning"
+                  @click="runScenario(row.heading)"
+                >
+                  运行
+                </el-button>
               </div>
             </div>
             <p v-if="!selectedRows.length" class="px-3 py-3 text-[11px] text-ink-muted">

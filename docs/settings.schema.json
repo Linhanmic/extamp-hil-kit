@@ -28,6 +28,8 @@
         "slotMappingPath",
         "conceptOutputDir",
         "slotConceptOutputDir",
+        "gaugeExecutable",
+        "gaugeArgs",
         "requirementsImport"
       ],
       "additionalProperties": false,
@@ -63,6 +65,14 @@
         "slotConceptOutputDir": {
           "type": "string",
           "description": "按车型生成 SLOT cpt 的目录；空串表示 specs"
+        },
+        "gaugeExecutable": {
+          "type": "string",
+          "description": "Gauge 可执行文件；空串表示 PATH 中的 gauge"
+        },
+        "gaugeArgs": {
+          "type": "string",
+          "description": "Gauge run 的附加参数，支持引号包裹"
         },
         "requirementsImport": { "$ref": "#/$defs/requirementsImport" }
       }

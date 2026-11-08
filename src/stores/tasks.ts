@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { TaskScenario, TestTask } from '@/models'
+import type { TaskRunOutcome, TaskScenario, TestTask } from '@/models'
 
 /**
  * 新建任务：任务保存在 .hil-kit/tasks.json，运行通过主进程调用 Gauge CLI。
@@ -69,11 +69,20 @@ export const useTasksStore = defineStore('tasks', () => {
   async function run(scenarios: TaskScenario[]) {
     const api = window.desktop?.tasks
     if (!api?.run) return { ok: false as const, error: '运行只在桌面端可用' }
+    return execute(() => api.run(scenarios))
+  }
 
+  async function runSpec(path: string) {
+    const api = window.desktop?.tasks
+    if (!api?.runSpec) return { ok: false as const, error: '运行只在桌面端可用' }
+    return execute(() => api.runSpec(path))
+  }
+
+  async function execute(call: () => Promise<TaskRunOutcome>) {
     running.value = true
     output.value = '正在运行 Gauge 场景…'
     try {
-      const outcome = await api.run(scenarios)
+      const outcome = await call()
       const sections = [`$ ${outcome.command}`]
       if (outcome.stdout.trim()) sections.push(outcome.stdout.trimEnd())
       if (outcome.stderr.trim()) sections.push(`[stderr]\n${outcome.stderr.trimEnd()}`)
@@ -100,5 +109,6 @@ export const useTasksStore = defineStore('tasks', () => {
     clear,
     saveTask,
     run,
+    runSpec,
   }
 })

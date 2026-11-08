@@ -13,6 +13,21 @@ import type {
   TestTask,
 } from '../src/models'
 import { readWorkspace } from './workspace'
+import { readSettings } from './settings-store'
+
+/** 把设置里的附加参数拆成独立 argv，支持单双引号，不经过 shell */
+export function parseGaugeArguments(text: string): string[] {
+  const args: string[] = []
+  for (const match of text.matchAll(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)) {
+    const value = match[0]
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      args.push(value.slice(1, -1))
+    } else {
+      args.push(value)
+    }
+  }
+  return args
+}
 
 const TASKS_FILE = '.hil-kit/tasks.json'
 const SCHEMA_VERSION = 1
@@ -130,11 +145,15 @@ function runSpecGauge(projectPath: string, specPath: string): Promise<TaskRunOut
 }
 
 function executeGauge(projectPath: string, args: string[]): Promise<TaskRunOutcome> {
-  const command = `gauge ${args.map((arg) => JSON.stringify(arg)).join(' ')}`
-  const executable = process.platform === 'win32' ? 'gauge.exe' : 'gauge'
+  const settings = readSettings(projectPath).document?.settings
+  const extraArgs = parseGaugeArguments(settings?.gaugeArgs ?? '')
+  const finalArgs = [args[0]!, ...extraArgs, ...args.slice(1)]
+  const command = `gauge ${finalArgs.map((arg) => JSON.stringify(arg)).join(' ')}`
+  const executable =
+    settings?.gaugeExecutable || (process.platform === 'win32' ? 'gauge.exe' : 'gauge')
 
   return new Promise((resolveOutcome) => {
-    const child = spawn(executable, args, {
+    const child = spawn(executable, finalArgs, {
       cwd: projectPath,
       shell: false,
       stdio: ['ignore', 'pipe', 'pipe'],

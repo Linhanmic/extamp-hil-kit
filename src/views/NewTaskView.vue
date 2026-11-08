@@ -87,9 +87,16 @@ async function save(): Promise<string | null> {
   return result.id
 }
 
-async function run() {
+async function runTask() {
   const id = await save()
   if (!id) return
+  const result = await tasksStore.run(selectedScenarios.value)
+  if (result.ok) ElMessage.success('任务运行完成')
+  else ElMessage.error(result.error)
+}
+
+async function runScenariosOnly() {
+  if (!selectedScenarios.value.length) return
   const result = await tasksStore.run(selectedScenarios.value)
   if (result.ok) ElMessage.success('选中场景运行完成')
   else ElMessage.error(result.error)
@@ -104,10 +111,10 @@ async function run() {
   <div class="flex flex-col gap-3">
     <div class="w-[calc(11.5/12*100%)]">
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-4">
+        <div class="col-span-3">
           <h1 class="text-lg font-medium text-ink">新建任务</h1>
         </div>
-        <div class="col-span-3">
+        <div class="col-span-2">
           <el-select
             :model-value="selectedTaskId || undefined"
             size="small"
@@ -133,12 +140,22 @@ async function run() {
         <div class="col-span-2 flex justify-end">
           <el-button
             size="small"
+            :loading="tasksStore.running"
+            :disabled="!selectedScenarios.length"
+            @click="runScenariosOnly"
+          >
+            运行场景
+          </el-button>
+        </div>
+        <div class="col-span-2 flex justify-end">
+          <el-button
+            size="small"
             type="primary"
             :loading="tasksStore.running"
             :disabled="!selectedScenarios.length"
-            @click="run"
+            @click="runTask"
           >
-            运行选中场景
+            运行任务
           </el-button>
         </div>
       </div>

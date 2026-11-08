@@ -140,6 +140,33 @@ async function submit() {
         </div>
       </div>
 
+      <!-- Gauge 运行 -->
+      <div class="rounded-lg border border-line bg-surface-soft p-3">
+        <p class="text-[11px] font-medium text-ink">Gauge 运行</p>
+        <p class="mt-1 mb-2 text-[11px] text-ink-muted">
+          可执行文件留空时使用 PATH 中的 gauge；附加参数插入 gauge run 与规格书路径之间。
+        </p>
+        <!-- @grid A：标签 3 · 控件 9 -->
+        <div class="grid grid-cols-12 items-center gap-2">
+          <span class="col-span-3 text-[11px] text-ink-muted">可执行文件</span>
+          <div class="col-span-9">
+            <el-input
+              v-model="form.gaugeExecutable"
+              size="small"
+              placeholder="gauge / gauge.exe 或绝对路径"
+            />
+          </div>
+          <span class="col-span-3 text-[11px] text-ink-muted">附加参数</span>
+          <div class="col-span-9">
+            <el-input
+              v-model="form.gaugeArgs"
+              size="small"
+              placeholder="如 --env default --verbose"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- 数据文件 -->
       <div class="rounded-lg border border-line bg-surface-soft p-3">
         <p class="text-[11px] font-medium text-ink">数据文件</p>

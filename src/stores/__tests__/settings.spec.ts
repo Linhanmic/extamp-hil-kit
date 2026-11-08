@@ -15,6 +15,8 @@ function sampleSettings(): ProjectSettings {
     slotMappingPath: 'config/SLOT映射/mapping.ini',
     conceptOutputDir: 'specs',
     slotConceptOutputDir: 'specs',
+    gaugeExecutable: '',
+    gaugeArgs: '',
     requirementsImport: {
       filePath: '',
       sheetName: '6、软件需求分析表',
