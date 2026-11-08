@@ -132,20 +132,20 @@ describe('parseRequirements', () => {
     expect(variants[0]!.content).toEqual(['变体1', '变体 1。'])
   })
 
-  it('车型名归一化：去空白、下划线转连字符，一个表头多车型按 / 、 ; 拆分', () => {
+  it('车型名归一化：去空白、连字符转下划线，一个表头多车型按 / 、 ; 拆分', () => {
     const result = parseRequirements(
       table([
-        ['需求ID', '需求名称', '需求详情', 'FASLF 带华为智驾', 'SFHAZ_18CH/SFHAZ_20CH', 'A、B;C'],
+        ['需求ID', '需求名称', '需求详情', 'FASLF 带华为智驾', 'SFHAZ-18CH/SFHAZ-20CH', 'A、B;C'],
         ['REQ_1', '音源控制', '…', '●变体1', '●变体2', '●变体2'],
       ]),
       MAPPING,
     )
 
-    expect(result.vehicles).toEqual(['FASLF带华为智驾', 'SFHAZ-18CH', 'SFHAZ-20CH', 'A', 'B', 'C'])
+    expect(result.vehicles).toEqual(['FASLF带华为智驾', 'SFHAZ_18CH', 'SFHAZ_20CH', 'A', 'B', 'C'])
     expect(result.requirements[0]!.variants[0]!.vehicles).toEqual(['FASLF带华为智驾'])
     expect(result.requirements[0]!.variants[1]!.vehicles).toEqual([
-      'SFHAZ-18CH',
-      'SFHAZ-20CH',
+      'SFHAZ_18CH',
+      'SFHAZ_20CH',
       'A',
       'B',
       'C',
@@ -284,8 +284,8 @@ describe('真实需求分析表端到端解析', () => {
     expect(result.vehicles).not.toContain('MA16D平台')
     expect(result.vehicles).not.toContain('MA20D平台')
     // 表头里的多车型写法拆开后各自成条目
-    expect(result.vehicles).toContain('SFHAZ-18CH')
-    expect(result.vehicles).toContain('SFHAZ-20CH')
+    expect(result.vehicles).toContain('SFHAZ_18CH')
+    expect(result.vehicles).toContain('SFHAZ_20CH')
   })
 
   it('第一条需求的变体按内容键归并', () => {
@@ -311,12 +311,12 @@ describe('真实需求分析表端到端解析', () => {
     ])
 
     expect(first.variants[0]!.vehicles).toEqual(['HFAF', 'EFSS'])
-    expect(first.variants[1]!.vehicles).toEqual(['FASLF带华为智驾', 'HCHE', 'HCHE-01'])
+    expect(first.variants[1]!.vehicles).toEqual(['FASLF带华为智驾', 'HCHE', 'HCHE_01'])
     // L 与 P 两个单元格写的是同一段文本，归并成一个变体；SFHAZ 表头里的两款车都算进来
     const longText = first.variants[2]!
-    expect(longText.vehicles).toEqual(['SFHAZ-18CH', 'SFHAZ-20CH', 'HCHE-02'])
+    expect(longText.vehicles).toEqual(['SFHAZ_18CH', 'SFHAZ_20CH', 'HCHE_02'])
     expect(longText.content).toHaveLength(1)
-    expect(first.variants.at(-1)).toMatchObject({ key: '变体17', vehicles: ['HCHE-16'] })
+    expect(first.variants.at(-1)).toMatchObject({ key: '变体17', vehicles: ['HCHE_16'] })
   })
 
   it('平台列上的标记不产生变体，也不产生告警', () => {

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Requirement } from '@/models'
 import { useConfigsStore } from '@/stores/configs'
+import { useRequirementMappingStore } from '@/stores/requirement-mapping'
 import {
   analyzeRequirementAssociation,
   type RequirementAssociationStatus,
@@ -19,10 +20,8 @@ const props = defineProps<{
 }>()
 
 const configsStore = useConfigsStore()
+const mappingStore = useRequirementMappingStore()
 const openIds = ref(new Set<string>())
-const excludedIds = defineModel<Set<string>>('excludedIds', {
-  default: () => new Set<string>(),
-})
 
 const associations = computed(() => {
   const map = new Map<string, ReturnType<typeof analyzeRequirementAssociation>>()
@@ -32,7 +31,7 @@ const associations = computed(() => {
       analyzeRequirementAssociation(
         requirement,
         configsStore.configurations,
-        !excludedIds.value.has(requirement.id),
+        mappingStore.isParticipating(requirement.id),
       ),
     )
   }
@@ -62,10 +61,7 @@ function toggleExpanded(id: string) {
 }
 
 function setParticipating(id: string, value: string | number | boolean) {
-  const next = new Set(excludedIds.value)
-  if (value === 'participate') next.delete(id)
-  else next.add(id)
-  excludedIds.value = next
+  mappingStore.setParticipating(id, value === 'participate')
 }
 
 function joinVehicles(vehicles: string[]): string {
@@ -135,7 +131,7 @@ function visibleVariants(requirement: Requirement) {
         </div>
         <div class="col-span-3 flex items-center justify-center px-2 py-2">
           <el-segmented
-            :model-value="excludedIds.has(requirement.id) ? 'skip' : 'participate'"
+            :model-value="mappingStore.isParticipating(requirement.id) ? 'participate' : 'skip'"
             size="small"
             :options="[
               { label: '参与', value: 'participate' },

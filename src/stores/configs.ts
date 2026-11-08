@@ -10,6 +10,7 @@ import type {
   VariantRef,
 } from '@/models'
 import { useRequirementsStore } from './requirements'
+import { normalizeVehicleName } from '@/shared/vehicle-name'
 
 /** 变体引用的解析状态：能在需求中找到为正常，否则失效 */
 export type VariantRefStatus = 'ok' | 'missing'
@@ -150,11 +151,12 @@ export const useConfigsStore = defineStore('configs', () => {
   function matchSpecialVehicles(rules: SpecialVehicleRule[]): string[] {
     const result: string[] = []
     for (const vehicle of requirementVehicleUniverse.value) {
-      const matched = rules.some((rule) =>
-        rule.match === 'starts_with'
-          ? vehicle.startsWith(rule.text)
-          : vehicle.includes(rule.text),
-      )
+      const matched = rules.some((rule) => {
+        const text = normalizeVehicleName(rule.text)
+        return rule.match === 'starts_with'
+          ? vehicle.startsWith(text)
+          : vehicle.includes(text)
+      })
       if (matched) result.push(vehicle)
     }
     return result
@@ -170,7 +172,10 @@ export const useConfigsStore = defineStore('configs', () => {
       }
     }
 
-    const specialRules = value.special_vehicles
+    const specialRules = value.special_vehicles.map((rule) => ({
+      ...rule,
+      text: normalizeVehicleName(rule.text),
+    }))
     const matchedSpecial = matchSpecialVehicles(specialRules)
 
     const vehicles = [...variantVehicles]
@@ -239,7 +244,7 @@ export const useConfigsStore = defineStore('configs', () => {
       }
       for (const configuration of configurations.value) {
         for (const value of configuration.config_value) {
-          for (const rule of value.special_vehicles) push(rule.text)
+          for (const rule of value.special_vehicles) push(normalizeVehicleName(rule.text))
         }
       }
     }

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useConfigsStore } from '@/stores/configs'
 import type { ConfigValueInput, ConfigurationValueRow } from '@/stores/configs'
 import type { SpecialVehicleMatch, SpecialVehicleRule, VariantRef } from '@/models'
+import { normalizeVehicleName } from '@/shared/vehicle-name'
 
 /**
  * 新增 / 编辑配置值：配置值 + 关联的需求变体 + 特殊车型规则。
@@ -51,7 +52,10 @@ watch(visible, (open) => {
   if (!open) return
   text.value = props.configValue?.value ?? ''
   refs.value = (props.configValue?.relay_variants ?? []).map((ref) => ({ ...ref }))
-  specialRules.value = (props.configValue?.special_vehicles ?? []).map((rule) => ({ ...rule }))
+  specialRules.value = (props.configValue?.special_vehicles ?? []).map((rule) => ({
+    ...rule,
+    text: normalizeVehicleName(rule.text),
+  }))
   specialMatch.value = 'starts_with'
   specialText.value = ''
   requirementIndex.value = null

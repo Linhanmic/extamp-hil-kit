@@ -4,6 +4,7 @@ import RequirementImportDialog from '@/components/RequirementImportDialog.vue'
 import RequirementAssociationTable from '@/components/RequirementAssociationTable.vue'
 import { useConfigsStore } from '@/stores/configs'
 import { useRequirementsStore } from '@/stores/requirements'
+import { useRequirementMappingStore } from '@/stores/requirement-mapping'
 import {
   analyzeRequirementAssociation,
   missingRequirementNames,
@@ -16,12 +17,12 @@ import {
  */
 const store = useRequirementsStore()
 const configsStore = useConfigsStore()
+const mappingStore = useRequirementMappingStore()
 const importVisible = ref(false)
 const keyword = ref('')
 const vehicleFilter = ref('')
 const requirementStatusFilter = ref<RequirementAssociationStatus[]>([])
 const variantStatusFilter = ref<'' | 'linked' | 'unlinked'>('')
-const excludedIds = ref(new Set<string>())
 
 const available = computed(() => Boolean(window.desktop?.requirements))
 
@@ -58,7 +59,7 @@ const filteredRequirements = computed(() => {
     const association = analyzeRequirementAssociation(
       item,
       configsStore.configurations,
-      !excludedIds.value.has(item.id),
+      mappingStore.isParticipating(item.id),
     )
     if (
       requirementStatusFilter.value.length &&
@@ -195,7 +196,6 @@ async function onImported() {
       <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取已保存的需求…</p>
       <RequirementAssociationTable
         v-else-if="filteredRequirements.length"
-        v-model:excluded-ids="excludedIds"
         :requirements="filteredRequirements"
         :variant-status="variantStatusFilter"
       />

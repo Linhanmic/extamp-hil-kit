@@ -25,6 +25,7 @@ import type {
   RequirementsParseWarning,
   Variant,
 } from '../src/models/common'
+import { normalizeVehicleName } from '../src/shared/vehicle-name'
 
 /** SheetJS 读出的单元格取值：空单元格为 null */
 export type SheetCell = string | number | boolean | null | undefined
@@ -455,14 +456,6 @@ function scanVehicleColumns(
   }
 
   return { columns, platformColumns, names }
-}
-
-/** 车型名归一化：去引号、去空白（含 NBSP 与全角空格）、下划线换算成连字符 */
-function normalizeVehicleName(raw: string): string {
-  return raw
-    .replace(/["'`＂＇]/g, '')
-    .replace(/\s/g, '')
-    .replace(/_/g, '-')
 }
 
 function splitVehicleNames(header: string): string[] {

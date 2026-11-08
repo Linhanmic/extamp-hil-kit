@@ -123,6 +123,6 @@
 - **车型全集不落盘**：上百个车型的需求表如果把全集也存一份，文件体积会翻倍；需要车型清单时从 `requirements[].variants[].vehicles` 汇总去重即可。注意这样一来，「一条需求都不涉及」的车型不会出现在文件里——这类车型本来也没有需求映射可查。
 - `Variant.requirement_id` 在 `requirements[]` 里是冗余的，保留它是为了与 `src/models/common.ts` 的 `Variant` 完全一致，读写时不需要字段映射。
 - 平台列（表头含「平台」）的单元格既不计适用也不计不适用，不产生变体，其表头也不出现在任何 `vehicles` 里。
-- `vehicles` 里的名字经过归一化：去引号、去空白（含 NBSP 与全角空格）、`_` 换算成 `-`；表头按 `/`、`、`、`,`、`，`、`;`、`；` 拆成多款车型。
+- `vehicles` 里的名字经过归一化：删除所有空白字符，破折号 `-` 换算成下划线 `_`；表头按 `/`、`、`、`,`、`，`、`;`、`；` 拆成多款车型。
 - 解析结果（`RequirementsParseResult.vehicles`）仍然带车型全集，供导入界面预览与统计用，只是不写入文件。
 - 校验实现见 `electron/requirements-store.ts`（写入）与 `electron/__tests__/requirements-store.spec.ts`（结构断言）。

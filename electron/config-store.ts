@@ -19,6 +19,7 @@ import type {
   VariantRef,
 } from '../src/models/common'
 import { resolveProjectPath } from './settings-store'
+import { normalizeVehicleName } from '../src/shared/vehicle-name'
 
 /** 配置数据的当前结构版本 */
 const SCHEMA_VERSION = 2
@@ -272,7 +273,7 @@ function normalizeSpecialVehicles(
   const seen = new Set<string>()
   const result: SpecialVehicleRule[] = []
   for (const rule of rules) {
-    const text = rule.text.trim()
+    const text = normalizeVehicleName(rule.text)
     if (!text) {
       throw new Error(`配置项「${configKey}」的配置值「${value}」存在空的特殊车型参数`)
     }

@@ -27,6 +27,7 @@ import type {
   VolumeTableRow,
 } from '../src/models'
 import { resolveProjectPath } from './settings-store'
+import { normalizeVehicleList, normalizeVehicleName } from '../src/shared/vehicle-name'
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT'
@@ -84,7 +85,7 @@ export function parseOutputText(text: string): OutputScenario[] {
       current.vehicles = line
         .slice('适用车型'.length + 1)
         .split(/[/、,，;；]/)
-        .map((item) => item.trim())
+        .map((item) => normalizeVehicleName(item))
         .filter(Boolean)
       continue
     }
@@ -150,7 +151,7 @@ export function parseVolumeTableText(text: string): VolumeTableDocument {
     const cells = splitCells(line, delimiter)
     if (cells.every((cell) => cell === '')) continue
     rows.push({
-      vehicle: vehicleIndex >= 0 ? (cells[vehicleIndex] ?? '') : (cells[0] ?? ''),
+      vehicle: normalizeVehicleList(vehicleIndex >= 0 ? (cells[vehicleIndex] ?? '') : (cells[0] ?? '')).join('/'),
       source: sourceIndex >= 0 ? (cells[sourceIndex] ?? '') : (cells[1] ?? ''),
       values: levelIndices.map((index) => cells[index] ?? ''),
     })
@@ -214,9 +215,8 @@ export function parseSlotMappingFileText(text: string): {
   for (const line of readLines(text)) {
     if (line.startsWith('适用车型:') || line.startsWith('适用车型：')) {
       const value = line.slice('适用车型'.length + 1)
-      for (const vehicle of value.split(/[/、,，;；]/)) {
-        const name = vehicle.trim()
-        if (name && !vehicles.includes(name)) vehicles.push(name)
+      for (const vehicle of normalizeVehicleList(value)) {
+        if (!vehicles.includes(vehicle)) vehicles.push(vehicle)
       }
       continue
     }
@@ -256,10 +256,7 @@ export function parseSnapshotIniText(text: string): SnapshotFile[] {
         current = null
         continue
       }
-      const vehicles = name
-        .split(/[/、,，;；]/)
-        .map((vehicle) => vehicle.trim())
-        .filter(Boolean)
+      const vehicles = normalizeVehicleList(name)
       current = { name, vehicles, channels: [] }
       files.push(current)
       continue
@@ -351,7 +348,7 @@ export function appendSnapshot(
   const target = resolveProjectPath(projectPath, filePath)
   if (!target) return { unconfigured: true }
 
-  const name = section.trim()
+  const name = normalizeVehicleList(section).join('/')
   if (!name || /[[\]\r\n]/.test(name)) return { error: '适用车型分节名称不正确' }
   const lines = speakers.map((speaker) => speaker.trim()).filter(Boolean)
   if (!lines.length) return { error: '至少填写一个扬声器' }
