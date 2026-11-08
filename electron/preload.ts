@@ -5,6 +5,8 @@ import type {
   RequirementsParseConfig,
   SettingsPickKind,
 } from '../src/models/common'
+import type { VolumeTableDocument } from '../src/models/volume'
+import type { TaskScenario, TestTask } from '../src/models/task'
 
 // 渲染进程不直接接触 Node：只通过 contextBridge 暴露只读环境信息、窗口控制与工作区操作
 contextBridge.exposeInMainWorld('desktop', {
@@ -48,6 +50,7 @@ contextBridge.exposeInMainWorld('desktop', {
   },
   meter: {
     load: () => ipcRenderer.invoke('meter:load'),
+    save: (document: VolumeTableDocument) => ipcRenderer.invoke('meter:save', document),
   },
   slotMap: {
     load: () => ipcRenderer.invoke('slot-map:load'),
@@ -71,6 +74,12 @@ contextBridge.exposeInMainWorld('desktop', {
       ipcRenderer.invoke('concepts:generate', fileName, text),
     generateSlot: (fileName: string, text: string) =>
       ipcRenderer.invoke('concepts:generate-slot', fileName, text),
+  },
+  tasks: {
+    load: () => ipcRenderer.invoke('tasks:load'),
+    save: (tasks: TestTask[]) => ipcRenderer.invoke('tasks:save', tasks),
+    run: (scenarios: TaskScenario[]) => ipcRenderer.invoke('tasks:run', scenarios),
+    runSpec: (path: string) => ipcRenderer.invoke('tasks:run-spec', path),
   },
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),

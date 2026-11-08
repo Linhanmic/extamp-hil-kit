@@ -10,9 +10,11 @@ import type {
   SlotMappingLoadOutcome,
   SnapshotLoadOutcome,
   SnapshotAppendOutcome,
+  VolumeTableDocument,
   VolumeTableLoadOutcome,
+  VolumeTableSaveOutcome,
 } from '../src/models'
-import { appendSnapshot, readOutput, readSlotMapping, readSnapshotDir, readVolumeTable } from './business-store'
+import { appendSnapshot, readOutput, readSlotMapping, readSnapshotDir, readVolumeTable, writeVolumeTable } from './business-store'
 import { readSettings } from './settings-store'
 import { readWorkspace } from './workspace'
 
@@ -45,6 +47,17 @@ export function registerBusinessIpc() {
       return readVolumeTable(project.path, settings?.volumeTablePath ?? '') satisfies VolumeTableLoadOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies VolumeTableLoadOutcome
+    }
+  })
+
+  handle('meter:save', (_event, document: VolumeTableDocument) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies VolumeTableSaveOutcome
+    try {
+      const settings = readSettings(project.path).document?.settings
+      return writeVolumeTable(project.path, settings?.volumeTablePath ?? '', document)
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies VolumeTableSaveOutcome
     }
   })
 

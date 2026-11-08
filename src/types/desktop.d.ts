@@ -26,6 +26,13 @@ import type {
   SpecsReadOutcome,
   SpecsWriteOutcome,
   VolumeTableLoadOutcome,
+  VolumeTableDocument,
+  VolumeTableSaveOutcome,
+  TaskRunOutcome,
+  TasksLoadOutcome,
+  TasksSaveOutcome,
+  TestTask,
+  TaskScenario,
 } from '@/models'
 
 export interface WorkspaceProject {
@@ -92,6 +99,8 @@ export interface DesktopBridge {
   meter: {
     /** 读取当前项目的音量表文件 */
     load: () => Promise<VolumeTableLoadOutcome>
+    /** 整份写回音量表 */
+    save: (document: VolumeTableDocument) => Promise<VolumeTableSaveOutcome>
   }
   slotMap: {
     /** 读取当前项目的 SLOT 映射配置及其 slot 文件 */
@@ -124,6 +133,16 @@ export interface DesktopBridge {
     generate: (fileName: string, text: string) => Promise<ConceptGenerateOutcome>
     /** 按车型生成 SLOT cpt 到独立的生成目录 */
     generateSlot: (fileName: string, text: string) => Promise<ConceptGenerateOutcome>
+  }
+  tasks: {
+    /** 读取 .hil-kit/tasks.json */
+    load: () => Promise<TasksLoadOutcome>
+    /** 整份保存任务 */
+    save: (tasks: TestTask[]) => Promise<TasksSaveOutcome>
+    /** 调用 Gauge CLI 运行选中场景 */
+    run: (scenarios: TaskScenario[]) => Promise<TaskRunOutcome>
+    /** 运行整份 spec 文件 */
+    runSpec: (path: string) => Promise<TaskRunOutcome>
   }
   settings: {
     /** 读取当前项目的设置（文件缺失时带回默认值） */

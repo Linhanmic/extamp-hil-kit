@@ -17,3 +17,12 @@ export interface VolumeTableLoadOutcome {
   unconfigured?: boolean
   document?: VolumeTableDocument
 }
+
+/** 整份音量表写回结果 */
+export interface VolumeTableSaveOutcome {
+  error?: string
+  saved?: {
+    filePath: string
+    updatedAt: string
+  }
+}

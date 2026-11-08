@@ -23,6 +23,7 @@ import type {
   SnapshotLoadOutcome,
   VolumeTableDocument,
   VolumeTableLoadOutcome,
+  VolumeTableSaveOutcome,
   VolumeTableRow,
 } from '../src/models'
 import { resolveProjectPath } from './settings-store'
@@ -160,6 +161,42 @@ export function parseVolumeTableText(text: string): VolumeTableDocument {
   return {
     levels: levelIndices.map((index) => header[index] ?? ''),
     rows,
+  }
+}
+
+/** 整份写回音量表：沿用原分隔符；含分隔符或换行的单元格拒绝，避免破坏表格 */
+export function writeVolumeTable(
+  projectPath: string,
+  filePath: string,
+  document: VolumeTableDocument,
+): VolumeTableSaveOutcome {
+  const target = resolveProjectPath(projectPath, filePath)
+  if (!target) return { error: '还没有配置音量表文件' }
+
+  let delimiter = ';'
+  try {
+    const firstLine = readLines(readFileSync(target, 'utf8'))[0]
+    if (firstLine) delimiter = detectDelimiter(firstLine)
+  } catch (error) {
+    if (!isMissing(error)) return { error: `音量表文件无法读取（${target}）：${message(error)}` }
+  }
+
+  const lines = [
+    ['车型', '音源', ...document.levels],
+    ...document.rows.map((row) => [row.vehicle, row.source, ...row.values]),
+  ]
+  for (const cells of lines) {
+    if (cells.some((cell) => cell.includes(delimiter) || /[\r\n]/.test(cell))) {
+      return { error: '车型、音源或 dB 值包含当前分隔符或换行，无法保存' }
+    }
+  }
+
+  try {
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, `${lines.map((cells) => cells.join(delimiter)).join('\n')}\n`, 'utf8')
+    return { saved: { filePath: target, updatedAt: statSync(target).mtime.toISOString() } }
+  } catch (error) {
+    return { error: `音量表写入失败（${target}）：${message(error)}` }
   }
 }
 

@@ -12,6 +12,7 @@ import {
   readSlotMapping,
   readSnapshotDir,
   readVolumeTable,
+  writeVolumeTable,
 } from '../business-store'
 
 const temporaryDirs: string[] = []
@@ -103,6 +104,29 @@ describe('parseVolumeTableText', () => {
       vehicle: 'YU2',
       source: '媒体音',
     })
+  })
+})
+
+describe('writeVolumeTable', () => {
+  it('整份写回并沿用原分隔符，空 dB 保留为空单元格', () => {
+    const project = temporaryProject()
+    const dir = join(project, 'config', '音量表')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'test.csv'), '车型,音源,0,1\n旧车型,媒体音,-99,-78\n', 'utf8')
+
+    const outcome = writeVolumeTable(project, 'config/音量表/test.csv', {
+      levels: ['0', '1'],
+      rows: [
+        { vehicle: 'SC6H', source: '媒体音', values: ['-99', '-78.6'] },
+        { vehicle: 'YU2', source: '电话音', values: ['-99', ''] },
+      ],
+    })
+    expect(outcome.saved).toBeDefined()
+    expect(readFileSync(join(dir, 'test.csv'), 'utf8')).toContain('YU2,电话音,-99,')
+
+    const parsed = readVolumeTable(project, 'config/音量表/test.csv')
+    expect(parsed.document?.rows).toHaveLength(2)
+    expect(parsed.document?.rows[1]?.values).toEqual(['-99', ''])
   })
 })
 

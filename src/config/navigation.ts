@@ -1,5 +1,6 @@
 export type NavIconName =
   | 'create'
+  | 'queue'
   | 'config'
   | 'slot'
   | 'output'
@@ -29,6 +30,7 @@ export interface NavItem {
  */
 export const NAV_ITEMS: NavItem[] = [
   { name: 'task-new', path: '/task/new', label: '新建任务', icon: 'create' },
+  { name: 'queue', path: '/queue', label: '测试队列', icon: 'queue' },
   { name: 'config', path: '/config', label: '配置参数', icon: 'config' },
   { name: 'slot-map', path: '/slot-map', label: 'SLOT 映射', icon: 'slot' },
   { name: 'output', path: '/output', label: '出声位置', icon: 'output' },

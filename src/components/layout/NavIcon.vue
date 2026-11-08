@@ -21,6 +21,12 @@ defineProps<{
       <path d="M8 3.2v9.6M3.2 8h9.6" stroke-linecap="round" />
     </template>
 
+    <!-- 测试队列：列表与运行箭头 -->
+    <template v-else-if="name === 'queue'">
+      <path d="M3 4.2h6M3 8h6M3 11.8h6" stroke-linecap="round" />
+      <path d="m10.5 6 3 2-3 2z" stroke-linejoin="round" />
+    </template>
+
     <!-- 配置参数：带旋钮的滑杆 -->
     <template v-else-if="name === 'config'">
       <path d="M3 5.2h10M3 10.8h10" stroke-linecap="round" />

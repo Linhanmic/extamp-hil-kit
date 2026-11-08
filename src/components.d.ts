@@ -63,6 +63,7 @@ declare module 'vue' {
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
     TheWelcome: typeof import('./components/TheWelcome.vue')['default']
     VolumeCurveChart: typeof import('./components/VolumeCurveChart.vue')['default']
+    VolumeFormDialog: typeof import('./components/VolumeFormDialog.vue')['default']
     WelcomeItem: typeof import('./components/WelcomeItem.vue')['default']
     WindowControls: typeof import('./components/layout/WindowControls.vue')['default']
   }

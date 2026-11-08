@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import VolumeCurveChart from '@/components/VolumeCurveChart.vue'
+import VolumeFormDialog from '@/components/VolumeFormDialog.vue'
 import { useMeterStore } from '@/stores/meter'
 import {
   buildVolumeCurves,
@@ -17,6 +18,21 @@ const store = useMeterStore()
 const viewMode = ref<'table' | 'chart'>('table')
 const sourceFilter = ref('')
 const vehicleFilter = ref('')
+const formVisible = ref(false)
+const editingRow = ref<VolumeTableRow | null>(null)
+const formLevels = computed(() =>
+  store.levels.length ? store.levels : VOLUME_LEVELS.map(String),
+)
+
+function openCreate() {
+  editingRow.value = null
+  formVisible.value = true
+}
+
+function openEdit(row: VolumeTableRow) {
+  editingRow.value = row
+  formVisible.value = true
+}
 
 const sourceOptions = computed(() => {
   const sources: string[] = []
@@ -80,7 +96,8 @@ const emptyText = computed(() =>
         <div class="col-span-6">
           <h1 class="text-lg font-medium text-ink">音量表</h1>
         </div>
-        <div class="col-span-6 justify-self-end">
+        <div class="col-span-6 flex items-center justify-end gap-2">
+          <el-button size="small" type="primary" @click="openCreate">新增音量</el-button>
           <el-segmented
             v-model="viewMode"
             size="small"
@@ -159,6 +176,7 @@ const emptyText = computed(() =>
               >
                 {{ level }}
               </th>
+              <th class="border-b border-line px-3 py-2 font-medium whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -176,6 +194,9 @@ const emptyText = computed(() =>
               >
                 {{ value }}
               </td>
+              <td class="border-b border-line px-2 py-1.5 whitespace-nowrap">
+                <el-button size="small" link type="primary" @click="openEdit(row)">编辑</el-button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -191,5 +212,7 @@ const emptyText = computed(() =>
         />
       </div>
     </div>
+
+    <VolumeFormDialog v-model="formVisible" :row="editingRow" :levels="formLevels" />
   </div>
 </template>

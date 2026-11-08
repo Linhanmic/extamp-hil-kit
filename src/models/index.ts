@@ -56,6 +56,7 @@ export type {
   VolumeTableRow,
   VolumeTableDocument,
   VolumeTableLoadOutcome,
+  VolumeTableSaveOutcome,
 } from './volume'
 export type {
   SlotMappingScenario,
@@ -88,3 +89,11 @@ export type {
   ConceptsDeleteOutcome,
   ConceptGenerateOutcome,
 } from './concept'
+export type {
+  TaskScenario,
+  TestTask,
+  TasksDocument,
+  TasksLoadOutcome,
+  TasksSaveOutcome,
+  TaskRunOutcome,
+} from './task'

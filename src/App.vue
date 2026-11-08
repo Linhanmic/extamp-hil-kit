@@ -19,6 +19,7 @@ import { useRequirementsStore } from './stores/requirements'
 import { useSettingsStore } from './stores/settings'
 import { useSlotMapStore } from './stores/slotMap'
 import { useSnapshotStore } from './stores/snapshot'
+import { useTasksStore } from './stores/tasks'
 import { useSpecsStore } from './stores/specs'
 import LaunchView from './views/LaunchView.vue'
 
@@ -33,6 +34,7 @@ const outputStore = useOutputStore()
 const meterStore = useMeterStore()
 const slotMapStore = useSlotMapStore()
 const snapshotStore = useSnapshotStore()
+const tasksStore = useTasksStore()
 const specsStore = useSpecsStore()
 const conceptsStore = useConceptsStore()
 watch(
@@ -45,6 +47,7 @@ watch(
       void slotMapStore.load()
       void snapshotStore.load()
       void conceptsStore.load()
+      void tasksStore.load()
       // 配置状态依赖需求：必须先读需求再读配置，避免启动时把有效引用短暂判为失效
       await requirementsStore.load()
       await configsStore.load()
@@ -60,6 +63,7 @@ watch(
     snapshotStore.clear()
     specsStore.clear()
     conceptsStore.clear()
+    tasksStore.clear()
   },
   { immediate: true },
 )
