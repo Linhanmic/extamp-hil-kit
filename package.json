@@ -4,6 +4,14 @@
   "version": "0.1.0",
   "private": true,
   "description": "External Amplifier HIL Kit — 外置功放 HIL 测试工具台",
+  "homepage": "https://github.com/Linhanmic/extamp-hil-kit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Linhanmic/extamp-hil-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Linhanmic/extamp-hil-kit/issues"
+  },
   "author": {
     "name": "Linhanmic",
     "email": "Linhanmic@users.noreply.github.com"
