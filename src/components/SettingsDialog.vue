@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { DEFAULT_PROJECT_SETTINGS } from '@/config/settings-defaults'
 import SettingsPathField from '@/components/SettingsPathField.vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+import { toProjectRelativePath } from '@/composables/project-path'
+import { useWorkspace } from '@/composables/useWorkspace'
 import { useSettingsStore } from '@/stores/settings'
 import type { ProjectSettings, SettingsPickKind } from '@/models'
 
@@ -12,6 +14,7 @@ import type { ProjectSettings, SettingsPickKind } from '@/models'
  */
 const visible = defineModel<boolean>({ default: false })
 const store = useSettingsStore()
+const { project } = useWorkspace()
 
 const form = ref<ProjectSettings>(clone(DEFAULT_PROJECT_SETTINGS))
 const error = ref('')
@@ -20,9 +23,30 @@ function clone(settings: ProjectSettings): ProjectSettings {
   return JSON.parse(JSON.stringify(settings)) as ProjectSettings
 }
 
+function useRelativePaths(settings: ProjectSettings) {
+  const base = project.value?.path ?? ''
+  for (const key of [
+    'requirementsPath',
+    'configsPath',
+    'outputPath',
+    'snapshotPath',
+    'volumeTablePath',
+    'slotMappingPath',
+    'conceptOutputPath',
+    'slotConceptOutputPath',
+  ] as const) {
+    settings[key] = toProjectRelativePath(base, settings[key])
+  }
+  settings.requirementsImport.filePath = toProjectRelativePath(
+    base,
+    settings.requirementsImport.filePath,
+  )
+  return settings
+}
+
 watch(visible, (open) => {
   if (!open) return
-  form.value = clone(store.settings)
+  form.value = useRelativePaths(clone(store.settings))
   error.value = ''
 })
 
@@ -38,7 +62,7 @@ async function chooseFile(kind: SettingsPickKind) {
     return
   }
 
-  const path = outcome.path
+  const path = toProjectRelativePath(project.value?.path ?? '', outcome.path)
   switch (kind) {
     case 'requirements-json':
       form.value.requirementsPath = path
@@ -77,7 +101,7 @@ async function chooseDirectory() {
     error.value = outcome.error ?? '选择目录失败'
     return
   }
-  form.value.slotMappingPath = outcome.path
+  form.value.slotMappingPath = toProjectRelativePath(project.value?.path ?? '', outcome.path)
 }
 
 function validate(): string {
