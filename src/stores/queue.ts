@@ -20,7 +20,8 @@ export interface QueueItem {
 }
 
 function outcomeText(outcome: TaskRunOutcome): string {
-  const sections = [`$ ${outcome.command}`]
+  const sections = [...(outcome.notes ?? [])]
+  sections.push(`$ ${outcome.command}`)
   if (outcome.stdout.trim()) sections.push(outcome.stdout.trimEnd())
   if (outcome.stderr.trim()) sections.push(`[stderr]\n${outcome.stderr.trimEnd()}`)
   if (outcome.error) sections.push(`[error] ${outcome.error}`)

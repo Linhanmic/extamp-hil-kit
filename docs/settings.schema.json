@@ -30,6 +30,7 @@
         "slotConceptOutputPath",
         "gaugeExecutable",
         "gaugeArgs",
+        "gaugeEnv",
         "requirementsImport"
       ],
       "additionalProperties": false,
@@ -73,6 +74,10 @@
         "gaugeArgs": {
           "type": "string",
           "description": "Gauge run 的附加参数，支持引号包裹"
+        },
+        "gaugeEnv": {
+          "type": "string",
+          "description": "Gauge 环境名；运行时写入 env/<环境>/value.properties 的 vehicle_model"
         },
         "requirementsImport": { "$ref": "#/$defs/requirementsImport" }
       }

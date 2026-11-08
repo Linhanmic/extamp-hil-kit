@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildGaugeRunArgs, parseGaugeArguments, readTasks, writeTasks } from '../tasks'
+import { buildGaugeRunArgs, parseGaugeArguments, readTasks, updateVehicleProperties, writeTasks } from '../tasks'
 import type { TestTask } from '../../src/models'
 
 const temporaryDirs: string[] = []
@@ -65,6 +65,25 @@ describe('parseGaugeArguments', () => {
       'a b',
     ])
     expect(parseGaugeArguments('')).toEqual([])
+  })
+})
+
+describe('updateVehicleProperties', () => {
+  it('创建或更新 value.properties 的 vehicle_model，并保留其他配置', () => {
+    const project = temporaryProject()
+    const created = updateVehicleProperties(project, 'default', 'SC6H')
+    expect(created.note).toContain('vehicle_model=SC6H')
+
+    writeFileSync(
+      join(project, 'env', 'default', 'value.properties'),
+      'demo_env = default\nvehicle_model = OLD\n',
+      'utf8',
+    )
+    updateVehicleProperties(project, 'default', 'YU2')
+    const text = readFileSync(join(project, 'env', 'default', 'value.properties'), 'utf8')
+    expect(text).toContain('demo_env = default')
+    expect(text).toContain('vehicle_model = YU2')
+    expect(text).not.toContain('vehicle_model = OLD')
   })
 })
 

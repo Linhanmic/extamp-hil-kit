@@ -17,6 +17,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   slotConceptOutputPath: './specs/slot-generated.cpt',
   gaugeExecutable: '',
   gaugeArgs: '',
+  gaugeEnv: 'default',
   requirementsImport: {
     filePath: '',
     sheetName: '',

@@ -17,6 +17,7 @@ function sampleSettings(): ProjectSettings {
     slotConceptOutputPath: 'specs/slot-generated.cpt',
     gaugeExecutable: '',
     gaugeArgs: '',
+    gaugeEnv: 'default',
     requirementsImport: {
       filePath: '',
       sheetName: '6、软件需求分析表',

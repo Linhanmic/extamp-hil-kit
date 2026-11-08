@@ -37,6 +37,7 @@ function sampleSettings(): ProjectSettings {
     slotConceptOutputPath: 'specs/slot-generated.cpt',
     gaugeExecutable: '',
     gaugeArgs: '',
+    gaugeEnv: 'default',
     requirementsImport: {
       filePath: 'docs/需求分析表.xlsx',
       sheetName: '6、软件需求分析表',
@@ -148,6 +149,7 @@ describe('sanitizeSettings', () => {
       slotConceptOutputPath: '',
       gaugeExecutable: '',
       gaugeArgs: '',
+      gaugeEnv: '',
       requirementsImport: {
         filePath: '',
         sheetName: '',

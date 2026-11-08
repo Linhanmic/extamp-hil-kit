@@ -83,7 +83,8 @@ export const useTasksStore = defineStore('tasks', () => {
     output.value = '正在运行 Gauge 场景…'
     try {
       const outcome = await call()
-      const sections = [`$ ${outcome.command}`]
+      const sections = [...(outcome.notes ?? [])]
+      sections.push(`$ ${outcome.command}`)
       if (outcome.stdout.trim()) sections.push(outcome.stdout.trimEnd())
       if (outcome.stderr.trim()) sections.push(`[stderr]\n${outcome.stderr.trimEnd()}`)
       if (outcome.error) sections.push(`[error] ${outcome.error}`)

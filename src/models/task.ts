@@ -43,4 +43,6 @@ export interface TaskRunOutcome {
   stdout: string
   stderr: string
   exitCode?: number
+  /** 运行前自动配置步骤，例如更新 value.properties */
+  notes?: string[]
 }

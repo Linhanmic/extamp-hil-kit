@@ -23,7 +23,7 @@
 | `snapshotPath` / `volumeTablePath` / `slotMappingPath` | `snapshot:load` / `meter:load` / `slot-map:load` 读取快照、音量表、SLOT 映射 |
 | `conceptOutputPath` | `concepts:generate` 按车型生成 cpt 的目标文件 |
 | `slotConceptOutputPath` | `concepts:generate-slot` 按车型生成 SLOT cpt 的目标文件 |
-| `gaugeExecutable` / `gaugeArgs` | `tasks:run` / `tasks:run-spec` 的 Gauge 可执行文件与附加运行参数 |
+| `gaugeExecutable` / `gaugeArgs` / `gaugeEnv` | `tasks:run` / `tasks:run-spec` 的 Gauge 可执行文件、附加运行参数与 value.properties 环境名 |
 | `requirementsImport` | 需求导入弹窗：文件选择器的起始路径、工作表与列映射的默认值 |
 
 ## JSON Schema（2020-12）

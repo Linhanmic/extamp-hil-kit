@@ -143,7 +143,7 @@ function runGauge(
 
   const specPaths = [...new Set(scenarios.map((scenario) => scenario.path))]
   const args = buildGaugeRunArgs(specPaths, scenarios.map((scenario) => scenario.heading), tags)
-  return executeGauge(projectPath, args)
+  return executeGauge(projectPath, args, tags)
 }
 
 /** 整份 spec 文件运行，不传 --scenario */
@@ -160,10 +160,75 @@ function runSpecGauge(
       stderr: '',
     })
   }
-  return executeGauge(projectPath, buildGaugeRunArgs([specPath], [], tags))
+  return executeGauge(projectPath, buildGaugeRunArgs([specPath], [], tags), tags)
 }
 
-function executeGauge(projectPath: string, args: string[]): Promise<TaskRunOutcome> {
+export interface VehiclePropertyResult {
+  error?: string
+  note?: string
+}
+
+/** 更新 env/<环境>/value.properties 中的 vehicle_model，保留文件其他配置 */
+export function updateVehicleProperties(
+  projectPath: string,
+  envName: string,
+  vehicle: string,
+): VehiclePropertyResult {
+  const name = vehicle.trim()
+  if (!name) return {}
+  const env = envName.trim() || 'default'
+  const target = resolve(projectPath, 'env', env, 'value.properties')
+
+  try {
+    let text = ''
+    try {
+      text = readFileSync(target, 'utf8')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    const eol = text.includes('\r\n') ? '\r\n' : '\n'
+    const lines = text.split(/\r?\n/)
+    let replaced = false
+    for (let index = 0; index < lines.length; index++) {
+      if (/^\s*vehicle_model\s*=/.test(lines[index]!)) {
+        lines[index] = `vehicle_model = ${name}`
+        replaced = true
+        break
+      }
+    }
+    if (!replaced) {
+      if (text.trim()) lines.push('', `vehicle_model = ${name}`)
+      else lines.push(`vehicle_model = ${name}`)
+    }
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, lines.join(eol).replace(/\n{3,}/g, `${eol}${eol}`), 'utf8')
+    return { note: `value.properties：${target} vehicle_model=${name}` }
+  } catch (error) {
+    return { error: `value.properties 更新失败（${target}）：${message(error)}` }
+  }
+}
+
+function executeGauge(
+  projectPath: string,
+  args: string[],
+  vehicle = '',
+): Promise<TaskRunOutcome> {
+  const notes: string[] = []
+  if (vehicle.trim()) {
+    const settings = readSettings(projectPath).document?.settings
+    const property = updateVehicleProperties(projectPath, settings?.gaugeEnv ?? '', vehicle)
+    if (property.error) {
+      return Promise.resolve({
+        error: property.error,
+        command: '',
+        stdout: '',
+        stderr: '',
+        notes,
+      })
+    }
+    if (property.note) notes.push(property.note)
+  }
+
   const settings = readSettings(projectPath).document?.settings
   const extraArgs = parseGaugeArguments(settings?.gaugeArgs ?? '')
   const finalArgs = [args[0]!, ...extraArgs, ...args.slice(1)]
@@ -183,7 +248,7 @@ function executeGauge(projectPath: string, args: string[]): Promise<TaskRunOutco
     const finish = (outcome: TaskRunOutcome) => {
       if (settled) return
       settled = true
-      resolveOutcome(outcome)
+      resolveOutcome({ ...outcome, notes })
     }
 
     child.stdout.on('data', (chunk) => {

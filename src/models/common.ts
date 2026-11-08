@@ -86,6 +86,7 @@ export interface ProjectSettings {
   slotConceptOutputPath: string//按车型生成 SLOT cpt 的目标文件
   gaugeExecutable: string//Gauge 可执行文件；空表示 PATH 中的 gauge
   gaugeArgs: string//Gauge run 的附加参数，支持引号包裹
+  gaugeEnv: string//Gauge 环境名；运行时写入 env/<环境>/value.properties
   requirementsImport: RequirementsImportDefaults
 }
 /** settings.json 的文件结构：结构约定见 docs/settings-json.md */

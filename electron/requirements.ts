@@ -98,7 +98,11 @@ export function registerRequirementsIpc() {
 
   handle('requirements:preview', (_event, config: RequirementsParseConfig) => {
     try {
-      return { result: parseFile(config) } satisfies RequirementsPreviewOutcome
+      const project = readWorkspace().current
+      const resolved = project
+        ? { ...config, filePath: resolveProjectPath(project.path, config.filePath) }
+        : config
+      return { result: parseFile(resolved) } satisfies RequirementsPreviewOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies RequirementsPreviewOutcome
     }
@@ -109,7 +113,8 @@ export function registerRequirementsIpc() {
     if (!project) return { error: '还没有绑定 Gauge 项目，请先在启动页选择项目' }
 
     try {
-      const result = parseFile(config)
+      const resolved = { ...config, filePath: resolveProjectPath(project.path, config.filePath) }
+      const result = parseFile(resolved)
       const settings = readSettings(project.path).document?.settings
       const saved = writeRequirements(project.path, result, settings?.requirementsPath ?? '')
       return { saved } satisfies RequirementsSaveOutcome

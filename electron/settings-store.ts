@@ -107,6 +107,7 @@ export function sanitizeSettings(input: unknown): ProjectSettings {
     slotConceptOutputPath: readText(input, 'slotConceptOutputPath'),
     gaugeExecutable: readText(input, 'gaugeExecutable'),
     gaugeArgs: readText(input, 'gaugeArgs'),
+    gaugeEnv: readText(input, 'gaugeEnv'),
     requirementsImport: {
       filePath: readText(importSettings, 'filePath'),
       sheetName: readText(importSettings, 'sheetName'),
