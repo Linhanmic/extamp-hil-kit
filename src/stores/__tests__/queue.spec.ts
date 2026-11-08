@@ -34,7 +34,9 @@ describe('测试队列', () => {
     store.enqueueScenario({ path: '/specs/b.spec', heading: 'C' }, 'YU2')
 
     for (let index = 0; index < 3; index++) {
-      await Promise.resolve()
+      for (let guard = 0; guard < 10 && completions.length === 0; guard++) {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      }
       completions.shift()!()
     }
     await started

@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { TaskRunOutcome, TaskScenario, TestTask } from '@/models'
 import { useTasksStore } from './tasks'
+import { configureVehicleAssets } from '../composables/vehicle-runtime'
 
 export type QueueKind = 'task' | 'scenario' | 'spec'
 export type QueueStatus = 'pending' | 'running' | 'success' | 'failed'
@@ -118,10 +119,23 @@ export const useQueueStore = defineStore('queue', () => {
         if (!item) break
         item.status = 'running'
         tasksStore.output = `正在执行：${item.name}${item.vehicle ? `（车型 ${item.vehicle}）` : ''}`
+        let configText = ''
+        if (item.vehicle) {
+          tasksStore.output = `正在自动配置车型 ${item.vehicle} 的测试资产…`
+          const config = await configureVehicleAssets(item.vehicle)
+          if (!config.ok) {
+            item.status = 'failed'
+            item.output = config.steps.concat(config.error ? `[error] ${config.error}` : []).join('\n\n')
+            tasksStore.output = item.output
+            continue
+          }
+          configText = config.steps.join('\n\n')
+          tasksStore.output = configText
+        }
         const outcome = item.kind === 'spec'
           ? await api.runSpec(item.specPath!, item.vehicle)
           : await api.run(item.scenarios, item.vehicle)
-        item.output = outcomeText(outcome)
+        item.output = [configText, outcomeText(outcome)].filter(Boolean).join('\n\n')
         item.status = outcome.exitCode === 0 && !outcome.error ? 'success' : 'failed'
         tasksStore.output = item.output
       }

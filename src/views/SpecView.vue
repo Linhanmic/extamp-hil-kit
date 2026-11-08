@@ -6,6 +6,7 @@ import { buildSpecTree, specCheckState, specDisplayName, specFilePaths } from '@
 import type { SpecTreeNode } from '@/spec/tree'
 import { useConfigsStore } from '@/stores/configs'
 import { useTasksStore } from '@/stores/tasks'
+import { configureVehicleAssets } from '@/composables/vehicle-runtime'
 import { useSpecsStore } from '@/stores/specs'
 
 /**
@@ -91,8 +92,24 @@ function vehicleText(vehicles: string[]): string {
 
 const selectedChangedCount = computed(() => selectedRows.value.filter((row) => row.changed).length)
 
+async function prepareVehicleRun(): Promise<boolean> {
+  if (!runVehicle.value) return true
+  specRunning.value = true
+  tasksStore.output = `正在自动配置车型 ${runVehicle.value} 的测试资产…`
+  const result = await configureVehicleAssets(runVehicle.value)
+  specRunning.value = false
+  if (!result.ok) {
+    tasksStore.output = result.steps.concat(result.error ? `[error] ${result.error}` : []).join('\n\n')
+    ElMessage.error(result.error ?? '测试资产自动配置失败')
+    return false
+  }
+  tasksStore.output = result.steps.join('\n\n')
+  return true
+}
+
 async function runSpec() {
   if (!selectedEntry.value) return
+  if (!(await prepareVehicleRun())) return
   specRunning.value = true
   const result = await tasksStore.runSpec(selectedEntry.value.path, runVehicle.value)
   specRunning.value = false
@@ -102,6 +119,7 @@ async function runSpec() {
 
 async function runScenario(heading: string) {
   if (!selectedEntry.value) return
+  if (!(await prepareVehicleRun())) return
   specRunning.value = true
   const result = await tasksStore.run(
     [{ path: selectedEntry.value.path, heading }],

@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import SpecTreeNodeItem from '@/components/SpecTreeNodeItem.vue'
 import { buildSpecTree, specDisplayName } from '@/spec/tree'
 import { useConfigsStore } from '@/stores/configs'
+import { configureVehicleAssets } from '@/composables/vehicle-runtime'
 import { useSpecsStore } from '@/stores/specs'
 import { useTasksStore } from '@/stores/tasks'
 import type { TaskScenario } from '@/models'
@@ -90,9 +91,23 @@ async function save(): Promise<string | null> {
   return result.id
 }
 
+async function prepareVehicleRun(): Promise<boolean> {
+  if (!runVehicle.value) return true
+  tasksStore.output = `正在自动配置车型 ${runVehicle.value} 的测试资产…`
+  const result = await configureVehicleAssets(runVehicle.value)
+  if (!result.ok) {
+    tasksStore.output = result.steps.concat(result.error ? `[error] ${result.error}` : []).join('\n\n')
+    ElMessage.error(result.error ?? '测试资产自动配置失败')
+    return false
+  }
+  tasksStore.output = result.steps.join('\n\n')
+  return true
+}
+
 async function runTask() {
   const id = await save()
   if (!id) return
+  if (!(await prepareVehicleRun())) return
   const result = await tasksStore.run(selectedScenarios.value, runVehicle.value)
   if (result.ok) ElMessage.success('任务运行完成')
   else ElMessage.error(result.error)
@@ -100,6 +115,7 @@ async function runTask() {
 
 async function runScenariosOnly() {
   if (!selectedScenarios.value.length) return
+  if (!(await prepareVehicleRun())) return
   const result = await tasksStore.run(selectedScenarios.value, runVehicle.value)
   if (result.ok) ElMessage.success('选中场景运行完成')
   else ElMessage.error(result.error)
@@ -158,7 +174,7 @@ async function runScenariosOnly() {
             :disabled="!selectedScenarios.length"
             @click="runTask"
           >
-            运行任务
+            一键配置运行
           </el-button>
         </div>
       </div>
