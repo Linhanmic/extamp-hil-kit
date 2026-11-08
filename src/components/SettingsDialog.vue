@@ -55,25 +55,29 @@ async function chooseFile(kind: SettingsPickKind) {
     case 'slot-mapping':
       form.value.slotMappingPath = path
       break
+    case 'snapshot-file':
+      form.value.snapshotPath = path
+      break
+    case 'concept-output-file':
+      form.value.conceptOutputPath = path
+      break
+    case 'slot-concept-output-file':
+      form.value.slotConceptOutputPath = path
+      break
     case 'requirements-sheet':
       form.value.requirementsImport.filePath = path
       break
   }
 }
 
-async function chooseDirectory(
-  kind: 'snapshot' | 'slot-mapping' | 'concept-output' | 'slot-concept-output' = 'snapshot',
-) {
+async function chooseDirectory() {
   const outcome = await store.pickDirectory()
   if (outcome.canceled) return
   if (outcome.error || !outcome.path) {
     error.value = outcome.error ?? '选择目录失败'
     return
   }
-  if (kind === 'slot-mapping') form.value.slotMappingPath = outcome.path
-  else if (kind === 'concept-output') form.value.conceptOutputDir = outcome.path
-  else if (kind === 'slot-concept-output') form.value.slotConceptOutputDir = outcome.path
-  else form.value.snapshotDir = outcome.path
+  form.value.slotMappingPath = outcome.path
 }
 
 function validate(): string {
@@ -206,10 +210,10 @@ async function submit() {
             @pick="chooseFile('output-file')"
           />
           <SettingsPathField
-            v-model="form.snapshotDir"
-            label="扬声器快照目录"
-            placeholder="如 config/扬声器快照"
-            @pick="chooseDirectory('snapshot')"
+            v-model="form.snapshotPath"
+            label="扬声器快照文件"
+            placeholder="如 config/扬声器快照/snapshot.ini"
+            @pick="chooseFile('snapshot-file')"
           />
           <SettingsPathField
             v-model="form.volumeTablePath"
@@ -221,21 +225,19 @@ async function submit() {
             v-model="form.slotMappingPath"
             label="SLOT 映射目录"
             placeholder="如 config/SLOT映射"
-            @pick="chooseDirectory('slot-mapping')"
+            @pick="chooseDirectory"
           />
           <SettingsPathField
-            v-model="form.conceptOutputDir"
-            label="CPT 生成目录"
-            placeholder="留空用 specs"
-            fallback="specs"
-            @pick="chooseDirectory('concept-output')"
+            v-model="form.conceptOutputPath"
+            label="CPT 生成文件"
+            placeholder="如 specs/generated.cpt"
+            @pick="chooseFile('concept-output-file')"
           />
           <SettingsPathField
-            v-model="form.slotConceptOutputDir"
-            label="SLOT CPT 生成目录"
-            placeholder="留空用 specs"
-            fallback="specs"
-            @pick="chooseDirectory('slot-concept-output')"
+            v-model="form.slotConceptOutputPath"
+            label="SLOT CPT 生成文件"
+            placeholder="如 specs/slot-generated.cpt"
+            @pick="chooseFile('slot-concept-output-file')"
           />
         </div>
       </div>

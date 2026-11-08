@@ -79,11 +79,11 @@ export interface ProjectSettings {
   requirementsPath: string//需求 json
   configsPath: string//配置参数 json
   outputPath: string//出声位置文件
-  snapshotDir: string//扬声器快照所在目录
+  snapshotPath: string//扬声器快照文件 snapshot.ini
   volumeTablePath: string//音量表文件
   slotMappingPath: string//SLOT 映射配置文件
-  conceptOutputDir: string//按车型生成 cpt 的目录；空表示 specs
-  slotConceptOutputDir: string//按车型生成 SLOT cpt 的目录；空表示 specs
+  conceptOutputPath: string//按车型生成 cpt 的目标文件
+  slotConceptOutputPath: string//按车型生成 SLOT cpt 的目标文件
   gaugeExecutable: string//Gauge 可执行文件；空表示 PATH 中的 gauge
   gaugeArgs: string//Gauge run 的附加参数，支持引号包裹
   requirementsImport: RequirementsImportDefaults
@@ -122,6 +122,9 @@ export type SettingsPickKind =
   | 'output-file'
   | 'volume-table'
   | 'slot-mapping'
+  | 'snapshot-file'
+  | 'concept-output-file'
+  | 'slot-concept-output-file'
   | 'requirements-sheet'
 /** 需求表的列位置配置（不含文件位置），表头探测后可在导入界面确认与调整 */
 export interface RequirementsColumnMapping {

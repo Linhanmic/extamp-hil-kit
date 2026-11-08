@@ -10,7 +10,7 @@ import {
   parseVolumeTableText,
   readOutput,
   readSlotMapping,
-  readSnapshotDir,
+  readSnapshotFile,
   readVolumeTable,
   writeVolumeTable,
 } from '../business-store'
@@ -166,21 +166,21 @@ describe('appendSnapshot', () => {
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'snapshot.ini'), '[SC6H]\n左前低音\n', 'utf8')
 
-    const outcome = appendSnapshot(project, 'config/扬声器快照', 'YU2', ['中置', '重低音'])
+    const outcome = appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'YU2', ['中置', '重低音'])
     expect(outcome.saved?.filePath).toBe(join(dir, 'snapshot.ini'))
 
     const text = readFileSync(join(dir, 'snapshot.ini'), 'utf8')
     expect(text).toContain('[SC6H]')
     expect(text).toContain('[YU2]\n中置\n重低音')
-    expect(appendSnapshot(project, 'config/扬声器快照', 'YU2', ['中置']).error).toMatch(/已存在/)
+    expect(appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'YU2', ['中置']).error).toMatch(/已存在/)
   })
 
   it('文件不存在时创建，空车型或空扬声器拒绝', () => {
     const project = temporaryProject()
-    const outcome = appendSnapshot(project, 'config/扬声器快照', 'SC6H/YU2', ['左前'])
+    const outcome = appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'SC6H/YU2', ['左前'])
     expect(outcome.saved).toBeDefined()
-    expect(appendSnapshot(project, 'config/扬声器快照', '', ['左前']).error).toMatch(/名称不正确/)
-    expect(appendSnapshot(project, 'config/扬声器快照', 'SC6H', ['  ']).error).toMatch(/至少填写/)
+    expect(appendSnapshot(project, 'config/扬声器快照/snapshot.ini', '', ['左前']).error).toMatch(/名称不正确/)
+    expect(appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'SC6H', ['  ']).error).toMatch(/至少填写/)
   })
 })
 
@@ -191,7 +191,7 @@ describe('读取器', () => {
     expect(readOutput(project, '')).toEqual({ unconfigured: true })
     expect(readVolumeTable(project, '')).toEqual({ unconfigured: true })
     expect(readSlotMapping(project, '')).toEqual({ unconfigured: true })
-    expect(readSnapshotDir(project, '')).toEqual({ unconfigured: true })
+    expect(readSnapshotFile(project, '')).toEqual({ unconfigured: true })
   })
 
   it('文件 / 目录不存在时按空数据处理，不报错', () => {
@@ -203,7 +203,9 @@ describe('读取器', () => {
     expect(readVolumeTable(project, 'config/音量表/缺失.csv')).toEqual({
       document: { levels: [], rows: [] },
     })
-    expect(readSnapshotDir(project, 'config/不存在目录')).toEqual({ document: { files: [] } })
+    expect(readSnapshotFile(project, 'config/不存在目录/snapshot.ini')).toEqual({
+      document: { files: [] },
+    })
   })
 
   it('快照只读取目录下统一的 snapshot.ini', () => {
@@ -217,7 +219,7 @@ describe('读取器', () => {
     )
     writeFileSync(join(dir, '旧快照.txt'), '通道1对应不应读取', 'utf8')
 
-    const outcome = readSnapshotDir(project, 'config/扬声器快照')
+    const outcome = readSnapshotFile(project, 'config/扬声器快照/snapshot.ini')
 
     expect(outcome.document?.files).toHaveLength(1)
     expect(outcome.document?.files[0]).toMatchObject({

@@ -15,7 +15,7 @@ import type {
   SettingsPickOutcome,
   SettingsSaveOutcome,
 } from '../src/models/common'
-import { readSettings, resolveProjectPath, writeSettings } from './settings-store'
+import { readSettings, writeSettings } from './settings-store'
 import { readWorkspace } from './workspace'
 
 const PICK_FILTERS: Record<SettingsPickKind, Electron.FileFilter[]> = {
@@ -33,6 +33,12 @@ const PICK_FILTERS: Record<SettingsPickKind, Electron.FileFilter[]> = {
     { name: 'SLOT 映射配置', extensions: ['ini', 'txt', 'conf'] },
     { name: '所有文件', extensions: ['*'] },
   ],
+  'snapshot-file': [
+    { name: '扬声器快照', extensions: ['ini'] },
+    { name: '所有文件', extensions: ['*'] },
+  ],
+  'concept-output-file': [{ name: 'Gauge 封装', extensions: ['cpt'] }],
+  'slot-concept-output-file': [{ name: 'Gauge 封装', extensions: ['cpt'] }],
   'requirements-sheet': [{ name: '需求分析表', extensions: ['xlsx', 'xlsm', 'xls'] }],
 }
 
@@ -42,6 +48,9 @@ const PICK_TITLES: Record<SettingsPickKind, string> = {
   'output-file': '选择出声位置文件',
   'volume-table': '选择音量表文件',
   'slot-mapping': '选择 SLOT 映射配置文件',
+  'snapshot-file': '选择扬声器快照文件',
+  'concept-output-file': '选择 CPT 生成目标文件',
+  'slot-concept-output-file': '选择 SLOT CPT 生成目标文件',
   'requirements-sheet': '选择需求分析表',
 }
 
@@ -50,22 +59,6 @@ function errorMessage(error: unknown): string {
 }
 
 /** 某一类目标当前配置的路径，用于文件选择器的起始位置 */
-function currentPath(settings: ProjectSettings, kind: SettingsPickKind): string {
-  switch (kind) {
-    case 'requirements-json':
-      return settings.requirementsPath
-    case 'configs-json':
-      return settings.configsPath
-    case 'output-file':
-      return settings.outputPath
-    case 'volume-table':
-      return settings.volumeTablePath
-    case 'slot-mapping':
-      return settings.slotMappingPath
-    case 'requirements-sheet':
-      return settings.requirementsImport.filePath
-  }
-}
 
 export function registerSettingsIpc() {
   const handle = (channel: string, listener: Parameters<typeof ipcMain.handle>[1]) => {
@@ -107,17 +100,14 @@ export function registerSettingsIpc() {
   handle('settings:pick-file', async (event, kind: SettingsPickKind) => {
     const project = readWorkspace().current
     try {
-      const current = project
-        ? readSettings(project.path).document?.settings
-        : DEFAULT_PROJECT_SETTINGS
       const options: Electron.OpenDialogOptions = {
         title: PICK_TITLES[kind] ?? '选择文件',
         buttonLabel: '选择该文件',
         filters: PICK_FILTERS[kind] ?? [],
         properties: ['openFile'],
       }
-      const startAt = project && current ? resolveProjectPath(project.path, currentPath(current, kind)) : ''
-      if (startAt) options.defaultPath = startAt
+      // 设置里的路径可能还是相对写法，统一从项目根开始浏览
+      if (project) options.defaultPath = project.path
 
       const win = BrowserWindow.fromWebContents(event.sender)
       const result = win
@@ -140,11 +130,7 @@ export function registerSettingsIpc() {
         buttonLabel: '选择该目录',
         properties: ['openDirectory'],
       }
-      const settings = project ? readSettings(project.path).document?.settings : null
-      const startAt = project
-        ? resolveProjectPath(project.path, settings?.snapshotDir ?? '') || project.path
-        : ''
-      if (startAt) options.defaultPath = startAt
+      if (project) options.defaultPath = project.path
 
       const win = BrowserWindow.fromWebContents(event.sender)
       const result = win

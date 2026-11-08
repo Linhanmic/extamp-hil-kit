@@ -20,35 +20,35 @@ afterEach(() => {
 })
 
 describe('generateConceptFile', () => {
-  it('未配置生成目录时写入 specs', () => {
+  it('未单独配置时写入默认生成文件', () => {
     const project = temporaryProject()
     const outcome = generateConceptFile(project, 'SC6H.cpt', '# 场景\n* step1\n')
 
-    expect(outcome.saved?.filePath).toBe(join(project, 'specs', 'SC6H.cpt'))
-    expect(readFileSync(join(project, 'specs', 'SC6H.cpt'), 'utf8')).toContain('step1')
+    expect(outcome.saved?.filePath).toBe(join(project, 'specs', 'generated.cpt'))
+    expect(readFileSync(join(project, 'specs', 'generated.cpt'), 'utf8')).toContain('step1')
   })
 
-  it('按设置中的相对目录生成，拒绝非法文件名和空内容', () => {
+  it('按设置中的目标文件生成，拒绝非法文件名和空内容', () => {
     const project = temporaryProject()
-    writeSettings(project, { ...DEFAULT_PROJECT_SETTINGS, conceptOutputDir: 'generated/cpt' })
+    writeSettings(project, { ...DEFAULT_PROJECT_SETTINGS, conceptOutputPath: 'generated/cpt.cpt' })
 
     const outcome = generateConceptFile(project, 'YU2.cpt', '# 场景\n* step1\n')
-    expect(outcome.saved?.filePath).toBe(join(project, 'generated', 'cpt', 'YU2.cpt'))
+    expect(outcome.saved?.filePath).toBe(join(project, 'generated', 'cpt.cpt'))
 
     expect(generateConceptFile(project, '../escape.cpt', '# x\n').error).toMatch(/文件名不正确/)
     expect(generateConceptFile(project, 'empty.cpt', '  ').error).toMatch(/内容不能为空/)
   })
 
-  it('SLOT cpt 使用独立生成目录', () => {
+  it('SLOT cpt 使用独立目标文件', () => {
     const project = temporaryProject()
     writeSettings(project, {
       ...DEFAULT_PROJECT_SETTINGS,
-      conceptOutputDir: 'output/cpt',
-      slotConceptOutputDir: 'slot/cpt',
+      conceptOutputPath: 'output/cpt.cpt',
+      slotConceptOutputPath: 'slot/cpt.cpt',
     })
 
     const outcome = generateSlotConceptFile(project, 'SC6H-SLOT.cpt', '# 媒体音\n* 打开SLOT1\n')
-    expect(outcome.saved?.filePath).toBe(join(project, 'slot', 'cpt', 'SC6H-SLOT.cpt'))
+    expect(outcome.saved?.filePath).toBe(join(project, 'slot', 'cpt.cpt'))
     expect(readFileSync(outcome.saved!.filePath, 'utf8')).toContain('SLOT1')
   })
 })

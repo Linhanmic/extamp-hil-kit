@@ -23,11 +23,11 @@
         "requirementsPath",
         "configsPath",
         "outputPath",
-        "snapshotDir",
+        "snapshotPath",
         "volumeTablePath",
         "slotMappingPath",
-        "conceptOutputDir",
-        "slotConceptOutputDir",
+        "conceptOutputPath",
+        "slotConceptOutputPath",
         "gaugeExecutable",
         "gaugeArgs",
         "requirementsImport"
@@ -46,9 +46,9 @@
           "type": "string",
           "description": "出声位置文件；相对路径按项目根解析，空串表示还没配置"
         },
-        "snapshotDir": {
+        "snapshotPath": {
           "type": "string",
-          "description": "扬声器快照所在目录；空串表示还没配置"
+          "description": "扬声器快照文件 snapshot.ini；相对项目根解析"
         },
         "volumeTablePath": {
           "type": "string",
@@ -58,13 +58,13 @@
           "type": "string",
           "description": "SLOT 映射配置文件；空串表示还没配置"
         },
-        "conceptOutputDir": {
+        "conceptOutputPath": {
           "type": "string",
-          "description": "按车型生成 cpt 的目录；空串表示 specs"
+          "description": "按车型生成 cpt 的目标文件；空串回落到 specs/generated.cpt"
         },
-        "slotConceptOutputDir": {
+        "slotConceptOutputPath": {
           "type": "string",
-          "description": "按车型生成 SLOT cpt 的目录；空串表示 specs"
+          "description": "按车型生成 SLOT cpt 的目标文件；空串回落到 specs/slot-generated.cpt"
         },
         "gaugeExecutable": {
           "type": "string",

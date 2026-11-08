@@ -343,14 +343,14 @@ export function readSlotMapping(projectPath: string, dirPath = ''): SlotMappingL
   return { document: { plans } satisfies SlotMappingDocument }
 }
 
-/** 追加一个快照分节到 snapshot.ini；保留原文件，拒绝同名分节 */
+/** 追加一个快照分节到 snapshot.ini 文件；保留原文件，拒绝同名分节 */
 export function appendSnapshot(
   projectPath: string,
-  dirPath: string,
+  filePath: string,
   section: string,
   speakers: string[],
 ): SnapshotAppendOutcome {
-  const target = resolveProjectPath(projectPath, dirPath)
+  const target = resolveProjectPath(projectPath, filePath)
   if (!target) return { unconfigured: true }
 
   const name = section.trim()
@@ -358,11 +358,10 @@ export function appendSnapshot(
   const lines = speakers.map((speaker) => speaker.trim()).filter(Boolean)
   if (!lines.length) return { error: '至少填写一个扬声器' }
 
-  const filePath = join(target, 'snapshot.ini')
   try {
     let text = ''
     try {
-      text = readFileSync(filePath, 'utf8')
+      text = readFileSync(target, 'utf8')
     } catch (error) {
       if (!isMissing(error)) throw error
     }
@@ -371,23 +370,23 @@ export function appendSnapshot(
 
     const eol = text.includes('\r\n') ? '\r\n' : '\n'
     const addition = `${text.trimEnd() ? `${eol}${eol}` : ''}[${name}]${eol}${lines.join(eol)}${eol}`
-    mkdirSync(dirname(filePath), { recursive: true })
-    writeFileSync(filePath, `${text.trimEnd()}${addition}`, 'utf8')
-    return { saved: { filePath, updatedAt: statSync(filePath).mtime.toISOString() } }
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, `${text.trimEnd()}${addition}`, 'utf8')
+    return { saved: { filePath: target, updatedAt: statSync(target).mtime.toISOString() } }
   } catch (error) {
     return { error: `快照写入失败：${message(error)}` }
   }
 }
 
-export function readSnapshotDir(projectPath: string, dirPath = ''): SnapshotLoadOutcome {
-  const target = resolveProjectPath(projectPath, dirPath)
+export function readSnapshotFile(projectPath: string, filePath = ''): SnapshotLoadOutcome {
+  const target = resolveProjectPath(projectPath, filePath)
   if (!target) return { unconfigured: true }
 
   try {
-    const files = parseSnapshotIniText(readFileSync(join(target, 'snapshot.ini'), 'utf8'))
+    const files = parseSnapshotIniText(readFileSync(target, 'utf8'))
     return { document: { files } satisfies SnapshotDocument }
   } catch (error) {
     if (isMissing(error)) return { document: { files: [] } }
-    return { error: `扬声器快照文件无法读取（${join(target, 'snapshot.ini')}）：${message(error)}` }
+    return { error: `扬声器快照文件无法读取（${target}）：${message(error)}` }
   }
 }

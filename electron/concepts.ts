@@ -5,7 +5,7 @@
  * 读写 / 删除前校验目标路径确实在 <项目>/specs 之内，避免越界操作。
  */
 import { mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve, sep, basename } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep, basename, dirname } from 'node:path'
 import { ipcMain } from 'electron'
 import type {
   ConceptFileContent,
@@ -62,12 +62,12 @@ function listConceptFiles(dir: string): string[] {
   return result
 }
 
-/** 按车型生成一个 cpt 到指定设置项的生成目录；默认 specs */
+/** 按车型生成一个 cpt 到设置的目标文件；未配置时回落到 specs/<fileName> */
 function generateConceptFileAt(
   projectPath: string,
   fileName: string,
   text: string,
-  settingKey: 'conceptOutputDir' | 'slotConceptOutputDir',
+  settingKey: 'conceptOutputPath' | 'slotConceptOutputPath',
 ): ConceptGenerateOutcome {
   if (typeof fileName !== 'string' || basename(fileName) !== fileName || !fileName.endsWith('.cpt')) {
     return { error: '生成的 cpt 文件名不正确' }
@@ -78,12 +78,13 @@ function generateConceptFileAt(
 
   try {
     const configured = readSettings(projectPath).document?.settings[settingKey] ?? ''
-    const base = resolveProjectPath(projectPath, configured, 'specs')
-    const target = resolve(base, fileName)
-    if (!target.startsWith(base + sep)) {
-      return { error: '生成文件路径不在 cpt 生成目录内' }
+    const target = configured
+      ? resolveProjectPath(projectPath, configured)
+      : resolve(projectPath, 'specs', fileName)
+    if (!target.toLowerCase().endsWith('.cpt')) {
+      return { error: 'cpt 生成目标必须是 .cpt 文件' }
     }
-    mkdirSync(base, { recursive: true })
+    mkdirSync(dirname(target), { recursive: true })
     writeFileSync(target, text, 'utf8')
     return {
       saved: {
@@ -102,7 +103,7 @@ export function generateConceptFile(
   fileName: string,
   text: string,
 ): ConceptGenerateOutcome {
-  return generateConceptFileAt(projectPath, fileName, text, 'conceptOutputDir')
+  return generateConceptFileAt(projectPath, fileName, text, 'conceptOutputPath')
 }
 
 /** SLOT 映射按车型生成 cpt，使用独立目录 */
@@ -111,7 +112,7 @@ export function generateSlotConceptFile(
   fileName: string,
   text: string,
 ): ConceptGenerateOutcome {
-  return generateConceptFileAt(projectPath, fileName, text, 'slotConceptOutputDir')
+  return generateConceptFileAt(projectPath, fileName, text, 'slotConceptOutputPath')
 }
 
 export function registerConceptsIpc() {

@@ -20,9 +20,9 @@
 | `requirementsPath` | `requirements:load` / `requirements:save` 读写需求数据 |
 | `configsPath` | `configs:load` / `configs:save` 读写配置参数 |
 | `outputPath` | `output:load` 读取出声位置文件 |
-| `snapshotDir` / `volumeTablePath` / `slotMappingPath` | `snapshot:load` / `meter:load` / `slot-map:load` 读取快照、音量表、SLOT 映射 |
-| `conceptOutputDir` | `concepts:generate` 按车型生成 cpt；空串回落到 `specs` |
-| `slotConceptOutputDir` | `concepts:generate-slot` 按车型生成 SLOT cpt；空串回落到 `specs` |
+| `snapshotPath` / `volumeTablePath` / `slotMappingPath` | `snapshot:load` / `meter:load` / `slot-map:load` 读取快照、音量表、SLOT 映射 |
+| `conceptOutputPath` | `concepts:generate` 按车型生成 cpt 的目标文件 |
+| `slotConceptOutputPath` | `concepts:generate-slot` 按车型生成 SLOT cpt 的目标文件 |
 | `gaugeExecutable` / `gaugeArgs` | `tasks:run` / `tasks:run-spec` 的 Gauge 可执行文件与附加运行参数 |
 | `requirementsImport` | 需求导入弹窗：文件选择器的起始路径、工作表与列映射的默认值 |
 
@@ -50,7 +50,7 @@
         "requirementsPath",
         "configsPath",
         "outputPath",
-        "snapshotDir",
+        "snapshotPath",
         "volumeTablePath",
         "slotMappingPath",
         "requirementsImport"
@@ -66,7 +66,7 @@
           "description": "配置参数 json 的位置；相对路径按项目根解析，空串表示默认 .hil-kit/config.json"
         },
         "outputPath": { "type": "string", "description": "出声位置文件；空串表示还没配置" },
-        "snapshotDir": { "type": "string", "description": "扬声器快照所在目录；空串表示还没配置" },
+        "snapshotPath": { "type": "string", "description": "扬声器快照文件 snapshot.ini 路径" },
         "volumeTablePath": { "type": "string", "description": "音量表文件；空串表示还没配置" },
         "slotMappingPath": { "type": "string", "description": "SLOT 映射配置文件；空串表示还没配置" },
         "requirementsImport": { "$ref": "#/$defs/requirementsImport" }
@@ -122,7 +122,7 @@
     "requirementsPath": ".hil-kit/requirements.json",
     "configsPath": ".hil-kit/config.json",
     "outputPath": "config/出声位置/出声位置.txt",
-    "snapshotDir": "config/扬声器快照",
+    "snapshotPath": "config/扬声器快照/snapshot.ini",
     "volumeTablePath": "config/音量表/test.csv",
     "slotMappingPath": "config/SLOT映射/mapping.ini",
     "requirementsImport": {
