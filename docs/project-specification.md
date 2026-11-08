@@ -582,14 +582,19 @@ preload 还暴露 `platform` 和 Electron/Chrome/Node 版本信息。新增 IPC 
 | `npx vitest run`     | 单次运行全部 Vitest 测试                 |
 | `npm run build`      | 类型检查并构建渲染进程、主进程和 preload |
 | `npm start`          | 使用构建产物启动桌面应用                 |
+| `npm run dist:win`   | Windows NSIS 安装包、便携版与 zip        |
+| `npm run dist:mac`   | macOS dmg/zip（需 macOS 环境）           |
+| `npm run dist:linux` | Linux AppImage/deb/tar.gz                |
+| `npm run release`    | 构建并发布到 GitHub Releases             |
 
 ### 11.2 当前交付物
 
 - 项目源代码、fixtures、测试数据和自动化测试。
 - `dist/` 渲染进程构建产物与 `dist-electron/` 主进程/preload 构建产物。
+- `release/` 下的多端安装包、便携式免安装包与压缩包（由 electron-builder 产出，不入库）。
 - 本规格书及各数据契约、界面和模型专项文档。
 
-当前 `package.json` 未定义安装包制作、签名或发布流程，因此不得将可安装发行包声明为已交付物。
+`package.json` 已定义 electron-builder 多端打包与 GitHub 发布脚本；代码签名与自动更新仍不在本版本范围。
 
 ## 12. 需求追踪矩阵
 

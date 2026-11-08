@@ -1,43 +1,65 @@
 <script setup lang="ts">
-import HelloWorld from '../components/HelloWorld.vue'
-import TheWelcome from '../components/TheWelcome.vue'
+import { computed } from 'vue'
+import { NAV_ITEMS } from '@/config/navigation'
+import { useWorkspace } from '@/composables/useWorkspace'
 
-function showMessage() {
-  // ElMessage 由 unplugin-auto-import 自动导入，无需手动 import
-  ElMessage.success('Element Plus 已接入成功 🎉')
-}
+const { project } = useWorkspace()
+const projectName = computed(() => {
+  const path = project.value?.path
+  if (!path) return '未选择项目'
+  const parts = path.replace(/\\/g, '/').split('/').filter(Boolean)
+  return parts.at(-1) ?? path
+})
+
+const capabilities = [
+  {
+    title: '需求与配置',
+    desc: 'Excel 导入需求变体，配置值关联变体并求出适用车型。',
+  },
+  {
+    title: '资产生成',
+    desc: '按车型更新规格 tags，重建 SLOT 映射与出声位置目标 CPT。',
+  },
+  {
+    title: '一键运行',
+    desc: '写入 value.properties 后执行任务、场景、规格书或测试队列。',
+  },
+]
 </script>
 
 <template>
-  <div class="starter-content">
-    <HelloWorld msg="You did it!" />
-    <TheWelcome />
+  <div class="flex flex-col gap-6 py-2">
+    <header class="space-y-1">
+      <p class="text-xs font-medium tracking-wide text-ink-muted">External Amplifier HIL Kit</p>
+      <h1 class="text-2xl font-semibold text-ink">外置功放 HIL 测试工具台</h1>
+      <p class="max-w-2xl text-sm leading-6 text-ink-muted">
+        当前工作区：<span class="font-medium text-ink">{{ projectName }}</span>
+      </p>
+    </header>
 
-    <!-- @grid A：示例区建立自己的 Row -->
-    <section class="mt-8 mb-4 grid grid-cols-12 gap-3">
-      <!-- @grid B：按钮 / 标签 / 徽标都是固有尺寸，整组占 col-span-12，内部只用统一 gap -->
-      <div class="col-span-12 flex flex-wrap items-center justify-center gap-3">
-        <el-button type="primary" @click="showMessage">Element Plus 按钮</el-button>
-        <el-tag type="success" effect="dark">按需引入</el-tag>
-        <!-- bg-primary 来自 main.css 的 @theme，取值是 Element Plus 的 --el-color-primary -->
-        <span class="rounded-full bg-primary px-3 py-1 text-sm font-semibold text-white">
-          Tailwind 生效
-        </span>
+    <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <article
+        v-for="item in capabilities"
+        :key="item.title"
+        class="rounded-lg border border-ink-muted/20 bg-surface-page p-4"
+      >
+        <h2 class="text-sm font-semibold text-ink">{{ item.title }}</h2>
+        <p class="mt-2 text-xs leading-5 text-ink-muted">{{ item.desc }}</p>
+      </article>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-sm font-semibold text-ink">快速入口</h2>
+      <div class="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <RouterLink
+          v-for="item in NAV_ITEMS"
+          :key="item.name"
+          :to="item.path"
+          class="rounded-md border border-ink-muted/20 px-3 py-2 text-xs text-ink transition hover:border-primary hover:text-primary"
+        >
+          {{ item.label }}
+        </RouterLink>
       </div>
     </section>
   </div>
 </template>
-
-<style scoped>
-/* 示例内容沿用 starter 的绿色链接观感，避免影响壳层里的导航链接 */
-.starter-content :deep(a) {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-}
-
-.starter-content :deep(a:hover) {
-  background-color: hsla(160, 100%, 37%, 0.2);
-}
-</style>

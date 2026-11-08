@@ -41,12 +41,6 @@ declare module 'vue' {
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTag: typeof import('element-plus/es')['ElTag']
-    HelloWorld: typeof import('./components/HelloWorld.vue')['default']
-    IconCommunity: typeof import('./components/icons/IconCommunity.vue')['default']
-    IconDocumentation: typeof import('./components/icons/IconDocumentation.vue')['default']
-    IconEcosystem: typeof import('./components/icons/IconEcosystem.vue')['default']
-    IconSupport: typeof import('./components/icons/IconSupport.vue')['default']
-    IconTooling: typeof import('./components/icons/IconTooling.vue')['default']
     NavIcon: typeof import('./components/layout/NavIcon.vue')['default']
     RegionToggle: typeof import('./components/layout/RegionToggle.vue')['default']
     RequirementAssociationTable: typeof import('./components/RequirementAssociationTable.vue')['default']
@@ -60,10 +54,8 @@ declare module 'vue' {
     SpecTreeNodeItem: typeof import('./components/SpecTreeNodeItem.vue')['default']
     SplitResizer: typeof import('./components/layout/SplitResizer.vue')['default']
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
-    TheWelcome: typeof import('./components/TheWelcome.vue')['default']
     VolumeCurveChart: typeof import('./components/VolumeCurveChart.vue')['default']
     VolumeFormDialog: typeof import('./components/VolumeFormDialog.vue')['default']
-    WelcomeItem: typeof import('./components/WelcomeItem.vue')['default']
     WindowControls: typeof import('./components/layout/WindowControls.vue')['default']
   }
 }

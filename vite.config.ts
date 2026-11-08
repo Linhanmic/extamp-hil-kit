@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
@@ -19,10 +20,17 @@ const preloadBuild = {
   },
 }
 
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+  version: string
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // 桌面端通过 file:// 加载产物，资源路径必须是相对路径
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     vue(),
     vueDevTools(),

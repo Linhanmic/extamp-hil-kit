@@ -1,7 +1,14 @@
 {
   "name": "extamp-hil-kit",
-  "version": "0.0.0",
+  "productName": "ExtAmp HIL Kit",
+  "version": "0.1.0",
   "private": true,
+  "description": "External Amplifier HIL Kit — 外置功放 HIL 测试工具台",
+  "author": {
+    "name": "Linhanmic",
+    "email": "Linhanmic@users.noreply.github.com"
+  },
+  "license": "UNLICENSED",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -9,13 +16,19 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "start": "electron .",
-    "test:unit": "vitest",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never",
+    "release": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -36,6 +49,7 @@
     "@vue/test-utils": "^2.5.0",
     "@vue/tsconfig": "^0.9.1",
     "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.82.0",
@@ -58,5 +72,86 @@
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0"
+  },
+  "build": {
+    "appId": "com.linhanmic.extamp-hil-kit",
+    "productName": "ExtAmp HIL Kit",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "asarUnpack": [],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ExtAmp HIL Kit",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Development",
+      "synopsis": "External Amplifier HIL test workbench",
+      "target": [
+        "AppImage",
+        "deb",
+        "tar.gz"
+      ]
+    }
   }
 }

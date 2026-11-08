@@ -61,13 +61,27 @@ npm run dev
 ## 开发命令
 
 ```sh
-npm run dev         # Vite + Electron 开发
-npm run type-check  # vue-tsc 类型检查
-npm run build       # 构建 dist / dist-electron
-npm start           # 用构建产物启动桌面应用
-npm run test:unit   # Vitest 单元测试
-npm run lint        # oxlint + eslint
+npm run dev           # Vite + Electron 开发
+npm run type-check    # vue-tsc 类型检查
+npm run build         # 构建 dist / dist-electron
+npm start             # 用构建产物启动桌面应用
+npm run test:unit     # Vitest 单元测试
+npm run lint          # oxlint + eslint
+npm run dist:win      # Windows：NSIS 安装包 + 便携版 + zip（输出 release/）
+npm run dist:mac      # macOS：dmg + zip（需在 macOS 上执行）
+npm run dist:linux    # Linux：AppImage + deb + tar.gz
+npm run release       # 构建并发布到 GitHub Releases（需 GH_TOKEN / gh 登录）
 ```
+
+打包产物位于 `release/`：
+
+| 产物 | 平台 | 说明 |
+| --- | --- | --- |
+| `*-setup.exe` | Windows | NSIS 安装包（可选安装目录） |
+| `*-portable.exe` | Windows | 便携式免安装包，解压/双击即用 |
+| `*-win-x64.zip` | Windows | 免安装压缩包 |
+| `*.dmg` / `*-mac-*.zip` | macOS | 需在 macOS 上构建 |
+| `*.AppImage` / `*.deb` / `*.tar.gz` | Linux | 免安装与 deb 安装 |
 
 ## 代码结构
 
