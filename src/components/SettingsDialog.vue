@@ -129,6 +129,7 @@ async function submit() {
   error.value = validate()
   if (error.value) return
 
+  form.value = useRelativePaths(form.value)
   const result = await store.save(form.value)
   if (!result.ok) {
     error.value = result.error
@@ -224,7 +225,7 @@ async function submit() {
       <div class="rounded-lg border border-line bg-surface-soft p-3">
         <p class="text-[11px] font-medium text-ink">其他业务数据</p>
         <p class="mt-1 mb-2 text-[11px] text-ink-muted">
-          供出声位置、扬声器快照、音量表与 SLOT 映射使用；留空表示还没配置，相应功能配置前不可用。
+          供出声位置、扬声器快照、音量表与 SLOT 映射使用；两类目标 CPT 承载生成结果，上层 spec 通过统一概念名替换内部实现来适配车型。
         </p>
         <div class="flex flex-col gap-2">
           <SettingsPathField
@@ -253,14 +254,14 @@ async function submit() {
           />
           <SettingsPathField
             v-model="form.conceptOutputPath"
-            label="CPT 生成文件"
-            placeholder="如 specs/generated.cpt"
+            label="出声位置目标CPT文件"
+            placeholder="如 ./specs/出声位置.cpt"
             @pick="chooseFile('concept-output-file')"
           />
           <SettingsPathField
             v-model="form.slotConceptOutputPath"
-            label="SLOT CPT 生成文件"
-            placeholder="如 specs/slot-generated.cpt"
+            label="SLOT映射目标CPT文件"
+            placeholder="如 ./specs/SLOT映射.cpt"
             @pick="chooseFile('slot-concept-output-file')"
           />
         </div>

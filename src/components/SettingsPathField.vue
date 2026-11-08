@@ -31,7 +31,12 @@ const resolvedPath = computed(() => {
   const target = (props.modelValue.trim() || props.fallback || '').trim()
   const base = project.value?.path
   if (!target || !base || isAbsolutePath(target)) return ''
-  return `${base.replace(/[\\/]+$/, '')}/${target.replace(/^[\\/]+/, '')}`
+  const normalizedBase = base.replace(/\\/g, '/').replace(/\/+$/, '')
+  const normalizedTarget = target
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .replace(/^\/+/, '')
+  return `${normalizedBase}/${normalizedTarget}`
 })
 </script>
 

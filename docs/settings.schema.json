@@ -60,11 +60,11 @@
         },
         "conceptOutputPath": {
           "type": "string",
-          "description": "按车型生成 cpt 的目标文件；空串回落到 specs/generated.cpt"
+          "description": "按车型生成 cpt 的目标文件；空串回落到 ./specs/generated.cpt"
         },
         "slotConceptOutputPath": {
           "type": "string",
-          "description": "按车型生成 SLOT cpt 的目标文件；空串回落到 specs/slot-generated.cpt"
+          "description": "按车型生成 SLOT cpt 的目标文件；空串回落到 ./specs/slot-generated.cpt"
         },
         "gaugeExecutable": {
           "type": "string",

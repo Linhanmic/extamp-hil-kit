@@ -122,7 +122,7 @@
     "requirementsPath": ".hil-kit/requirements.json",
     "configsPath": ".hil-kit/config.json",
     "outputPath": "config/出声位置/出声位置.txt",
-    "snapshotPath": "config/扬声器快照/snapshot.ini",
+    "snapshotPath": "./config/扬声器快照/snapshot.ini",
     "volumeTablePath": "config/音量表/test.csv",
     "slotMappingPath": "config/SLOT映射/mapping.ini",
     "requirementsImport": {

@@ -7,14 +7,14 @@ import type { ProjectSettings } from '../models/common'
  * 由对应功能在用户设置前保持不可用。
  */
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
-  requirementsPath: '.hil-kit/requirements.json',
-  configsPath: '.hil-kit/config.json',
+  requirementsPath: './.hil-kit/requirements.json',
+  configsPath: './.hil-kit/config.json',
   outputPath: '',
-  snapshotPath: 'config/扬声器快照/snapshot.ini',
+  snapshotPath: './config/扬声器快照/snapshot.ini',
   volumeTablePath: '',
   slotMappingPath: '',
-  conceptOutputPath: 'specs/generated.cpt',
-  slotConceptOutputPath: 'specs/slot-generated.cpt',
+  conceptOutputPath: './specs/generated.cpt',
+  slotConceptOutputPath: './specs/slot-generated.cpt',
   gaugeExecutable: '',
   gaugeArgs: '',
   requirementsImport: {
