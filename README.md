@@ -69,7 +69,7 @@ npm run test:unit     # Vitest 单元测试
 npm run lint          # oxlint + eslint
 npm run dist:win      # Windows：NSIS 安装包 + 便携版 + zip（输出 release/）
 npm run dist:mac      # macOS：dmg + zip（需在 macOS 上执行）
-npm run dist:linux    # Linux：AppImage + deb + tar.gz
+npm run dist:linux    # Linux：deb + tar.gz（AppImage 需在 Linux 上构建）
 npm run release       # 构建并发布到 GitHub Releases（需 GH_TOKEN / gh 登录）
 ```
 
@@ -81,7 +81,7 @@ npm run release       # 构建并发布到 GitHub Releases（需 GH_TOKEN / gh �
 | `*-portable.exe` | Windows | 便携式免安装包，解压/双击即用 |
 | `*-win-x64.zip` | Windows | 免安装压缩包 |
 | `*.dmg` / `*-mac-*.zip` | macOS | 需在 macOS 上构建 |
-| `*.AppImage` / `*.deb` / `*.tar.gz` | Linux | 免安装与 deb 安装 |
+| `*.deb` / `*.tar.gz` | Linux | deb 安装与免安装压缩包（AppImage 需在 Linux 上构建） |
 
 ## 代码结构
 

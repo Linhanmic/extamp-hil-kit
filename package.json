@@ -9,6 +9,7 @@
     "email": "Linhanmic@users.noreply.github.com"
   },
   "license": "UNLICENSED",
+  "desktopName": "ExtAmp HIL Kit",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -147,8 +148,9 @@
       "icon": "build/icon.png",
       "category": "Development",
       "synopsis": "External Amplifier HIL test workbench",
+      "executableName": "extamp-hil-kit",
+      "syncDesktopName": true,
       "target": [
-        "AppImage",
         "deb",
         "tar.gz"
       ]
