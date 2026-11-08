@@ -51,7 +51,7 @@ function readLines(text: string): string[] {
 
 /**
  * 解析出声位置文本：`#` 开新场景；适用车型按 /、逗号等拆分，未写表示全部车型。
- * 支持 speak="左前|中置" / no_speak='右前|重低音'；旧式 `* 左前|中置` 仍按出声关键字解析。
+ * 只从步骤行中提取 speak="左前|中置" / no_speak='右前|重低音'，其他写法都按普通步骤保留。
  */
 export function parseOutputText(text: string): OutputScenario[] {
   const scenarios: OutputScenario[] = []
@@ -89,16 +89,14 @@ export function parseOutputText(text: string): OutputScenario[] {
       continue
     }
 
-    const body = line.startsWith('*') ? line.slice(1).trim() : line
-    const directives = [...body.matchAll(/\b(no_speak|speak)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    const isStep = line.startsWith('*')
+    const body = isStep ? line.slice(1).trim() : line
+    const directives = isStep
+      ? [...body.matchAll(/\b(no_speak|speak)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+      : []
     for (const match of directives) {
       const content = match[2] ?? match[3] ?? ''
       appendKeywords(match[1] === 'speak' ? current.speakKeywords : current.noSpeakKeywords, content)
-    }
-    // 兼容旧文件：没有 speak= 的竖线列表仍是出声扬声器关键字
-    if (!directives.length && line.startsWith('*') && body.includes('|')) {
-      appendKeywords(current.speakKeywords, body)
-      continue
     }
     current.steps.push(body)
   }

@@ -29,7 +29,7 @@ afterEach(() => {
 })
 
 describe('parseOutputText', () => {
-  it('未写适用车型表示全部车型，旧竖线列表仍识别为出声关键字', () => {
+  it('未写适用车型表示全部车型，旧竖线写法不产生扬声器关键字', () => {
     const text = [
       '# 检查智能语音关闭时出声位置是否正确',
       '* step1',
@@ -54,8 +54,8 @@ describe('parseOutputText', () => {
         title: '检查智能语音全车播放时出声位置是否正确',
         allVehicles: false,
         vehicles: ['SC6H', 'YU2'],
-        steps: ['step1'],
-        speakKeywords: ['左前低音', '左前高音', '右前低音', '中置'],
+        steps: ['step1', '左前低音|左前高音|右前低音|中置'],
+        speakKeywords: [],
         noSpeakKeywords: [],
       },
     ])
