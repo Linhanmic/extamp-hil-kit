@@ -49,8 +49,8 @@ const PICK_TITLES: Record<SettingsPickKind, string> = {
   'volume-table': '选择音量表文件',
   'slot-mapping': '选择 SLOT 映射配置文件',
   'snapshot-file': '选择扬声器快照文件',
-  'concept-output-file': '选择 CPT 生成目标文件',
-  'slot-concept-output-file': '选择 SLOT CPT 生成目标文件',
+  'concept-output-file': '选择出声位置目标CPT文件',
+  'slot-concept-output-file': '选择SLOT映射目标CPT文件',
   'requirements-sheet': '选择需求分析表',
 }
 
