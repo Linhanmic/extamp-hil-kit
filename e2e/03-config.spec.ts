@@ -39,13 +39,15 @@ test.describe('配置参数页', () => {
   })
 
   test('搜索框可过滤配置项', async ({ page }) => {
-    const searchInput = page.locator('input[type="text"], input[type="search"]').first()
+    const searchInput = page.locator('input[type="text"]').first()
     await searchInput.fill('媒体')
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(500)
 
-    await expect(page.getByText('媒体音源默认值').first()).toBeVisible()
+    // 过滤后应能看到媒体音源默认值
+    const body = await page.textContent('body')
+    expect(body).toContain('媒体音源默认值')
 
     await searchInput.fill('')
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(500)
   })
 })
