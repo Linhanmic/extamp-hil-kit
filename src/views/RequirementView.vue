@@ -4,7 +4,6 @@ import RequirementImportDialog from '@/components/RequirementImportDialog.vue'
 import RequirementAssociationTable from '@/components/RequirementAssociationTable.vue'
 import { useConfigsStore } from '@/stores/configs'
 import { useRequirementsStore } from '@/stores/requirements'
-import { useRequirementMappingStore } from '@/stores/requirement-mapping'
 import {
   analyzeRequirementAssociation,
   missingRequirementNames,
@@ -17,7 +16,6 @@ import {
  */
 const store = useRequirementsStore()
 const configsStore = useConfigsStore()
-const mappingStore = useRequirementMappingStore()
 const importVisible = ref(false)
 const keyword = ref('')
 const vehicleFilter = ref('')
@@ -59,7 +57,7 @@ const filteredRequirements = computed(() => {
     const association = analyzeRequirementAssociation(
       item,
       configsStore.configurations,
-      mappingStore.isParticipating(item.id),
+      store.isParticipating(item.id),
     )
     if (
       requirementStatusFilter.value.length &&

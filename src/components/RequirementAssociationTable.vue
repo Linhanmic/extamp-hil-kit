@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Requirement } from '@/models'
 import { useConfigsStore } from '@/stores/configs'
-import { useRequirementMappingStore } from '@/stores/requirement-mapping'
+import { useRequirementsStore } from '@/stores/requirements'
 import {
   analyzeRequirementAssociation,
   type RequirementAssociationStatus,
@@ -20,7 +20,7 @@ const props = defineProps<{
 }>()
 
 const configsStore = useConfigsStore()
-const mappingStore = useRequirementMappingStore()
+const requirementsStore = useRequirementsStore()
 const openIds = ref(new Set<string>())
 
 const associations = computed(() => {
@@ -31,7 +31,7 @@ const associations = computed(() => {
       analyzeRequirementAssociation(
         requirement,
         configsStore.configurations,
-        mappingStore.isParticipating(requirement.id),
+        requirementsStore.isParticipating(requirement.id),
       ),
     )
   }
@@ -61,7 +61,7 @@ function toggleExpanded(id: string) {
 }
 
 function setParticipating(id: string, value: string | number | boolean) {
-  mappingStore.setParticipating(id, value === 'participate')
+  void requirementsStore.setParticipating(id, value === 'participate')
 }
 
 function joinVehicles(vehicles: string[]): string {
@@ -131,7 +131,7 @@ function visibleVariants(requirement: Requirement) {
         </div>
         <div class="col-span-3 flex items-center justify-center px-2 py-2">
           <el-segmented
-            :model-value="mappingStore.isParticipating(requirement.id) ? 'participate' : 'skip'"
+            :model-value="requirementsStore.isParticipating(requirement.id) ? 'participate' : 'skip'"
             size="small"
             :options="[
               { label: '参与', value: 'participate' },

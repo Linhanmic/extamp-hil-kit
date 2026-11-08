@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('desktop', {
       ipcRenderer.invoke('requirements:probe', filePath, sheetName, headerRow),
     preview: (config: RequirementsParseConfig) => ipcRenderer.invoke('requirements:preview', config),
     save: (config: RequirementsParseConfig) => ipcRenderer.invoke('requirements:save', config),
+    saveMapping: (mapping: Record<string, boolean>) =>
+      ipcRenderer.invoke('requirements:save-mapping', mapping),
   },
   configs: {
     load: () => ipcRenderer.invoke('configs:load'),

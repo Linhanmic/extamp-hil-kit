@@ -8,10 +8,11 @@
 - **再次导入**：同一份文件是**更新**——`createdAt` 保持首次导入时间，`updatedAt` 刷新，`requirements` 整体替换（全量覆盖，不追加、不合并旧数据）。
 - 文件内容无法解析时按首次导入处理，重新生成 `createdAt`。
 - 文件里不记录来源 Excel 路径、列配置、车型全集，也不写导入统计与告警（这些属于导入时的诊断信息，或可从需求数据派生）。
+- `mapping` 记录需求页的「参与 / 不参与参数映射」状态；重新导入需求时保留该字段，需求 ID 变化后旧状态自然失效。
 
 ## 读取时机
 
-应用启动、切换项目时由主进程读一次当前项目的 `requirements.json`（IPC `requirements:load`），渲染层 `stores/requirements.ts` 缓存并在需求页展示：
+应用启动、切换项目以及进入相关页面时由主进程读一次当前项目的 `requirements.json`（IPC `requirements:load`），渲染层 `stores/requirements.ts` 缓存并在需求页展示：
 
 - 文件不存在 → `empty`，需求页显示空状态「该项目还没有导入需求」。
 - 文件损坏、版本不支持或结构不对 → `error`，页面提示重新导入，不把半份数据当可信对象。
@@ -42,6 +43,11 @@
       "type": "array",
       "items": { "$ref": "#/$defs/requirement" },
       "description": "按需求表中首次出现的行顺序排列"
+    },
+    "mapping": {
+      "type": "object",
+      "description": "需求映射参与状态：需求 ID → 是否参与参数映射；缺省视为参与",
+      "additionalProperties": { "type": "boolean" }
     }
   },
   "$defs": {

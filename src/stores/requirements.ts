@@ -35,6 +35,37 @@ export const useRequirementsStore = defineStore('requirements', () => {
     return names.size
   })
 
+  const mapping = computed(() => document.value?.mapping ?? {})
+
+  /** 需求是否参与参数映射；缺省参与 */
+  function isParticipating(requirementId: string): boolean {
+    return mapping.value[requirementId] !== false
+  }
+
+  /** 更新映射参与状态并写回 requirements.json */
+  async function setParticipating(
+    requirementId: string,
+    participating: boolean,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const api = window.desktop?.requirements
+    if (!api?.saveMapping) return { ok: false, error: '映射状态只在桌面端可保存' }
+
+    const next = { ...mapping.value }
+    if (participating) delete next[requirementId]
+    else next[requirementId] = false
+
+    const outcome = await api.saveMapping(next)
+    if (!outcome.saved) return { ok: false, error: outcome.error ?? '保存映射状态失败' }
+    if (document.value) {
+      document.value = {
+        ...document.value,
+        mapping: next,
+        updatedAt: outcome.saved.updatedAt,
+      }
+    }
+    return { ok: true }
+  }
+
   async function load() {
     const api = window.desktop?.requirements
     // 浏览器里跑（npm run preview）没有主进程，保持空状态
@@ -74,6 +105,9 @@ export const useRequirementsStore = defineStore('requirements', () => {
     requirementCount,
     variantCount,
     vehicleCount,
+    mapping,
+    isParticipating,
+    setParticipating,
     load,
     clear,
   }

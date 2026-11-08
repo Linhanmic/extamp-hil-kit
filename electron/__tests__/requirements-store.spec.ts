@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { RequirementsParseResult } from '../../src/models/common'
 import { parseRequirements, probeSheet } from '../requirements-parse'
 import { readSheetTable } from '../requirements-sheet'
-import { readRequirements, requirementsFilePath, writeRequirements } from '../requirements-store'
+import { readRequirements, requirementsFilePath, writeRequirements, writeRequirementsMapping } from '../requirements-store'
 
 const SAMPLE_FILE = resolve('testdatas/需求分析表.xlsx')
 const SAMPLE_SHEET = '6、软件需求分析表'
@@ -56,6 +56,7 @@ describe('writeRequirements', () => {
     // 车型全集、来源路径、列配置都不落盘：车型可从变体汇总
     expect(Object.keys(payload).sort()).toEqual([
       'createdAt',
+      'mapping',
       'requirements',
       'schemaVersion',
       'updatedAt',
@@ -64,6 +65,23 @@ describe('writeRequirements', () => {
     expect(payload.createdAt).toBe(saved.createdAt)
     expect(payload.updatedAt).toBe(saved.updatedAt)
     expect(payload.requirements).toHaveLength(4)
+  })
+
+  it('映射参与状态写回 requirements.json 并在重新导入时保留', () => {
+    const project = temporaryProject()
+    writeRequirements(project, parsedSample())
+    const saved = writeRequirementsMapping(project, { REQ_1: false, REQ_2: true })
+    expect(saved.filePath).toBeTruthy()
+
+    const loaded = readRequirements(project).document
+    expect(loaded?.mapping).toEqual({ REQ_1: false, REQ_2: true })
+    expect(loaded?.requirements).toHaveLength(4)
+
+    writeRequirements(project, parsedSample())
+    expect(readRequirements(project).document?.mapping).toEqual({
+      REQ_1: false,
+      REQ_2: true,
+    })
   })
 
   it('再次导入是更新：保留 createdAt，刷新 updatedAt，数据整体替换', () => {

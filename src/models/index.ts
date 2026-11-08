@@ -45,7 +45,8 @@ export type {
   RequirementsChooseOutcome,
   RequirementsProbeOutcome,
   RequirementsPreviewOutcome,
-  RequirementsSaveOutcome
+  RequirementsSaveOutcome,
+  RequirementsMappingSaveOutcome,
 } from './common'
 export type {
   OutputScenario,

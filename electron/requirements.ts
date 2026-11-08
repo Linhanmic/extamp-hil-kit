@@ -15,10 +15,11 @@ import type {
   RequirementsPreviewOutcome,
   RequirementsProbeOutcome,
   RequirementsSaveOutcome,
+  RequirementsMappingSaveOutcome,
 } from '../src/models/common'
 import { parseRequirements, probeSheet } from './requirements-parse'
 import { listSheets, readSheetTable } from './requirements-sheet'
-import { readRequirements, writeRequirements } from './requirements-store'
+import { readRequirements, writeRequirements, writeRequirementsMapping } from './requirements-store'
 import { readSettings, resolveProjectPath } from './settings-store'
 import { readWorkspace } from './workspace'
 
@@ -120,6 +121,22 @@ export function registerRequirementsIpc() {
       return { saved } satisfies RequirementsSaveOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies RequirementsSaveOutcome
+    }
+  })
+
+  handle('requirements:save-mapping', (_event, mapping: Record<string, boolean>) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目，请先在启动页选择项目' }
+    try {
+      const settings = readSettings(project.path).document?.settings
+      const saved = writeRequirementsMapping(
+        project.path,
+        mapping,
+        settings?.requirementsPath ?? '',
+      )
+      return { saved } satisfies RequirementsMappingSaveOutcome
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies RequirementsMappingSaveOutcome
     }
   })
 }

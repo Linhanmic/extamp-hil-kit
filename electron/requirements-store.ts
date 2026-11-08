@@ -43,6 +43,21 @@ function readCreatedAt(targetPath: string): string | null {
   }
 }
 
+/** 读取已保存的映射参与状态；旧文件没有该字段时返回空对象 */
+function readMapping(targetPath: string): Record<string, boolean> {
+  try {
+    const raw = JSON.parse(readFileSync(targetPath, 'utf8')) as { mapping?: unknown }
+    if (!isRecord(raw.mapping)) return {}
+    return Object.fromEntries(
+      Object.entries(raw.mapping).filter(
+        (entry): entry is [string, boolean] => typeof entry[1] === 'boolean',
+      ),
+    )
+  } catch {
+    return {}
+  }
+}
+
 /**
  * 读取已落盘的需求数据。
  *
@@ -81,6 +96,13 @@ export function readRequirements(projectPath: string, filePath = ''): Requiremen
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
       requirements: raw.requirements,
+      mapping: isRecord(raw.mapping)
+        ? Object.fromEntries(
+            Object.entries(raw.mapping).filter(
+              (entry): entry is [string, boolean] => typeof entry[1] === 'boolean',
+            ),
+          )
+        : {},
     },
   }
 }
@@ -131,6 +153,8 @@ export function writeRequirements(
     // 车型清单不落盘：它可以从各变体的 vehicles 汇总得到，
     // 上百个车型的需求表存一份全集会让文件白白翻倍
     requirements: result.requirements,
+    // 重新导入时保留已有映射参与状态；需求 ID 变化后旧状态自然失效
+    mapping: readMapping(targetPath),
   }
 
   mkdirSync(dirname(targetPath), { recursive: true })
@@ -142,5 +166,36 @@ export function writeRequirements(
     updatedAt,
     requirementCount: result.stats.requirementCount,
     variantCount: result.stats.variantCount,
+  }
+}
+
+/** 只更新映射参与状态，保留 requirements 与 createdAt */
+export function writeRequirementsMapping(
+  projectPath: string,
+  mapping: Record<string, boolean>,
+  filePath = '',
+): RequirementsSavedState {
+  const targetPath = requirementsFilePath(projectPath, filePath)
+  const existing = readRequirements(projectPath, filePath)
+  if (!existing.document) {
+    throw new Error(existing.error ?? '需求数据不存在，无法保存映射状态')
+  }
+  const updatedAt = new Date().toISOString()
+  const document: RequirementsDocument = {
+    ...existing.document,
+    updatedAt,
+    mapping,
+  }
+  mkdirSync(dirname(targetPath), { recursive: true })
+  writeFileSync(targetPath, JSON.stringify(document, null, 2), 'utf8')
+  return {
+    filePath: targetPath,
+    createdAt: existing.document.createdAt,
+    updatedAt,
+    requirementCount: existing.document.requirements.length,
+    variantCount: existing.document.requirements.reduce(
+      (sum, requirement) => sum + requirement.variants.length,
+      0,
+    ),
   }
 }

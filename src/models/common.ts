@@ -203,6 +203,8 @@ export interface RequirementsDocument {
   createdAt: string
   updatedAt: string
   requirements: Requirement[]
+  /** 需求映射参与状态：id → 是否参与参数映射；缺省视为参与 */
+  mapping?: Record<string, boolean>
 }
 /** 读取已落盘需求数据的结果 */
 export interface RequirementsLoadOutcome {
@@ -228,6 +230,11 @@ export interface RequirementsPreviewOutcome {
 }
 /** 导入落盘结果 */
 export interface RequirementsSaveOutcome {
+  error?: string
+  saved?: RequirementsSavedState
+}
+/** 需求映射参与状态保存结果 */
+export interface RequirementsMappingSaveOutcome {
   error?: string
   saved?: RequirementsSavedState
 }
