@@ -37,7 +37,8 @@
     "dist:win": "npm run build && electron-builder --win --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:linux": "npm run build && electron-builder --linux --publish never",
-    "release": "npm run build && electron-builder --publish always"
+    "release": "npm run build && electron-builder --publish always",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -48,6 +49,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/vite": "^4.3.5",
     "@tsconfig/node24": "^24.0.5",
     "@types/jsdom": "^30.0.0",
@@ -67,6 +69,7 @@
     "jsdom": "^30.0.1",
     "npm-run-all2": "^9.0.3",
     "oxlint": "~1.82.0",
+    "playwright": "^1.65.0",
     "prettier": "3.9.6",
     "tailwindcss": "^4.3.5",
     "typescript": "~6.0.0",
@@ -159,7 +162,6 @@
       "executableName": "extamp-hil-kit",
       "syncDesktopName": true,
       "target": [
-        "deb",
         "tar.gz"
       ]
     }

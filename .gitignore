@@ -50,6 +50,10 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 
+# Playwright E2E 产物
+test-results/
+playwright-report/
+
 # 本地图标/界面探针截图
 *probe*.png
 

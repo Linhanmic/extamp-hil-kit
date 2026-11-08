@@ -584,7 +584,7 @@ preload 还暴露 `platform` 和 Electron/Chrome/Node 版本信息。新增 IPC 
 | `npm start`          | 使用构建产物启动桌面应用                 |
 | `npm run dist:win`   | Windows NSIS 安装包、便携版与 zip        |
 | `npm run dist:mac`   | macOS dmg/zip（需 macOS 环境）           |
-| `npm run dist:linux` | Linux deb/tar.gz（AppImage 需 Linux 环境） |
+| `npm run dist:linux` | Linux tar.gz（deb/AppImage 需 Linux 环境） |
 | `npm run release`    | 构建并发布到 GitHub Releases             |
 
 ### 11.2 当前交付物
