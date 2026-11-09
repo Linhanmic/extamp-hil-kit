@@ -34,12 +34,17 @@ const statusDot: Record<WorkflowStageStatus, string> = {
   idle: 'bg-ink-muted/40',
 }
 
+/** error 行说明用 danger-ink，避免只靠色点传达异常 */
+function detailClass(status: WorkflowStageStatus) {
+  return status === 'error' ? 'text-danger-ink' : 'text-ink-muted'
+}
+
 const summaryClass = computed(() =>
   blockedCount.value
-    ? 'text-[var(--el-color-danger)]'
+    ? 'text-danger-ink'
     : pendingCount.value
-      ? 'text-[var(--el-color-warning)]'
-      : 'text-[var(--el-color-success)]',
+      ? 'text-warning-ink'
+      : 'text-success-ink',
 )
 
 function open(stage: (typeof stages.value)[number]) {
@@ -99,7 +104,11 @@ async function onRefresh() {
             <span class="block truncate text-xs font-medium text-ink">
               {{ index + 1 }} · {{ item.title }}
             </span>
-            <span class="mt-0.5 block truncate text-[11px] text-ink-muted" :title="item.detail">
+            <span
+              class="mt-0.5 block truncate text-[11px]"
+              :class="detailClass(item.status)"
+              :title="item.detail"
+            >
               {{ item.detail }}
             </span>
           </span>

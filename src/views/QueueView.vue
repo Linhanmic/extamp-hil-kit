@@ -209,7 +209,7 @@ function addSpec() {
           <div class="col-span-2 px-2 py-1.5 text-[11px] text-ink">{{ kindLabels[item.kind] }}</div>
           <button
             type="button"
-            class="col-span-5 min-w-0 truncate px-2 py-1.5 text-left text-[11px] text-ink outline-none hover:text-primary"
+            class="col-span-5 min-w-0 truncate px-2 py-1.5 text-left text-[11px] text-ink outline-none hover:text-primary-ink"
             :title="`${item.name}（点击查看输出）`"
             @click="queueStore.showOutput(item)"
           >

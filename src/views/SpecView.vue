@@ -261,7 +261,7 @@ async function onApply() {
         >
           <button
             type="button"
-            class="block w-full truncate rounded px-1 text-left text-[11px] font-medium text-primary outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+            class="block w-full truncate rounded px-1 text-left text-[11px] font-medium text-primary-ink outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
             :title="`跳转到 ${group.name}`"
             @click="jumpToSpec(group.path)"
           >
@@ -362,7 +362,7 @@ async function onApply() {
                 v-if="selectedEntry.analysis.warnings.length"
                 class="mt-1 max-h-24 overflow-y-auto rounded border border-line bg-surface px-2 py-1"
               >
-                <p class="text-[11px] font-medium text-[var(--el-color-warning)]">
+                <p class="text-[11px] font-medium text-warning-ink">
                   {{ selectedEntry.analysis.warnings.length }} 条适用条件提示
                 </p>
                 <p

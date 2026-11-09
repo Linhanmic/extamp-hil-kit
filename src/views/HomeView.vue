@@ -55,7 +55,7 @@ const capabilities = [
           v-for="item in NAV_ITEMS"
           :key="item.name"
           :to="item.path"
-          class="rounded-md border border-ink-muted/20 px-3 py-2 text-xs text-ink transition hover:border-primary hover:text-primary"
+          class="rounded-md border border-ink-muted/20 px-3 py-2 text-xs text-ink transition hover:border-primary hover:text-primary-ink"
         >
           {{ item.label }}
         </RouterLink>

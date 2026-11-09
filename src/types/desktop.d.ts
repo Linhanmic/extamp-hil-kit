@@ -70,6 +70,10 @@ export interface DesktopBridge {
     /** 订阅最大化状态变化，返回取消订阅函数 */
     onMaximizedChange: (callback: (value: boolean) => void) => () => void
   }
+  menu: {
+    /** 订阅应用菜单命令（打开项目、视图显隐、执行队列等），返回取消订阅函数 */
+    onAction: (callback: (action: string) => void) => () => void
+  }
   workspace: {
     current: () => Promise<WorkspaceState>
     /** 打开系统目录选择器，选中后校验并持久化 */

@@ -61,7 +61,7 @@ function select(value: ThemeMode) {
     <template #dropdown>
       <el-dropdown-menu>
         <el-dropdown-item v-for="item in options" :key="item.value" :command="item.value">
-          <span :class="item.value === mode ? 'text-primary' : ''">
+          <span :class="item.value === mode ? 'text-primary-ink' : ''">
             {{ item.value === mode ? '· ' : '' }}{{ item.label }}
           </span>
         </el-dropdown-item>

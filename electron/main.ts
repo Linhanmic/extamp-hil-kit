@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { registerBusinessIpc } from './business'
 import { registerConceptsIpc } from './concepts'
 import { registerConfigsIpc } from './configs'
+import { buildApplicationMenu } from './menu'
 import { registerRequirementsIpc } from './requirements'
 import { registerSettingsIpc } from './settings'
 import { registerSpecsIpc } from './specs'
@@ -43,6 +44,7 @@ function registerWindowControls() {
 }
 
 function createWindow() {
+  const mac = process.platform === 'darwin'
   const win = new BrowserWindow({
     width: WINDOW_WIDTH,
     height: WINDOW_HEIGHT,
@@ -50,11 +52,12 @@ function createWindow() {
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,
     show: false,
-    // 无边框：标题栏与窗口控制全部由渲染层实现
-    frame: false,
+    // Windows/Linux：无边框，渲染层自绘窗控；macOS：hiddenInset 保留系统红黄绿
+    ...(mac
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 12, y: 12 } }
+      : { frame: false, autoHideMenuBar: true }),
     backgroundColor: '#141414',
-    autoHideMenuBar: true,
-    title: 'extamp-hil-kit',
+    title: 'ExtAmp HIL Kit',
     // 应用图标：黑底白 HIL，同时用于任务栏与窗口
     icon: join(import.meta.dirname, '../build/icon.ico'),
     webPreferences: {
@@ -116,10 +119,14 @@ if (!app.requestSingleInstanceLock()) {
     registerConceptsIpc()
     registerTasksIpc()
     registerSettingsIpc()
+    buildApplicationMenu(() => mainWindow)
     createWindow()
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      if (BrowserWindow.getAllWindows().length === 0) {
+        buildApplicationMenu(() => mainWindow)
+        createWindow()
+      }
     })
   })
 

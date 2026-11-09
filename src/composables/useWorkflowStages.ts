@@ -198,7 +198,7 @@ export function useWorkflowStages() {
       }`,
     )
 
-    // 7. Gauge 执行
+    // 7. Gauge 执行：失败用 error（与配置失效同级），便于右栏一眼定位
     const runStage = queueStore.running
       ? stage(
           'run',
@@ -208,7 +208,13 @@ export function useWorkflowStages() {
           `执行中 · 等待 ${queueStore.pendingCount} 项`,
         )
       : queueStore.failedCount > 0
-        ? stage('run', 'Gauge 执行', 'queue', 'warning', `上次 ${queueStore.failedCount} 项失败`)
+        ? stage(
+            'run',
+            'Gauge 执行',
+            'queue',
+            'error',
+            `上次 ${queueStore.failedCount} 项失败 · 打开队列查看输出`,
+          )
         : queueStore.successCount > 0
           ? stage('run', 'Gauge 执行', 'queue', 'ready', `已通过 ${queueStore.successCount} 项`)
           : tasksStore.tasks.length

@@ -5,18 +5,49 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* 把 Element Plus 的主题变量桥接成工具类：bg-primary / text-primary / border-primary */
+  /* 品牌蓝：填充/边框仍可用 #409EFF（Element Plus）；
+     文字用加深的 primary-ink，保证小字对白底 ≥4.5:1（#1f6feb ≈ 4.63:1） */
   --color-primary: var(--el-color-primary, #409eff);
+  --color-primary-ink: var(--el-hil-primary-ink, #1f6feb);
   --color-primary-light: var(--el-color-primary-light-1, #79bbff);
   --color-primary-dark: var(--el-color-primary-dark-2, #337ecc);
 
-  /* 布局语义色：全部取自 Element Plus 变量，浅色 / 深色自动跟随 */
+  /* 布局语义色：浅色默认写死可访问值；深色由 html.dark 覆盖 */
   --color-surface: var(--el-bg-color, #ffffff);
   --color-surface-soft: var(--el-fill-color-light, #f5f7fa);
   --color-surface-page: var(--el-bg-color-page, #f2f3f5);
   --color-line: var(--el-border-color-light, #e4e7ed);
   --color-ink: var(--el-text-color-primary, #303133);
-  --color-ink-muted: var(--el-text-color-secondary, #909399);
+  /* #595959 on #FFFFFF ≈ 7.0:1（旧 #909399 仅 3.08:1，不达 AA） */
+  --color-ink-muted: var(--el-hil-ink-muted, #595959);
+
+  /* 状态文字（深色字，供 summary / 表格文字；底色仍可用 Element Plus 语义色） */
+  --color-success-ink: var(--el-hil-success-ink, #2f7a1f);
+  --color-warning-ink: var(--el-hil-warning-ink, #9a5b00);
+  --color-danger-ink: var(--el-hil-danger-ink, #c0392b);
+}
+
+/* 覆盖 Element Plus：次要文字对比度 + 桌面 13px 基准字号。
+   放在 @theme 之后；html.dark 与 EP 深色变量同级，保证深色下也可读。 */
+:root {
+  --el-hil-ink-muted: #595959;
+  --el-hil-primary-ink: #1f6feb;
+  --el-hil-success-ink: #2f7a1f;
+  --el-hil-warning-ink: #9a5b00;
+  --el-hil-danger-ink: #c0392b;
+  --el-text-color-secondary: #595959;
+  --el-font-size-base: 13px;
+  --el-font-size-small: 12px;
+  --el-font-size-large: 16px;
+}
+
+html.dark {
+  --el-hil-ink-muted: #a1a1a1;
+  --el-hil-primary-ink: #79bbff;
+  --el-hil-success-ink: #85ce61;
+  --el-hil-warning-ink: #e6a23c;
+  --el-hil-danger-ink: #f56c6c;
+  --el-text-color-secondary: #a1a1a1;
 }
 
 /* 基础样式放进 base 层，组件里的工具类才能覆盖它们。
@@ -26,24 +57,23 @@
     min-height: 100vh;
     color: var(--color-text);
     background: var(--color-background);
+    /* 工具型桌面：主题切换 ≤150ms，避免 0.5s 拖沓 */
     transition:
-      color 0.5s,
-      background-color 0.5s;
-    line-height: 1.6;
+      color 0.15s ease,
+      background-color 0.15s ease;
+    line-height: 1.55;
+    /* 系统 UI 栈优先（Segoe UI / SF），Inter 作拉丁回退；桌面基准 13px（macOS HIG default） */
     font-family:
-      Inter,
       -apple-system,
       BlinkMacSystemFont,
       'Segoe UI',
       Roboto,
-      Oxygen,
-      Ubuntu,
-      Cantarell,
-      'Fira Sans',
-      'Droid Sans',
+      Inter,
+      'PingFang SC',
+      'Microsoft YaHei',
       'Helvetica Neue',
       sans-serif;
-    font-size: 15px;
+    font-size: 13px;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -51,5 +81,23 @@
 
   .green {
     color: hsla(160, 100%, 37%, 1);
+  }
+}
+
+/* 尊重系统「减少动态效果」：去掉非必要过渡与脉冲 */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

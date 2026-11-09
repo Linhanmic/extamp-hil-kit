@@ -48,7 +48,7 @@ const { recents, busy, error, choose, openPath } = useWorkspace()
         <!-- 错误提示 -->
         <p
           v-if="error"
-          class="col-span-12 rounded-xl border border-[color-mix(in_srgb,var(--el-color-danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--el-color-danger)_10%,transparent)] px-4 py-2.5 text-xs text-[var(--el-color-danger)]"
+          class="col-span-12 rounded-xl border border-[color-mix(in_srgb,var(--el-color-danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--el-color-danger)_10%,transparent)] px-4 py-2.5 text-xs text-danger-ink"
           role="alert"
         >
           {{ error }}

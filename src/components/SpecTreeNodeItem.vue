@@ -66,7 +66,7 @@ function toggleChecked() {
         v-else
         type="button"
         class="flex min-w-0 flex-1 items-center gap-1 px-1 py-1 text-left text-[11px] outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
-        :class="selectedPath === props.node.path ? 'bg-primary/10 text-primary' : 'text-ink'"
+        :class="selectedPath === props.node.path ? 'bg-primary/10 text-primary-ink font-medium' : 'text-ink'"
         :title="props.node.name"
         @click="emit('select', props.node.path)"
       >

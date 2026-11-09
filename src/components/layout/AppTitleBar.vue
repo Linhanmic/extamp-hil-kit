@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { Setting } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { Setting, Switch } from '@element-plus/icons-vue'
 import hilLogo from '../../../build/icon.png'
 import { useDesignGrid } from '@/composables/useDesignGrid'
+import { useWorkspace } from '@/composables/useWorkspace'
 import RegionToggle from './RegionToggle.vue'
 import WindowControls from './WindowControls.vue'
 
@@ -21,10 +24,23 @@ const emit = defineEmits<{
 }>()
 
 const { visible: gridVisible, toggle: toggleGrid } = useDesignGrid()
+const { project, clear } = useWorkspace()
+const route = useRoute()
 
-// 12 条弹性轨道 + 1 条固定宽度的窗口控制轨道（3 × 44px）。
-// 前 12 条轨道即设计网格的 12 列，控件按份数落在轨道上。
-const TITLEBAR_COLUMNS = 'repeat(12, minmax(0, 1fr)) 132px'
+/** macOS 用系统红黄绿（hiddenInset），不渲染自绘窗控轨道 */
+const isMac = computed(() => window.desktop?.platform === 'darwin')
+
+/** 面包屑：项目名 › 当前页（闸门下只显示品牌） */
+const breadcrumb = computed(() => {
+  const page = typeof route.meta?.title === 'string' ? route.meta.title : ''
+  if (!project.value) return ''
+  return page ? `${project.value.name} › ${page}` : project.value.name
+})
+
+// Windows/Linux：12 弹性轨 + 132px 窗控轨；macOS：仅 12 弹性轨（系统灯占左侧）
+const TITLEBAR_COLUMNS = computed(() =>
+  isMac.value ? 'repeat(12, minmax(0, 1fr))' : 'repeat(12, minmax(0, 1fr)) 132px',
+)
 
 // 设计网格开关图标：方框 + 2×2 四个实心格，fill=currentColor 跟随文字色（开启时变主题色）
 const GRID_PATH =
@@ -33,27 +49,47 @@ const GRID_PATH =
 
 <!--
   @grid A：标题栏是水平组合容器，内部重新建立 12 列。
-  按设计网格分配：标题 8 份 · 项目设置 1 份 · 设计网格 1 份 · 控制组 2 份；
-  窗口控制为第 13 条定宽轨道。高度取 48 行中的 3 行（6.25dvh）。
-  控制组是三个区域开关——按「左栏 · 面板 · 右栏」排序成组，图标填充哪块就代表哪块当前展开；
-  主题切换已移入「项目设置」弹窗，标题栏只保留这三个开关。
+  按设计网格分配：标题/面包屑 7 · 项目切换 1 · 项目设置 1 · 设计网格 1 · 控制组 2；
+  Windows 另有第 13 条定宽轨道（132px）放窗控。macOS 高度给系统灯留 inset。
   整条为窗口拖动区（-webkit-app-region: drag），交互控件单独标记 no-drag。
 -->
 <template>
   <header
-    class="grid h-[6.25dvh] shrink-0 items-stretch gap-1 border-b border-line bg-surface-soft pl-1 [-webkit-app-region:drag]"
+    class="grid shrink-0 items-stretch gap-1 border-b border-line bg-surface-soft [-webkit-app-region:drag]"
+    :class="isMac ? 'h-[38px] pl-[72px]' : 'h-[6.25dvh] pl-1'"
     :style="{ gridTemplateColumns: TITLEBAR_COLUMNS }"
   >
-    <!-- Column span-8（闸门下 11）：HIL 图标 + 中文品牌名，垂直居中，不再显示项目/路由 -->
+    <!-- Column span-7（闸门下 11）：品牌 + 面包屑「项目 › 页面」 -->
     <div
-      class="flex min-w-0 items-center gap-2 pl-2"
-      :class="props.locked ? 'col-span-11' : 'col-span-8'"
+      class="flex min-w-0 items-center gap-2"
+      :class="props.locked ? 'col-span-11' : 'col-span-7'"
     >
       <img :src="hilLogo" alt="HIL" class="size-6 shrink-0 rounded" />
-      <span class="truncate text-[13px] font-medium text-ink">外置功放 HIL 工具集</span>
+      <span v-if="props.locked" class="truncate text-[13px] font-medium text-ink">
+        外置功放 HIL 工具集
+      </span>
+      <template v-else>
+        <span class="shrink-0 text-[13px] font-medium text-ink">外置功放 HIL 工具集</span>
+        <span aria-hidden="true" class="shrink-0 text-ink-muted">·</span>
+        <span class="truncate text-[13px] text-ink-muted" :title="breadcrumb">
+          {{ breadcrumb }}
+        </span>
+      </template>
     </div>
 
-    <!-- Column span-1：项目设置（启动页闸门下隐藏），图标取 Element Plus 的 Setting -->
+    <!-- Column span-1：切换项目（原侧栏底部关键动作上移） -->
+    <button
+      v-if="!props.locked"
+      type="button"
+      class="col-span-1 grid size-8 place-items-center justify-self-end self-center rounded text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
+      title="切换 Gauge 项目"
+      aria-label="切换项目"
+      @click="clear"
+    >
+      <el-icon class="text-[18px]!"><Switch /></el-icon>
+    </button>
+
+    <!-- Column span-1：项目设置（启动页闸门下隐藏） -->
     <button
       v-if="!props.locked"
       type="button"
@@ -62,7 +98,6 @@ const GRID_PATH =
       aria-label="项目设置"
       @click="emit('settings')"
     >
-      <!-- Element Plus 的 .el-icon 会继承 body 字号（15px），用 ! 压过它，保持与其他图标一致的 18px -->
       <el-icon class="text-[18px]!"><Setting /></el-icon>
     </button>
 
@@ -70,7 +105,7 @@ const GRID_PATH =
     <button
       type="button"
       class="col-span-1 grid size-8 place-items-center justify-self-end self-center rounded text-ink-muted transition-colors outline-none [-webkit-app-region:no-drag] hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
-      :class="{ 'text-primary': gridVisible }"
+      :class="{ 'text-primary-ink': gridVisible }"
       :aria-pressed="gridVisible"
       :title="`${gridVisible ? '隐藏' : '显示'}设计网格（12 列 × 48 行，Ctrl+Shift+G）`"
       :aria-label="`${gridVisible ? '隐藏' : '显示'}设计网格`"
@@ -103,7 +138,7 @@ const GRID_PATH =
       />
     </div>
 
-    <!-- 第 13 条轨道（定宽 132px）：窗口控制按钮组 -->
-    <WindowControls class="col-start-13" />
+    <!-- 第 13 条轨道：仅 Windows/Linux 自绘窗控；macOS 用系统红黄绿 -->
+    <WindowControls v-if="!isMac" class="col-start-13" />
   </header>
 </template>

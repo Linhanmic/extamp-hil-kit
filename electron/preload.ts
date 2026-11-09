@@ -27,6 +27,14 @@ contextBridge.exposeInMainWorld('desktop', {
       return () => ipcRenderer.off('window:maximized-change', listener)
     },
   },
+  menu: {
+    /** 订阅应用菜单命令，返回取消订阅函数 */
+    onAction: (callback: (action: string) => void) => {
+      const listener = (_event: IpcRendererEvent, action: string) => callback(action)
+      ipcRenderer.on('menu:action', listener)
+      return () => ipcRenderer.off('menu:action', listener)
+    },
+  },
   workspace: {
     current: () => ipcRenderer.invoke('workspace:current'),
     choose: () => ipcRenderer.invoke('workspace:choose'),

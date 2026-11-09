@@ -136,7 +136,7 @@ watch(
               :key="`${file.name}-${index}`"
               type="button"
               class="border-b border-line px-3 py-2 text-left text-[11px] break-all outline-none last:border-b-0 hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-primary/40"
-              :class="selectedIndex === index ? 'bg-surface-soft text-primary' : 'text-ink'"
+              :class="selectedIndex === index ? 'bg-surface-soft text-primary-ink font-medium' : 'text-ink'"
               @click="selectedIndex = index"
             >
               {{ file.name }}

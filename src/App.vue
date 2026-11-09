@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppPanel from './components/layout/AppPanel.vue'
@@ -16,6 +16,7 @@ import { useConceptsStore } from './stores/concepts'
 import { useConfigsStore } from './stores/configs'
 import { useMeterStore } from './stores/meter'
 import { useOutputStore } from './stores/output'
+import { useQueueStore } from './stores/queue'
 import { useRequirementsStore } from './stores/requirements'
 import { useSettingsStore } from './stores/settings'
 import { useSlotMapStore } from './stores/slotMap'
@@ -24,8 +25,9 @@ import { useTasksStore } from './stores/tasks'
 import { useSpecsStore } from './stores/specs'
 import LaunchView from './views/LaunchView.vue'
 
-const { project, ready, load } = useWorkspace()
+const { project, ready, load, choose } = useWorkspace()
 const route = useRoute()
+const router = useRouter()
 const hasProject = computed(() => project.value !== null)
 
 // 应用打开（或切换项目）时读回该项目的设置、需求、配置参数与其余业务数据
@@ -39,6 +41,7 @@ const snapshotStore = useSnapshotStore()
 const tasksStore = useTasksStore()
 const specsStore = useSpecsStore()
 const conceptsStore = useConceptsStore()
+const queueStore = useQueueStore()
 watch(
   () => project.value?.path,
   async (path) => {
@@ -100,6 +103,20 @@ const visible = reactive({
   secondSidebar: true,
 })
 
+// 队列出现失败时自动展开底部终端，错误不必再点进面板才看见
+let lastFailedCount = 0
+watch(
+  () => queueStore.failedCount,
+  (failed) => {
+    if (failed > lastFailedCount) {
+      visible.panel = true
+      const failedItem = queueStore.items.find((item) => item.status === 'failed')
+      if (failedItem) queueStore.showOutput(failedItem)
+    }
+    lastFailedCount = failed
+  },
+)
+
 const { contentColumns, panelHeightPercent, resizeSidebar, resizeSecondSidebar, resizePanel } =
   useLayoutSize(visible)
 
@@ -117,17 +134,64 @@ const onPanelResize = (delta: number) => resizePanel(delta, mainRef.value?.clien
 const { toggle: toggleDesignGrid } = useDesignGrid()
 
 function onKeydown(event: KeyboardEvent) {
+  // 与原生菜单 Ctrl+Shift+G 对齐；渲染层兜底（菜单未注册时仍可用）
   if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'g') {
     event.preventDefault()
     toggleDesignGrid()
   }
 }
 
+/** 原生菜单命令 → 界面动作 */
+function onMenuAction(action: string) {
+  switch (action) {
+    case 'open-project':
+      void choose()
+      break
+    case 'open-settings':
+      settingsVisible.value = true
+      break
+    case 'toggle-sidebar':
+      visible.sidebar = !visible.sidebar
+      break
+    case 'toggle-panel':
+      visible.panel = !visible.panel
+      break
+    case 'toggle-second-sidebar':
+      visible.secondSidebar = !visible.secondSidebar
+      break
+    case 'toggle-design-grid':
+      toggleDesignGrid()
+      break
+    case 'go-home':
+      void router.push({ name: 'home' })
+      break
+    case 'go-queue':
+      void router.push({ name: 'queue' })
+      break
+    case 'run-queue':
+      void router.push({ name: 'queue' })
+      void queueStore.start()
+      break
+    case 'clear-queue':
+      if (!queueStore.running) queueStore.clear()
+      break
+    case 'reload':
+      window.location.reload()
+      break
+  }
+}
+
+let unsubscribeMenu: (() => void) | undefined
+
 onMounted(() => {
   load()
   window.addEventListener('keydown', onKeydown)
+  unsubscribeMenu = window.desktop?.menu?.onAction(onMenuAction)
 })
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  unsubscribeMenu?.()
+})
 </script>
 
 <template>
