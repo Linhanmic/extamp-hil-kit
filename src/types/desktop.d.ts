@@ -8,6 +8,7 @@ import type {
   ConfigsSaveOutcome,
   Configuration,
   OutputLoadOutcome,
+  OutputSaveOutcome,
   ProjectSettings,
   RequirementsChooseOutcome,
   RequirementsLoadOutcome,
@@ -21,8 +22,10 @@ import type {
   SettingsPickOutcome,
   SettingsSaveOutcome,
   SlotMappingLoadOutcome,
+  SlotMappingSaveOutcome,
+  SlotMappingDeleteOutcome,
   SnapshotLoadOutcome,
-  SnapshotAppendOutcome,
+  SnapshotSaveOutcome,
   SpecsListOutcome,
   SpecsReadOutcome,
   SpecsWriteOutcome,
@@ -98,6 +101,8 @@ export interface DesktopBridge {
   output: {
     /** 读取当前项目的出声位置文件 */
     load: () => Promise<OutputLoadOutcome>
+    /** 整份写回出声位置文件（新增 / 编辑 / 删除场景后） */
+    save: (text: string) => Promise<OutputSaveOutcome>
   }
   meter: {
     /** 读取当前项目的音量表文件 */
@@ -108,12 +113,16 @@ export interface DesktopBridge {
   slotMap: {
     /** 读取当前项目的 SLOT 映射配置及其 slot 文件 */
     load: () => Promise<SlotMappingLoadOutcome>
+    /** 新增或整份写回一个映射方案文件 */
+    save: (fileName: string, text: string) => Promise<SlotMappingSaveOutcome>
+    /** 删除一个映射方案文件 */
+    delete: (fileName: string) => Promise<SlotMappingDeleteOutcome>
   }
   snapshot: {
     /** 读取当前项目扬声器快照目录下的所有快照文件 */
     load: () => Promise<SnapshotLoadOutcome>
-    /** 向 snapshot.ini 追加一个车型分节 */
-    append: (section: string, speakers: string[]) => Promise<SnapshotAppendOutcome>
+    /** 整份写回 snapshot.ini（新增 / 编辑 / 删除分节） */
+    save: (text: string) => Promise<SnapshotSaveOutcome>
   }
   specs: {
     /** 列出当前项目 specs 目录下的 .spec 文件 */

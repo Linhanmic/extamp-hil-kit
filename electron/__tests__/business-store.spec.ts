@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  deleteSlotPlan,
   parseOutputText,
-  appendSnapshot,
   parseSlotMappingFileText,
   parseSnapshotIniText,
   parseVolumeTableText,
@@ -12,6 +12,9 @@ import {
   readSlotMapping,
   readSnapshotFile,
   readVolumeTable,
+  writeOutput,
+  writeSlotPlan,
+  writeSnapshotFile,
   writeVolumeTable,
 } from '../business-store'
 
@@ -159,31 +162,72 @@ describe('parseSnapshotIniText', () => {
   })
 })
 
-describe('appendSnapshot', () => {
-  it('保留原内容并追加分节，同名分节拒绝', () => {
+describe('业务资料写回', () => {
+  it('出声位置整份写回后能被解析器读回', () => {
     const project = temporaryProject()
-    const dir = join(project, 'config', '扬声器快照')
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, 'snapshot.ini'), '[SC6H]\n左前低音\n', 'utf8')
+    const text = [
+      '# 检查智能语音关闭时出声位置是否正确',
+      '* step1',
+      '* no_speak="左前低音|中置"',
+      '',
+      '# 检查智能语音全车播放时出声位置是否正确',
+      '适用车型:SC6H/YU2',
+      '* speak="左前高音"',
+      '',
+    ].join('\n')
 
-    const outcome = appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'YU2', ['中置', '重低音'])
-    expect(outcome.saved?.filePath).toBe(join(dir, 'snapshot.ini'))
+    const outcome = writeOutput(project, 'config/出声位置/出声位置.txt', text)
+    expect(outcome.saved?.filePath).toBe(join(project, 'config', '出声位置', '出声位置.txt'))
 
-    const text = readFileSync(join(dir, 'snapshot.ini'), 'utf8')
-    expect(text).toContain('[SC6H]')
-    expect(text).toContain('[YU2]\n中置\n重低音')
-    expect(appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'YU2', ['中置']).error).toMatch(/已存在/)
+    const parsed = readOutput(project, 'config/出声位置/出声位置.txt')
+    expect(parsed.document?.scenarios).toHaveLength(2)
+    expect(parsed.document?.scenarios[1]).toMatchObject({
+      title: '检查智能语音全车播放时出声位置是否正确',
+      allVehicles: false,
+      vehicles: ['SC6H', 'YU2'],
+      speakKeywords: ['左前高音'],
+    })
   })
 
-  it('文件不存在时创建，空车型或空扬声器拒绝', () => {
+  it('SLOT 映射方案写回、读回与删除', () => {
     const project = temporaryProject()
-    const outcome = appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'SC6H/YU2', ['左前'])
-    expect(outcome.saved).toBeDefined()
-    expect(appendSnapshot(project, 'config/扬声器快照/snapshot.ini', '', ['左前']).error).toMatch(/名称不正确/)
-    expect(appendSnapshot(project, 'config/扬声器快照/snapshot.ini', 'SC6H', ['  ']).error).toMatch(/至少填写/)
+    const text = ['适用车型:SC6H/YU2', '', '# 音源盒打开媒体音SLOT', '* 音源盒打开SLOT1', '* 音源盒打开SLOT2', ''].join('\n')
+
+    expect(writeSlotPlan(project, 'config/SLOT映射', '方案.txt', text).saved).toBeDefined()
+
+    const outcome = readSlotMapping(project, 'config/SLOT映射')
+    expect(outcome.document?.plans).toHaveLength(1)
+    expect(outcome.document?.plans[0]).toMatchObject({ name: '方案.txt', vehicles: ['SC6H', 'YU2'] })
+    expect(outcome.document?.plans[0]?.scenarios[0]).toMatchObject({
+      title: '音源盒打开媒体音SLOT',
+      slots: [1, 2],
+    })
+
+    expect(deleteSlotPlan(project, 'config/SLOT映射', '方案.txt')).toEqual({ deleted: true })
+    expect(readSlotMapping(project, 'config/SLOT映射').document?.plans).toHaveLength(0)
+    expect(writeSlotPlan(project, '', '方案.txt', text).error).toMatch(/还没有配置/)
+    expect(writeSlotPlan(project, 'config/SLOT映射', '../逃逸.txt', text).error).toMatch(/文件名不正确/)
+    expect(writeSlotPlan(project, 'config/SLOT映射', '方案.md', text).error).toMatch(/\.txt/)
+  })
+
+  it('快照整份写回后能被解析器读回，UTF-8 中文不丢', () => {
+    const project = temporaryProject()
+    const text = ['[SC6H]', '左前低音', '', '[SC6H/YU2]', '中置', '重低音', ''].join('\n')
+
+    const outcome = writeSnapshotFile(project, 'config/扬声器快照/snapshot.ini', text)
+    expect(outcome.saved?.filePath).toBe(join(project, 'config', '扬声器快照', 'snapshot.ini'))
+
+    const parsed = readSnapshotFile(project, 'config/扬声器快照/snapshot.ini')
+    expect(parsed.document?.files).toHaveLength(2)
+    expect(parsed.document?.files[1]).toMatchObject({
+      vehicles: ['SC6H', 'YU2'],
+      channels: [
+        { channel: '通道1', speaker: '中置' },
+        { channel: '通道2', speaker: '重低音' },
+      ],
+    })
   })
 })
-
 describe('读取器', () => {
   it('路径没配置时返回 unconfigured', () => {
     const project = temporaryProject()

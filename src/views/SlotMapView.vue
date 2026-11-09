@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSlotMapStore } from '@/stores/slotMap'
 import { useConceptsStore } from '@/stores/concepts'
-import { extractParams, serializeConcepts, validateConcepts } from '@/spec/concept-file'
+import { serializeConcepts, validateConcepts } from '@/spec/concept-file'
 import { formatSlots, scenarioSlots, sourceTitles } from '@/stores/slot-map-format'
+import SlotPlanFormDialog from '@/components/SlotPlanFormDialog.vue'
+import type { SlotMappingPlan } from '@/models'
+import { buildVehicleConcepts, planSlotConcepts, summarizeMerge } from '@/composables/vehicle-assets'
 
 /**
  * SLOT 映射：目录下每个 txt 是一种映射方案。
@@ -64,22 +67,50 @@ function displayName(fileName: string): string {
   return fileName.replace(/\.txt$/i, '')
 }
 
-/** 汇总当前车型适用的映射方案，生成 <车型>-SLOT.cpt */
+/** 方案增删改：编辑传当前方案，新建传 null */
+const formVisible = ref(false)
+const editingPlan = ref<SlotMappingPlan | null>(null)
+const canEdit = computed(() => Boolean(window.desktop?.slotMap?.save))
+
+function openCreatePlan() {
+  editingPlan.value = null
+  formVisible.value = true
+}
+
+function openEditPlan(plan: SlotMappingPlan) {
+  editingPlan.value = plan
+  formVisible.value = true
+}
+
+async function removePlan(plan: SlotMappingPlan) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除映射方案「${displayName(plan.name)}」及其 ${plan.scenarios.length} 个音源场景？`,
+      '删除映射方案',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  const result = await store.deletePlan(plan.name)
+  if (result.ok) ElMessage.success('映射方案已删除')
+  else ElMessage.error(result.error)
+}
+
+/** 生成只看目录数据与当前车型：默认方案 + 车型差异，同名默认项由车型版本替换 */
+const generatePlan = computed(() => planSlotConcepts(store.plans, vehicleFilter.value))
+const canGenerate = computed(
+  () => Boolean(vehicleFilter.value) && generatePlan.value.defaults.length + generatePlan.value.vehicleSpecific.length > 0,
+)
+
+/** 按车型合并生成 <车型>-SLOT.cpt */
 async function generateSlotCpt() {
   const vehicle = vehicleFilter.value
   const api = window.desktop?.concepts
   if (!vehicle || !api?.generateSlot) return
 
-  const concepts = visiblePlans.value.flatMap((plan) =>
-    plan.scenarios
-      .filter((scenario) => scenario.steps.length)
-      .map((scenario) => ({
-        heading: `${displayName(plan.name)} · ${scenario.title}`,
-        params: extractParams(scenario.title),
-        steps: scenario.steps.map((text) => ({ text, table: null })),
-      })),
-  )
-  const issues = validateConcepts(concepts)
+  const merged = buildVehicleConcepts(generatePlan.value)
+  const issues = validateConcepts(merged.concepts)
   if (issues.length) {
     ElMessage.error(issues[0]!.message)
     return
@@ -88,9 +119,9 @@ async function generateSlotCpt() {
   generating.value = true
   try {
     const fileName = `${vehicle.replace(/[\\/:*?"<>|]/g, '_')}-SLOT.cpt`
-    const outcome = await api.generateSlot(fileName, serializeConcepts(concepts))
+    const outcome = await api.generateSlot(fileName, serializeConcepts(merged.concepts))
     if (outcome.saved) {
-      ElMessage.success(`已生成 ${outcome.saved.filePath}`)
+      ElMessage.success(`已生成 ${outcome.saved.filePath}（${summarizeMerge(merged)}）`)
       await conceptsStore.load()
     } else {
       ElMessage.error(outcome.error ?? '生成 SLOT cpt 失败')
@@ -116,14 +147,12 @@ async function generateSlotCpt() {
           </el-tag>
         </div>
         <div class="col-span-6 flex items-center justify-end gap-2">
+          <el-button size="small" :disabled="!canEdit" @click="openCreatePlan">新建方案</el-button>
           <el-button
             size="small"
             type="primary"
             :loading="generating"
-            :disabled="
-              !vehicleFilter ||
-              !visiblePlans.some((plan) => plan.scenarios.some((scenario) => scenario.steps.length))
-            "
+            :disabled="!canGenerate"
             @click="generateSlotCpt"
           >
             按车型生成 CPT
@@ -248,10 +277,18 @@ async function generateSlotCpt() {
 
         <div class="col-span-9 min-w-0">
           <div v-if="selectedPlan" class="border border-line">
-            <div class="border-b border-line bg-surface-soft px-3 py-2">
-              <h2 class="text-[13px] font-medium break-all text-ink">
+            <div class="grid grid-cols-12 items-center border-b border-line bg-surface-soft px-3 py-2">
+              <h2 class="col-span-8 text-[13px] font-medium break-all text-ink">
                 {{ displayName(selectedPlan.name) }}
               </h2>
+              <div class="col-span-4 flex justify-end gap-1">
+                <el-button size="small" link type="primary" @click="openEditPlan(selectedPlan)">
+                  编辑
+                </el-button>
+                <el-button size="small" link type="danger" @click="removePlan(selectedPlan)">
+                  删除
+                </el-button>
+              </div>
             </div>
             <div class="border-b border-line px-3 py-2 text-[11px] break-all text-ink">
               适用车型：{{ selectedPlan.vehicles.join('/') || '—' }}
@@ -284,5 +321,7 @@ async function generateSlotCpt() {
         </div>
       </div>
     </div>
+
+    <SlotPlanFormDialog v-model="formVisible" :plan="editingPlan" />
   </div>
 </template>

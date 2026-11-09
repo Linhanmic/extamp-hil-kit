@@ -52,6 +52,7 @@ export type {
   OutputScenario,
   OutputDocument,
   OutputLoadOutcome,
+  OutputSaveOutcome,
 } from './output'
 export type {
   VolumeTableRow,
@@ -64,13 +65,15 @@ export type {
   SlotMappingPlan,
   SlotMappingDocument,
   SlotMappingLoadOutcome,
+  SlotMappingSaveOutcome,
+  SlotMappingDeleteOutcome,
 } from './slot-map'
 export type {
   SnapshotChannel,
   SnapshotFile,
   SnapshotDocument,
   SnapshotLoadOutcome,
-  SnapshotAppendOutcome,
+  SnapshotSaveOutcome,
 } from './snapshot'
 export type {
   SpecFileInfo,

@@ -2,7 +2,7 @@
 /** 需求对应变体 */
 export interface Variant {
   requirement_id: string// 变体所属需求ID
-  key: string// 变体内容键，由变体内容去除所有控制字符、空白字符、标点符号生成，用于处理多个变体内容除了控制字符内容其实一样的问题，减少变体数量
+  key: string// 变体内容键，由变体内容去除所有控制字符与空白字符生成（破折号、实心点等标点符号保留），用于处理多个变体内容只差空格换行的问题，减少变体数量
   content: string[]// 关联的所有原始变体描述
   vehicles: string[]// 变体适用的车型
 }
@@ -68,7 +68,7 @@ export interface ConfigsSaveOutcome {
 export interface RequirementsImportDefaults {
   filePath: string//需求分析表默认路径，空表示每次选择
   sheetName: string//默认工作表名，空表示优先挑名字含「需求」的表
-  headerRow: number//表头行号，0 表示自动探测
+  headerRow: number//表头行号（1 基），0 表示自动探测
   idCol: string//需求ID列（Excel 列字母），空表示自动探测
   nameCol: string//需求名称列
   detailCol: string//需求详情列
@@ -129,11 +129,11 @@ export type SettingsPickKind =
   | 'requirements-sheet'
 /** 需求表的列位置配置（不含文件位置），表头探测后可在导入界面确认与调整 */
 export interface RequirementsColumnMapping {
-  headerRow: number// 表头所在行号
-  idCol: string | number// 需求ID列号
-  nameCol: string | number// 需求名称列号
-  detailCol: string | number// 需求详情列号
-  vehicleStartCol: string | number//车型起始列号
+  headerRow: number// 表头所在行号（1 基，与 Excel 行号一致）
+  idCol: string | number// 需求ID列号（1 基列号或 Excel 列字母）
+  nameCol: string | number// 需求名称列号（1 基列号或 Excel 列字母）
+  detailCol: string | number// 需求详情列号（1 基列号或 Excel 列字母）
+  vehicleStartCol: string | number//车型起始列号（1 基列号或 Excel 列字母）
 }
 /** 需求导入配置 */
 export interface RequirementsParseConfig extends RequirementsColumnMapping {
@@ -154,14 +154,14 @@ export interface RequirementSheetColumn {
 export interface RequirementSheetProbe {
   sheetName: string
   rowCount: number// 工作表总行数
-  headerRow: number// 识别出的表头行号
+  headerRow: number// 识别出的表头行号（1 基）
   mapping: RequirementsColumnMapping// 建议的列配置
   columns: RequirementSheetColumn[]// 探测区间内的列，按列号顺序
   notes: string[]// 探测过程中的提示（如某列是兜底推断的）
 }
 /** 需求表解析告警：不阻断导入，逐条列给用户确认 */
 export interface RequirementsParseWarning {
-  row: number// 出问题的行号（1 基），0 表示整表级
+  row: number// 出问题的行号（1 基，与 Excel 行号一致），0 表示整表级
   message: string
 }
 /** 需求表解析统计 */

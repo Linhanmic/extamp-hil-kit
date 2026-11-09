@@ -29,3 +29,18 @@ export interface SlotMappingLoadOutcome {
   unconfigured?: boolean
   document?: SlotMappingDocument
 }
+
+/** 保存一个 SLOT 映射方案文件的结果 */
+export interface SlotMappingSaveOutcome {
+  error?: string
+  saved?: {
+    filePath: string
+    updatedAt: string
+  }
+}
+
+/** 删除一个 SLOT 映射方案文件的结果 */
+export interface SlotMappingDeleteOutcome {
+  error?: string
+  deleted?: boolean
+}

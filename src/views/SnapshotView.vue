@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import SnapshotFormDialog from '@/components/SnapshotFormDialog.vue'
 import { useSnapshotStore } from '@/stores/snapshot'
+import type { SnapshotFile } from '@/models'
 
 /**
  * 快照：统一读取目录下 snapshot.ini。
@@ -10,8 +12,38 @@ import { useSnapshotStore } from '@/stores/snapshot'
 const store = useSnapshotStore()
 const selectedIndex = ref(0)
 const vehicleFilter = ref('')
-const createVisible = ref(false)
-const canAppend = computed(() => Boolean(window.desktop?.snapshot?.append))
+const formVisible = ref(false)
+const editingFile = ref<SnapshotFile | null>(null)
+const canEdit = computed(() => Boolean(window.desktop?.snapshot?.save))
+
+function openCreate() {
+  editingFile.value = null
+  formVisible.value = true
+}
+
+function openEdit(file: SnapshotFile) {
+  editingFile.value = file
+  formVisible.value = true
+}
+
+async function removeSection(file: SnapshotFile) {
+  try {
+    await ElMessageBox.confirm(`确定删除快照分节「${file.name}」及其 ${file.channels.length} 个通道？`, '删除快照', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+  const result = await store.removeSection(file.name)
+  if (result.ok) {
+    selectedIndex.value = 0
+    ElMessage.success('快照分节已删除')
+  } else {
+    ElMessage.error(result.error)
+  }
+}
 
 const vehicleOptions = computed(() => {
   const names = new Set<string>()
@@ -45,12 +77,7 @@ watch(
           <h1 class="text-lg font-medium text-ink">扬声器快照</h1>
         </div>
         <div class="col-span-5 justify-self-end">
-          <el-button
-            size="small"
-            type="primary"
-            :disabled="!canAppend"
-            @click="createVisible = true"
-          >
+          <el-button size="small" type="primary" :disabled="!canEdit" @click="openCreate">
             新增快照
           </el-button>
         </div>
@@ -119,8 +146,18 @@ watch(
         <!-- 右：车型与通道 -->
         <div class="col-span-9 min-w-0">
           <div v-if="selectedFile" class="border border-line">
-            <div class="border-b border-line bg-surface-soft px-3 py-2">
-              <h2 class="text-[13px] font-medium break-all text-ink">{{ selectedFile.name }}</h2>
+            <div class="grid grid-cols-12 items-center border-b border-line bg-surface-soft px-3 py-2">
+              <h2 class="col-span-8 text-[13px] font-medium break-all text-ink">
+                {{ selectedFile.name }}
+              </h2>
+              <div class="col-span-4 flex justify-end gap-1">
+                <el-button size="small" link type="primary" @click="openEdit(selectedFile)">
+                  编辑
+                </el-button>
+                <el-button size="small" link type="danger" @click="removeSection(selectedFile)">
+                  删除
+                </el-button>
+              </div>
             </div>
             <div
               v-for="channel in selectedFile.channels"
@@ -142,9 +179,6 @@ watch(
       </div>
     </div>
 
-    <SnapshotFormDialog
-      v-model="createVisible"
-      @added="selectedIndex = Math.max(0, visibleFiles.length - 1)"
-    />
+    <SnapshotFormDialog v-model="formVisible" :file="editingFile" />
   </div>
 </template>

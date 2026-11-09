@@ -107,7 +107,7 @@ function formatTime(value: string): string {
               <el-option v-for="name in sheets" :key="name" :label="name" :value="name" />
             </el-select>
           </div>
-          <label class="col-span-2 text-[11px] text-ink-muted">表头行</label>
+          <label class="col-span-2 text-[11px] text-ink-muted">表头行（1 起）</label>
           <div class="col-span-4">
             <el-input-number
               :model-value="mapping.headerRow"

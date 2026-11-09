@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { Requirement } from '@/models'
+import type { Requirement, Variant } from '@/models'
 import { useConfigsStore } from '@/stores/configs'
 import { useRequirementsStore } from '@/stores/requirements'
 import {
@@ -17,6 +17,11 @@ const props = defineProps<{
   requirements: Requirement[]
   /** 展开区按变体关联状态过滤；空串显示全部 */
   variantStatus?: '' | 'linked' | 'unlinked'
+}>()
+
+const emit = defineEmits<{
+  /** 从某个变体创建配置：需求 + 变体一起回给页面，由页面打开配置表单 */
+  (event: 'create-config', requirement: Requirement, variant: Variant): void
 }>()
 
 const configsStore = useConfigsStore()
@@ -74,23 +79,36 @@ function visibleVariants(requirement: Requirement) {
   const keys = props.variantStatus === 'linked' ? association.linkedKeys : association.unlinkedKeys
   return requirement.variants.filter((variant) => keys.includes(variant.key))
 }
+
+/** 需求行上的「创建配置」：取该需求第一个变体；需求没有变体时按「无变体差异」处理 */
+function createConfigFromRequirement(requirement: Requirement) {
+  const variant: Variant = requirement.variants[0] ?? {
+    requirement_id: requirement.id,
+    key: '',
+    content: [],
+    vehicles: [],
+  }
+  emit('create-config', requirement, variant)
+}
 </script>
 
 <template>
-  <!-- @grid A：首层与展开明细统一 12 列，需求 6 · 数量 1 · 状态 2 · 映射 3 -->
+  <!-- @grid A：首层与展开明细统一 12 列，需求 5 · 数量 1 · 状态 2 · 映射 2 · 操作 2；
+    明细 变体内容 5 · 车型 3 · 状态 2 · 操作 2。 -->
   <div class="min-w-0 border border-line">
     <div
       class="grid grid-cols-12 items-center gap-0 border-b border-line bg-surface-soft text-[11px] font-medium text-ink"
     >
-      <div class="col-span-6 px-3 py-2">需求名称</div>
+      <div class="col-span-5 px-3 py-2">需求名称</div>
       <div class="col-span-1 px-2 py-2 text-center">变体数量</div>
       <div class="col-span-2 px-2 py-2 text-center">关联状态</div>
-      <div class="col-span-3 px-2 py-2 text-center">映射</div>
+      <div class="col-span-2 px-2 py-2 text-center">映射</div>
+      <div class="col-span-2 px-2 py-2 text-center">操作</div>
     </div>
 
     <template v-for="requirement in requirements" :key="requirement.id">
       <div class="grid grid-cols-12 items-center gap-0 border-b border-line">
-        <div class="col-span-6 flex min-w-0 items-center gap-1 px-2 py-2">
+        <div class="col-span-5 flex min-w-0 items-center gap-1 px-2 py-2">
           <button
             type="button"
             class="grid size-5 shrink-0 place-items-center rounded text-ink-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -129,7 +147,7 @@ function visibleVariants(requirement: Requirement) {
             {{ statusLabels[associations.get(requirement.id)!.status] }}
           </el-tag>
         </div>
-        <div class="col-span-3 flex items-center justify-center px-2 py-2">
+        <div class="col-span-2 flex items-center justify-center px-2 py-2">
           <el-segmented
             :model-value="requirementsStore.isParticipating(requirement.id) ? 'participate' : 'skip'"
             size="small"
@@ -139,6 +157,17 @@ function visibleVariants(requirement: Requirement) {
             ]"
             @update:model-value="setParticipating(requirement.id, $event)"
           />
+        </div>
+        <div class="col-span-2 flex items-center justify-center gap-1 px-2 py-2">
+          <el-button
+            size="small"
+            link
+            type="primary"
+            title="按该需求第一个变体创建一条配置值"
+            @click="createConfigFromRequirement(requirement)"
+          >
+            创建配置
+          </el-button>
         </div>
       </div>
 
@@ -154,14 +183,17 @@ function visibleVariants(requirement: Requirement) {
           </p>
         </div>
         <div class="grid grid-cols-12 items-center gap-0 border-b border-line/60">
-          <div class="col-span-6 px-2 py-1.5 pl-8 text-[11px] font-medium text-ink-muted">
+          <div class="col-span-5 px-2 py-1.5 pl-8 text-[11px] font-medium text-ink-muted">
             变体内容
           </div>
-          <div class="col-span-4 px-2 py-1.5 text-[11px] font-medium text-ink-muted">
+          <div class="col-span-3 px-2 py-1.5 text-[11px] font-medium text-ink-muted">
             适用车型
           </div>
           <div class="col-span-2 px-2 py-1.5 text-center text-[11px] font-medium text-ink-muted">
             关联状态
+          </div>
+          <div class="col-span-2 px-2 py-1.5 text-center text-[11px] font-medium text-ink-muted">
+            操作
           </div>
         </div>
         <div
@@ -170,13 +202,13 @@ function visibleVariants(requirement: Requirement) {
           class="grid grid-cols-12 items-center gap-0 border-b border-line/30"
         >
           <p
-            class="col-span-6 min-w-0 truncate px-2 py-1.5 pl-8 text-[11px] text-ink"
+            class="col-span-5 min-w-0 truncate px-2 py-1.5 pl-8 text-[11px] text-ink"
             :title="variant.content[0] ?? '无变体差异'"
           >
             {{ variant.content[0] ?? '无变体差异' }}
           </p>
           <p
-            class="col-span-4 min-w-0 truncate px-2 py-1.5 text-[11px] text-ink"
+            class="col-span-3 min-w-0 truncate px-2 py-1.5 text-[11px] text-ink"
             :title="joinVehicles(variant.vehicles)"
           >
             {{ joinVehicles(variant.vehicles) }}
@@ -189,6 +221,16 @@ function visibleVariants(requirement: Requirement) {
             >
               {{ associations.get(requirement.id)!.linkedKeys.includes(variant.key) ? '已关联' : '未关联' }}
             </el-tag>
+          </div>
+          <div class="col-span-2 flex items-center justify-center px-2 py-1.5">
+            <el-button
+              size="small"
+              link
+              type="primary"
+              @click="emit('create-config', requirement, variant)"
+            >
+              创建配置
+            </el-button>
           </div>
         </div>
         <p

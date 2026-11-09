@@ -295,7 +295,7 @@ async function submit() {
                 placeholder="留空自动挑含「需求」的表"
               />
             </div>
-            <label class="col-span-2 text-[11px] text-ink-muted">表头行</label>
+            <label class="col-span-2 text-[11px] text-ink-muted">表头行（1 起）</label>
             <div class="col-span-3">
               <el-input-number
                 v-model="form.requirementsImport.headerRow"

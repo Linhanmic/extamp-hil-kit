@@ -39,12 +39,19 @@ describe('列号换算', () => {
 })
 
 describe('变体内容键', () => {
-  it('抹掉空白、标点与控制字符后视为同一个变体', () => {
+  it('抹掉空白与控制字符后视为同一个变体', () => {
     const key = variantKey('变体1')
-    expect(variantKey('变体 1。')).toBe(key)
+    expect(variantKey('变体 1')).toBe(key)
     expect(variantKey('变体1\n')).toBe(key)
     expect(variantKey('变体１')).toBe(key) // 全角数字经 NFKC 归一
     expect(variantKey('变体2')).not.toBe(key)
+  })
+
+  it('保留破折号与实心点，不把不同变体合并成一个', () => {
+    expect(variantKey('变体1。')).toBe('变体1。')
+    expect(variantKey('前门—中置')).toBe('前门—中置')
+    expect(variantKey('●左前高音')).toBe('●左前高音')
+    expect(variantKey('变体1。')).not.toBe(variantKey('变体1'))
   })
 })
 
@@ -120,7 +127,7 @@ describe('parseRequirements', () => {
     const result = parseRequirements(
       table([
         ['需求ID', '需求名称', '需求详情', 'HFAF', 'EFSS', 'HCHE'],
-        ['REQ_1', '音源控制', '…', '●变体1', '●变体 1。', '●变体2'],
+        ['REQ_1', '音源控制', '…', '●变体1', '●变体 1', '●变体2'],
       ]),
       MAPPING,
     )
@@ -129,7 +136,23 @@ describe('parseRequirements', () => {
     expect(variants).toHaveLength(2)
     expect(variants[0]).toMatchObject({ key: '变体1', vehicles: ['HFAF', 'EFSS'] })
     // 原始描述全保留，便于回溯表里到底怎么写的
-    expect(variants[0]!.content).toEqual(['变体1', '变体 1。'])
+    expect(variants[0]!.content).toEqual(['变体1', '变体 1'])
+  })
+
+  it('变体描述里的破折号、实心点原样保留，不因去标点而被合并或丢失', () => {
+    const result = parseRequirements(
+      table([
+        ['需求ID', '需求名称', '需求详情', 'HFAF', 'EFSS'],
+        ['REQ_1', '音源控制', '…', '●前门—中置', '●前门中置'],
+      ]),
+      MAPPING,
+    )
+
+    const variants = result.requirements[0]!.variants
+    expect(variants).toHaveLength(2)
+    expect(variants[0]!.key).toBe('前门—中置')
+    expect(variants[0]!.content).toEqual(['前门—中置'])
+    expect(variants[1]!.key).toBe('前门中置')
   })
 
   it('车型名归一化：去空白、连字符转下划线，一个表头多车型按 / 、 ; 拆分', () => {

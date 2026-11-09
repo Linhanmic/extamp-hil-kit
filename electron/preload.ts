@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld('desktop', {
   },
   output: {
     load: () => ipcRenderer.invoke('output:load'),
+    save: (text: string) => ipcRenderer.invoke('output:save', text),
   },
   meter: {
     load: () => ipcRenderer.invoke('meter:load'),
@@ -56,11 +57,13 @@ contextBridge.exposeInMainWorld('desktop', {
   },
   slotMap: {
     load: () => ipcRenderer.invoke('slot-map:load'),
+    save: (fileName: string, text: string) =>
+      ipcRenderer.invoke('slot-map:save', fileName, text),
+    delete: (fileName: string) => ipcRenderer.invoke('slot-map:delete', fileName),
   },
   snapshot: {
     load: () => ipcRenderer.invoke('snapshot:load'),
-    append: (section: string, speakers: string[]) =>
-      ipcRenderer.invoke('snapshot:append', section, speakers),
+    save: (text: string) => ipcRenderer.invoke('snapshot:save', text),
   },
   specs: {
     list: () => ipcRenderer.invoke('specs:list'),

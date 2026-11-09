@@ -370,6 +370,37 @@ export const useConfigsStore = defineStore('configs', () => {
     return persist(configurations.value.filter((item) => item.config_key !== configKey))
   }
 
+  /** 从需求创建配置：配置项不存在就一并新建，配置项与配置值一次落盘 */
+  async function createConfigurationValue(
+    configKey: string,
+    input: ConfigValueInput,
+  ): Promise<SaveResult> {
+    const name = configKey.trim()
+    if (!name) return { ok: false, error: '配置项名称不能为空' }
+    const text = input.value.trim()
+    if (!text) return { ok: false, error: '配置值不能为空' }
+
+    const existing = configurations.value.find((item) => item.config_key === name)
+    if (existing?.config_value.some((value) => value.value === text)) {
+      return { ok: false, error: `配置值「${text}」已存在` }
+    }
+
+    const nextValue: ConfigValue = {
+      config_key: name,
+      value: text,
+      relay_variants: input.relay_variants,
+      special_vehicles: input.special_vehicles,
+    }
+    const next = existing
+      ? configurations.value.map((item) =>
+          item.config_key === name
+            ? { ...item, config_value: [...item.config_value, nextValue] }
+            : item,
+        )
+      : [...configurations.value, { config_key: name, config_value: [nextValue] }]
+    return persist(next)
+  }
+
   async function addConfigValue(configKey: string, input: ConfigValueInput): Promise<SaveResult> {
     const configuration = configurations.value.find((item) => item.config_key === configKey)
     if (!configuration) return missingConfiguration(configKey)
@@ -519,6 +550,7 @@ export const useConfigsStore = defineStore('configs', () => {
     addConfiguration,
     renameConfiguration,
     removeConfiguration,
+    createConfigurationValue,
     addConfigValue,
     updateConfigValue,
     removeConfigValue,

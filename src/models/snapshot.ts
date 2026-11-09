@@ -25,8 +25,8 @@ export interface SnapshotLoadOutcome {
   document?: SnapshotDocument
 }
 
-/** 追加一个快照分节的结果 */
-export interface SnapshotAppendOutcome {
+/** 整份写回 snapshot.ini 的结果（新增 / 编辑 / 删除分节都走这一条） */
+export interface SnapshotSaveOutcome {
   error?: string
   unconfigured?: boolean
   saved?: {

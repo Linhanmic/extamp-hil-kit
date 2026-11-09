@@ -74,7 +74,7 @@
         "requirement_id": { "type": "string", "minLength": 1 },
         "key": {
           "type": "string",
-          "description": "内容键：变体描述经 NFKC 归一后去掉控制字符、空白、标点；空串表示该需求在这些车型上无变体差异"
+          "description": "内容键：变体描述经 NFKC 归一后去掉控制字符与空白，破折号、实心点等标点符号保留；空串表示该需求在这些车型上无变体差异"
         },
         "content": {
           "type": "array",

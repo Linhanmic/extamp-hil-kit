@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useOutputStore } from '@/stores/output'
 import { useConceptsStore } from '@/stores/concepts'
-import { extractParams, serializeConcepts, validateConcepts } from '@/spec/concept-file'
+import { serializeConcepts, validateConcepts } from '@/spec/concept-file'
+import {
+  buildVehicleConcepts,
+  planOutputConcepts,
+  summarizeMerge,
+} from '@/composables/vehicle-assets'
+import OutputScenarioFormDialog from '@/components/OutputScenarioFormDialog.vue'
+import type { OutputScenario } from '@/models'
 
 /**
  * 出声位置：场景文本 + 车型单选筛选。
@@ -50,20 +57,56 @@ function keywordText(keywords: string[]): string {
   return keywords.length ? keywords.join('、') : '-'
 }
 
-/** 按当前车型筛选生成一个 cpt；全部车型场景也会包含 */
+/** 场景增删改：编辑传下标，新增传 null */
+const formVisible = ref(false)
+const editingScenario = ref<OutputScenario | null>(null)
+const editingIndex = ref<number | null>(null)
+
+function openCreateScenario() {
+  editingScenario.value = null
+  editingIndex.value = null
+  formVisible.value = true
+}
+
+function openEditScenario(scenario: OutputScenario) {
+  const index = store.scenarios.indexOf(scenario)
+  if (index < 0) return
+  editingScenario.value = scenario
+  editingIndex.value = index
+  formVisible.value = true
+}
+
+async function removeScenario(scenario: OutputScenario) {
+  const index = store.scenarios.indexOf(scenario)
+  if (index < 0) return
+  try {
+    await ElMessageBox.confirm(`确定删除场景「${scenario.title || '未命名场景'}」？`, '删除场景', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+  const result = await store.removeScenario(index)
+  if (result.ok) ElMessage.success('场景已删除')
+  else ElMessage.error(result.error)
+}
+
+/** 生成只看磁盘数据与当前车型，不受页面筛选影响 */
+const generatePlan = computed(() => planOutputConcepts(store.scenarios, vehicleFilter.value))
+const canGenerate = computed(
+  () => Boolean(vehicleFilter.value) && generatePlan.value.defaults.length + generatePlan.value.vehicleSpecific.length > 0,
+)
+
+/** 按当前车型生成 cpt：默认项 + 车型差异项，同名默认项由车型版本替换 */
 async function generateVehicleCpt() {
   const vehicle = vehicleFilter.value
   const api = window.desktop?.concepts
   if (!vehicle || !api?.generate) return
 
-  const concepts = filteredScenarios.value
-    .filter((scenario) => scenario.steps.length)
-    .map((scenario) => ({
-      heading: scenario.title || '未命名场景',
-      params: extractParams(scenario.title),
-      steps: scenario.steps.map((text) => ({ text, table: null })),
-    }))
-  const issues = validateConcepts(concepts)
+  const merged = buildVehicleConcepts(generatePlan.value)
+  const issues = validateConcepts(merged.concepts)
   if (issues.length) {
     ElMessage.error(issues[0]!.message)
     return
@@ -72,9 +115,9 @@ async function generateVehicleCpt() {
   generating.value = true
   try {
     const fileName = `${vehicle.replace(/[\\/:*?"<>|]/g, '_')}.cpt`
-    const outcome = await api.generate(fileName, serializeConcepts(concepts))
+    const outcome = await api.generate(fileName, serializeConcepts(merged.concepts))
     if (outcome.saved) {
-      ElMessage.success(`已生成 ${outcome.saved.filePath}`)
+      ElMessage.success(`已生成 ${outcome.saved.filePath}（${summarizeMerge(merged)}）`)
       await conceptsStore.load()
     } else {
       ElMessage.error(outcome.error ?? '生成 cpt 失败')
@@ -93,15 +136,18 @@ async function generateVehicleCpt() {
   <div class="flex flex-col gap-3">
     <div class="w-[calc(11.5/12*100%)]">
       <div class="grid grid-cols-12 items-center gap-2">
-        <div class="col-span-7">
+        <div class="col-span-6">
           <h1 class="text-lg font-medium text-ink">出声位置</h1>
         </div>
-        <div class="col-span-5 justify-self-end">
+        <div class="col-span-2">
+          <el-button size="small" @click="openCreateScenario">新增场景</el-button>
+        </div>
+        <div class="col-span-4 justify-self-end">
           <el-button
             size="small"
             type="primary"
             :loading="generating"
-            :disabled="!vehicleFilter || !filteredScenarios.some((scenario) => scenario.steps.length)"
+            :disabled="!canGenerate"
             @click="generateVehicleCpt"
           >
             按车型生成 CPT
@@ -161,9 +207,22 @@ async function generateVehicleCpt() {
           <h2 class="text-sm font-medium text-ink">
             {{ scenario.title || '（未命名场景）' }}
           </h2>
-          <p class="mt-1 truncate text-[11px] text-ink-muted" :title="vehicleText(scenario)">
-            适用车型：{{ vehicleText(scenario) }}
-          </p>
+          <div class="mt-1 grid grid-cols-12 items-center gap-2">
+            <p
+              class="col-span-9 min-w-0 truncate text-[11px] text-ink-muted"
+              :title="vehicleText(scenario)"
+            >
+              适用车型：{{ vehicleText(scenario) }}
+            </p>
+            <div class="col-span-3 flex justify-end gap-1">
+              <el-button size="small" link type="primary" @click="openEditScenario(scenario)">
+                编辑
+              </el-button>
+              <el-button size="small" link type="danger" @click="removeScenario(scenario)">
+                删除
+              </el-button>
+            </div>
+          </div>
 
           <ol v-if="scenario.steps.length" class="mt-2 flex flex-col gap-0.5">
             <li
@@ -185,5 +244,11 @@ async function generateVehicleCpt() {
       </div>
       <el-empty v-else :description="emptyText" />
     </div>
+
+    <OutputScenarioFormDialog
+      v-model="formVisible"
+      :scenario="editingScenario"
+      :index="editingIndex"
+    />
   </div>
 </template>

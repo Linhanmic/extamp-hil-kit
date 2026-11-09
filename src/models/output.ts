@@ -22,3 +22,12 @@ export interface OutputLoadOutcome {
   unconfigured?: boolean
   document?: OutputDocument
 }
+
+/** 出声位置整份写回的结果 */
+export interface OutputSaveOutcome {
+  error?: string
+  saved?: {
+    filePath: string
+    updatedAt: string
+  }
+}

@@ -117,16 +117,16 @@ describe('parseSpec', () => {
 })
 
 describe('updateSpecTags', () => {
-  it('替换已有 tags 行，保留用户标签，追加车型标签', () => {
+  it('整行清除旧 tags 后只写车型标签', () => {
     const parsed = parseSpec(SPEC_TEXT)
-    const result = updateSpecTags(parsed, () => ['HFAF', 'HCHE'], UNIVERSE)
+    const result = updateSpecTags(parsed, () => ['HFAF', 'HCHE'])
 
     const lines = result.text.split('\n')
-    expect(lines[7]).toBe('tags: 旧标签, HFAF, HCHE')
+    expect(lines[7]).toBe('tags: HFAF, HCHE')
     expect(result.changed).toBe(true)
     expect(result.changes[0]).toMatchObject({
       before: ['旧标签'],
-      after: ['旧标签', 'HFAF', 'HCHE'],
+      after: ['HFAF', 'HCHE'],
     })
     expect(lines[0]).toBe('适用条件:媒体音源默认值-0x0无音源')
     expect(lines[6]).toBe('适用条件:示例参数-示例配置值1')
@@ -135,7 +135,7 @@ describe('updateSpecTags', () => {
 
   it('没有 tags 行时在标题（或适用条件）之后补一行', () => {
     const parsed = parseSpec(SPEC_TEXT)
-    const result = updateSpecTags(parsed, () => ['YU2'], UNIVERSE)
+    const result = updateSpecTags(parsed, () => ['YU2'])
     const lines = result.text.split('\n')
 
     expect(lines[11]).toBe('## 场景二')
@@ -144,26 +144,26 @@ describe('updateSpecTags', () => {
 
   it('没有车型适用时标签改为不适用，清掉旧的车型标签', () => {
     const parsed = parseSpec(['# T', '## A', 'tags: 旧标签, HFAF', '## B', 'tags: 不适用'].join('\n'))
-    const result = updateSpecTags(parsed, () => [], UNIVERSE)
+    const result = updateSpecTags(parsed, () => [])
     const lines = result.text.split('\n')
 
-    expect(lines[2]).toBe('tags: 旧标签, 不适用')
+    expect(lines[2]).toBe('tags: 不适用')
     expect(lines[4]).toBe('tags: 不适用')
     expect(result.changes[1]).toMatchObject({ before: ['不适用'], after: ['不适用'] })
   })
 
   it('多行标签会合并为一行', () => {
     const parsed = parseSpec(['# T', '## A', 'tags: t1, t2,', 't3'].join('\n'))
-    const result = updateSpecTags(parsed, () => ['YU2'], UNIVERSE)
+    const result = updateSpecTags(parsed, () => ['YU2'])
     const lines = result.text.split('\n')
 
-    expect(lines[2]).toBe('tags: t1, t2, t3, YU2')
+    expect(lines[2]).toBe('tags: YU2')
     expect(result.text.split('\n')).toHaveLength(3) // 续行被并入
   })
 
   it('标签没有变化时 changed 为 false', () => {
     const parsed = parseSpec(['# T', '## A', 'tags: 不适用'].join('\n'))
-    const result = updateSpecTags(parsed, () => [], UNIVERSE)
+    const result = updateSpecTags(parsed, () => [])
     expect(result.changed).toBe(false)
     expect(result.text).toBe(['# T', '## A', 'tags: 不适用'].join('\n'))
   })
@@ -177,7 +177,7 @@ describe('analyzeSpec', () => {
     expect(analysis.vehicles[1]).toEqual(['HFAF', 'HCHE'])
 
     const lines = analysis.newText.split('\n')
-    expect(lines[7]).toBe('tags: 旧标签, HCHE')
+    expect(lines[7]).toBe('tags: HCHE')
     expect(lines[11]).toBe('## 场景二')
     expect(lines[12]).toBe('tags: HFAF, HCHE')
     expect(analysis.changed).toBe(true)
@@ -188,7 +188,7 @@ describe('analyzeSpec', () => {
     const analysis = analyzeSpec(text, RESOLVER, UNIVERSE)
 
     expect(analysis.vehicles[0]).toEqual([])
-    expect(analysis.newText.split('\n')[3]).toBe('tags: 旧标签, 不适用')
+    expect(analysis.newText.split('\n')[3]).toBe('tags: 不适用')
     expect(analysis.changed).toBe(true)
   })
 

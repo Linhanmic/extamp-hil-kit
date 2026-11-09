@@ -10,8 +10,8 @@
  *
  * 更新逻辑只重写各场景的 `tags:` 行，不动 `适用条件:` 与正文，保持行尾风格不变：
  *   1. 算出场景适用车型（规格书条件 ∩ 场景条件）。
- *   2. 去掉旧的「车型标签」（已知车型名 + 不适用），保留用户自己的标签。
- *   3. 追加新的车型标签；没有车型适用时标签内容改为 `不适用`。
+ *   2. tags 行整行清除后重写：原有标签（含手工标签）全部丢弃，只写算出的车型。
+ *   3. 没有车型适用时标签内容改为 `不适用`。
  *   4. 没有标签的场景在标题（或适用条件）之后补一行；多行 / 多段标签合并为一行。
  *
  * 全部是纯函数（文本进、文本出），便于单测。
@@ -211,15 +211,14 @@ export function parseSpec(text: string): ParsedSpec {
 /**
  * 按算好的车型更新场景标签。
  *
- * 只重写各场景的 `tags:` 行：已知车型名与 `不适用` 视为本功能维护的标签，先清掉再追加，
- * 用户自己的标签原样保留，因此重复执行是幂等的。多行 / 多段标签会合并为一行。
+ * 只重写各场景的 `tags:` 行，且整行重写：原有标签一律清除，只写本功能算出的车型；
+ * 没有车型适用时写 `不适用`，因此重复执行是幂等的且不会残留旧车型。多行 / 多段标签
+ * 会合并为一行。
  */
 export function updateSpecTags(
   parsed: ParsedSpec,
   vehiclesFor: (scenario: SpecScenario, index: number) => string[],
-  universe: string[],
 ): { text: string; changes: TagChange[]; changed: boolean } {
-  const universeSet = new Set(universe)
   const changes: TagChange[] = []
   const deleteSet = new Set<number>()
   const replaceMap = new Map<number, string>()
@@ -227,9 +226,7 @@ export function updateSpecTags(
 
   parsed.scenarios.forEach((scenario, index) => {
     const vehicles = vehiclesFor(scenario, index)
-    const managed = vehicles.length ? vehicles : ['不适用']
-    const userTags = scenario.tags.filter((tag) => tag !== '不适用' && !universeSet.has(tag))
-    const newTags = dedupe([...userTags, ...managed])
+    const newTags = dedupe(vehicles.length ? vehicles : ['不适用'])
     const tagLine = `tags: ${newTags.join(', ')}`
     changes.push({
       scenarioHeading: scenario.heading,
@@ -299,7 +296,7 @@ export function analyzeSpec(
     return scenarioVehicles.filter((vehicle) => allowed.has(vehicle))
   })
 
-  const updated = updateSpecTags(parsed, (_scenario, index) => vehicles[index] ?? [], universe)
+  const updated = updateSpecTags(parsed, (_scenario, index) => vehicles[index] ?? [])
 
   return {
     parsed,

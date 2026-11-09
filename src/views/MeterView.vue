@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import VolumeCurveChart from '@/components/VolumeCurveChart.vue'
 import VolumeFormDialog from '@/components/VolumeFormDialog.vue'
 import { useMeterStore } from '@/stores/meter'
@@ -32,6 +33,21 @@ function openCreate() {
 function openEdit(row: VolumeTableRow) {
   editingRow.value = row
   formVisible.value = true
+}
+
+async function removeRow(row: VolumeTableRow) {
+  try {
+    await ElMessageBox.confirm(`确定删除「${row.vehicle} · ${row.source}」这一行音量数据？`, '删除音量行', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+  const result = await store.deleteRow(row)
+  if (result.ok) ElMessage.success('已删除')
+  else ElMessage.error(result.error)
 }
 
 const sourceOptions = computed(() => {
@@ -196,6 +212,7 @@ const emptyText = computed(() =>
               </td>
               <td class="border-b border-line px-2 py-1.5 whitespace-nowrap">
                 <el-button size="small" link type="primary" @click="openEdit(row)">编辑</el-button>
+                <el-button size="small" link type="danger" @click="removeRow(row)">删除</el-button>
               </td>
             </tr>
           </tbody>

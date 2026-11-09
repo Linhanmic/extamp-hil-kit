@@ -2,8 +2,10 @@
 import { computed, ref } from 'vue'
 import RequirementImportDialog from '@/components/RequirementImportDialog.vue'
 import RequirementAssociationTable from '@/components/RequirementAssociationTable.vue'
+import ConfigValueFormDialog from '@/components/ConfigValueFormDialog.vue'
 import { useConfigsStore } from '@/stores/configs'
 import { useRequirementsStore } from '@/stores/requirements'
+import type { Requirement, Variant, VariantRef } from '@/models'
 import {
   analyzeRequirementAssociation,
   missingRequirementNames,
@@ -87,6 +89,18 @@ const orphanNames = computed(() =>
 
 async function onImported() {
   await store.load()
+}
+
+/**
+ * 从需求创建配置：把该需求变体作为关联变体带进配置值表单，
+ * 配置项留空——可在表单里选已有配置项或直接输入新名称。
+ */
+const createConfigVisible = ref(false)
+const createConfigRefs = ref<VariantRef[]>([])
+
+function onCreateConfig(requirement: Requirement, variant: Variant) {
+  createConfigRefs.value = [{ requirement_name: requirement.name, variant_key: variant.key }]
+  createConfigVisible.value = true
 }
 </script>
 
@@ -196,10 +210,18 @@ async function onImported() {
         v-else-if="filteredRequirements.length"
         :requirements="filteredRequirements"
         :variant-status="variantStatusFilter"
+        @create-config="onCreateConfig"
       />
       <el-empty v-else :description="emptyText" />
     </div>
 
     <RequirementImportDialog v-model="importVisible" @imported="onImported" />
+    <!-- 从需求创建配置：配置项可新建，关联变体已预置 -->
+    <ConfigValueFormDialog
+      v-model="createConfigVisible"
+      :config-value="null"
+      allow-new-configuration
+      :initial-refs="createConfigRefs"
+    />
   </div>
 </template>

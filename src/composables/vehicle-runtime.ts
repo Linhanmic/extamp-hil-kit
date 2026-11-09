@@ -7,7 +7,7 @@ import { useRequirementsStore } from '@/stores/requirements'
 import { useSettingsStore } from '@/stores/settings'
 import { useSlotMapStore } from '@/stores/slotMap'
 import { useSpecsStore } from '@/stores/specs'
-import { buildOutputConcepts, buildSlotConcepts } from './vehicle-assets'
+import { buildVehicleConcepts, planOutputConcepts, planSlotConcepts, summarizeMerge } from './vehicle-assets'
 
 export interface VehicleConfigureResult {
   ok: boolean
@@ -92,32 +92,37 @@ export async function configureVehicleAssets(vehicle: string): Promise<VehicleCo
     steps.push('车型 tags：已是最新')
   }
 
-  // 4. 重建出声位置目标 CPT
-  const outputConcepts = buildOutputConcepts(outputStore.scenarios, name)
-  if (outputStore.scenarios.length && outputConcepts.length) {
+  // 4. 重建出声位置目标 CPT：默认项 + 车型差异，同名默认项由车型版本替换
+  const outputPlan = planOutputConcepts(outputStore.scenarios, name)
+  const outputMerge = buildVehicleConcepts(outputPlan)
+  if (outputStore.scenarios.length && outputMerge.concepts.length) {
     if (!conceptsApi?.generate) return fail(steps, '目标 CPT 生成只在桌面端可用')
-    const issues = validateConcepts(outputConcepts)
+    const issues = validateConcepts(outputMerge.concepts)
     if (issues.length) return fail(steps, issues[0]!.message)
-    const outcome = await conceptsApi.generate(`${name}.cpt`, serializeConcepts(outputConcepts))
+    const outcome = await conceptsApi.generate(
+      `${name}.cpt`,
+      serializeConcepts(outputMerge.concepts),
+    )
     if (!outcome.saved) return fail(steps, outcome.error ?? '出声位置目标 CPT 生成失败')
-    steps.push(`出声位置目标 CPT：${outcome.saved.filePath}`)
+    steps.push(`出声位置目标 CPT：${outcome.saved.filePath}（${summarizeMerge(outputMerge)}）`)
     generated = true
   } else {
     steps.push('出声位置目标 CPT：跳过（无适用场景）')
   }
 
-  // 5. 重建 SLOT 映射目标 CPT
-  const slotConcepts = buildSlotConcepts(slotStore.plans, name)
-  if (slotStore.plans.length && slotConcepts.length) {
+  // 5. 重建 SLOT 映射目标 CPT：同样是默认项 + 车型差异合并
+  const slotPlan = planSlotConcepts(slotStore.plans, name)
+  const slotMerge = buildVehicleConcepts(slotPlan)
+  if (slotStore.plans.length && slotMerge.concepts.length) {
     if (!conceptsApi?.generateSlot) return fail(steps, 'SLOT 目标 CPT 生成只在桌面端可用')
-    const issues = validateConcepts(slotConcepts)
+    const issues = validateConcepts(slotMerge.concepts)
     if (issues.length) return fail(steps, issues[0]!.message)
     const outcome = await conceptsApi.generateSlot(
       `${name}-SLOT.cpt`,
-      serializeConcepts(slotConcepts),
+      serializeConcepts(slotMerge.concepts),
     )
     if (!outcome.saved) return fail(steps, outcome.error ?? 'SLOT 目标 CPT 生成失败')
-    steps.push(`SLOT 映射目标 CPT：${outcome.saved.filePath}`)
+    steps.push(`SLOT 映射目标 CPT：${outcome.saved.filePath}（${summarizeMerge(slotMerge)}）`)
     generated = true
   } else {
     steps.push('SLOT 映射目标 CPT：跳过（无适用映射）')

@@ -11,9 +11,10 @@
  *   —         不适用
  *   空         未填写
  *
- * 变体的合并规则来自模型注释：先按 NFKC 归一，再抹掉控制字符、空白字符、
- * 标点符号得到 `key`，key 相同的单元格合并成同一个 Variant，原始描述进 `content`，
- * 车型进 `vehicles`——这样「除了控制字符其实一样」的变体不会重复膨胀。
+ * 变体的合并规则：先按 NFKC 归一，再抹掉控制字符与空白字符得到 `key`（破折号、实心点
+ * 等标点与符号原样保留），key 相同的单元格合并成同一个 Variant，原始描述进 `content`，
+ * 车型进 `vehicles`——这样「只差空格和换行」的变体不会重复膨胀，而「—」「●」这类
+ * 业务含义明确的符号不会被吞掉。
  */
 import type {
   Requirement,
@@ -114,15 +115,17 @@ export function classifyCell(value: SheetCell): CellMark {
     .trim()
   if (!raw) return { kind: 'blank' }
   if (APPLICABLE_BULLETS.includes(raw.charAt(0))) {
+    // 只去掉开头那个用作标记的符号；单元格正文里的破折号、实心点属于变体描述，原样保留
     return { kind: 'applicable', text: raw.slice(1).trim(), marked: true }
   }
   if (NOT_APPLICABLE_MARKS.has(raw.toLowerCase())) return { kind: 'notApplicable' }
   return { kind: 'applicable', text: raw, marked: false }
 }
 
-const KEY_STRIP = /[\p{Cc}\p{Cf}\p{Z}\p{P}]/gu
+// 只去控制字符与空白字符：破折号（—）、实心点（●）等标点符号是变体描述的一部分，不能删
+const KEY_STRIP = /[\p{Cc}\p{Cf}\p{Z}]/gu
 
-/** 变体内容键：NFKC 归一后去掉控制字符、空白字符与标点符号 */
+/** 变体内容键：NFKC 归一后去掉控制字符与空白字符，标点与符号原样保留 */
 export function variantKey(text: string): string {
   return text.normalize('NFKC').replace(KEY_STRIP, '')
 }

@@ -63,3 +63,6 @@ docs/config-display-prototype.html
 
 # 本地工具记忆缓存
 .workbuddy/
+
+# 并行会话留下的评审 diff（临时产物，不入库）
+.review*.diff

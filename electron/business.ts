@@ -1,20 +1,34 @@
 /**
- * 业务数据（主进程侧）：出声位置、音量表、SLOT 映射、扬声器快照的只读 IPC。
+ * 业务数据（主进程侧）：出声位置、音量表、SLOT 映射、扬声器快照的读写 IPC。
  *
  * 这些数据由项目设置里的路径指向，空串表示「还没配置」；读取时按项目根解析路径，
  * 没绑定项目或没配置路径都回 `unconfigured`，由界面提示去设置页配置。
+ * 写回只收渲染层生成好的整份文本，主进程负责路径解析、越界校验与落盘。
  */
 import { ipcMain } from 'electron'
 import type {
   OutputLoadOutcome,
+  OutputSaveOutcome,
   SlotMappingLoadOutcome,
+  SlotMappingSaveOutcome,
+  SlotMappingDeleteOutcome,
   SnapshotLoadOutcome,
-  SnapshotAppendOutcome,
+  SnapshotSaveOutcome,
   VolumeTableDocument,
   VolumeTableLoadOutcome,
   VolumeTableSaveOutcome,
 } from '../src/models'
-import { appendSnapshot, readOutput, readSlotMapping, readSnapshotFile, readVolumeTable, writeVolumeTable } from './business-store'
+import {
+  deleteSlotPlan,
+  readOutput,
+  readSlotMapping,
+  readSnapshotFile,
+  readVolumeTable,
+  writeOutput,
+  writeSlotPlan,
+  writeSnapshotFile,
+  writeVolumeTable,
+} from './business-store'
 import { readSettings } from './settings-store'
 import { readWorkspace } from './workspace'
 
@@ -61,6 +75,17 @@ export function registerBusinessIpc() {
     }
   })
 
+  handle('output:save', (_event, text: string) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies OutputSaveOutcome
+    try {
+      const settings = readSettings(project.path).document?.settings
+      return writeOutput(project.path, settings?.outputPath ?? '', text) satisfies OutputSaveOutcome
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies OutputSaveOutcome
+    }
+  })
+
   handle('slot-map:load', () => {
     const project = readWorkspace().current
     if (!project) return { unconfigured: true } satisfies SlotMappingLoadOutcome
@@ -69,6 +94,37 @@ export function registerBusinessIpc() {
       return readSlotMapping(project.path, settings?.slotMappingPath ?? '') satisfies SlotMappingLoadOutcome
     } catch (error) {
       return { error: errorMessage(error) } satisfies SlotMappingLoadOutcome
+    }
+  })
+
+  handle('slot-map:save', (_event, fileName: string, text: string) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies SlotMappingSaveOutcome
+    try {
+      const settings = readSettings(project.path).document?.settings
+      return writeSlotPlan(
+        project.path,
+        settings?.slotMappingPath ?? '',
+        fileName,
+        text,
+      ) satisfies SlotMappingSaveOutcome
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies SlotMappingSaveOutcome
+    }
+  })
+
+  handle('slot-map:delete', (_event, fileName: string) => {
+    const project = readWorkspace().current
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies SlotMappingDeleteOutcome
+    try {
+      const settings = readSettings(project.path).document?.settings
+      return deleteSlotPlan(
+        project.path,
+        settings?.slotMappingPath ?? '',
+        fileName,
+      ) satisfies SlotMappingDeleteOutcome
+    } catch (error) {
+      return { error: errorMessage(error) } satisfies SlotMappingDeleteOutcome
     }
   })
 
@@ -83,14 +139,14 @@ export function registerBusinessIpc() {
     }
   })
 
-  handle('snapshot:append', (_event, section: string, speakers: string[]) => {
+  handle('snapshot:save', (_event, text: string) => {
     const project = readWorkspace().current
-    if (!project) return { unconfigured: true } satisfies SnapshotAppendOutcome
+    if (!project) return { error: '还没有绑定 Gauge 项目' } satisfies SnapshotSaveOutcome
     try {
       const settings = readSettings(project.path).document?.settings
-      return appendSnapshot(project.path, settings?.snapshotPath ?? '', section, speakers)
+      return writeSnapshotFile(project.path, settings?.snapshotPath ?? '', text)
     } catch (error) {
-      return { error: errorMessage(error) } satisfies SnapshotAppendOutcome
+      return { error: errorMessage(error) } satisfies SnapshotSaveOutcome
     }
   })
 }

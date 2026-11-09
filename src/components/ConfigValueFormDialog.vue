@@ -10,12 +10,20 @@ import { normalizeVehicleName } from '@/shared/vehicle-name'
  * 生效车型由 store 合并计算（关联变体车型 ∪ 规则命中的需求车型），这里只负责录入。
  */
 const props = defineProps<{
-  configKey: string
+  /** 已有配置项：编辑 / 追加配置值时固定；为空表示新建（需求页「创建配置」用） */
+  configKey?: string
   configValue: ConfigurationValueRow | null
+  /** 允许在本表单里新建配置项 */
+  allowNewConfiguration?: boolean
+  /** 打开时预置的关联变体（从需求页创建配置时带入该变体） */
+  initialRefs?: VariantRef[]
 }>()
 
 const visible = defineModel<boolean>({ default: false })
 const store = useConfigsStore()
+
+/** 新建配置项时填写的配置项名称 */
+const configKeyInput = ref('')
 
 const text = ref('')
 const refs = ref<VariantRef[]>([])
@@ -32,6 +40,12 @@ const chosenRequirement = computed(() => {
   return index === null ? null : (store.requirementOptions[index] ?? null)
 })
 const variantChoices = computed(() => chosenRequirement.value?.variants ?? [])
+
+const dialogTitle = computed(() => {
+  if (props.configValue) return '编辑配置值'
+  if (props.configKey) return '新增配置值'
+  return '从需求创建配置'
+})
 
 /** 已选变体按需求分组，避免一长串「需求 · 变体」标签难读 */
 const groupedRefs = computed(() => {
@@ -50,8 +64,11 @@ const groupedRefs = computed(() => {
 
 watch(visible, (open) => {
   if (!open) return
+  configKeyInput.value = props.configKey ?? ''
   text.value = props.configValue?.value ?? ''
-  refs.value = (props.configValue?.relay_variants ?? []).map((ref) => ({ ...ref }))
+  refs.value = (props.configValue?.relay_variants ?? (props.initialRefs ?? [])).map((ref) => ({
+    ...ref,
+  }))
   specialRules.value = (props.configValue?.special_vehicles ?? []).map((rule) => ({
     ...rule,
     text: normalizeVehicleName(rule.text),
@@ -133,6 +150,11 @@ function removeSpecialRule(rule: SpecialVehicleRule) {
 
 async function save() {
   error.value = ''
+  const configKey = (props.configKey ?? configKeyInput.value).trim()
+  if (!configKey) {
+    error.value = '配置项名称不能为空'
+    return
+  }
   if (!text.value.trim()) {
     error.value = '配置值不能为空'
     return
@@ -146,8 +168,10 @@ async function save() {
     special_vehicles: specialRules.value,
   }
   const result = props.configValue
-    ? await store.updateConfigValue(props.configKey, props.configValue.value, input)
-    : await store.addConfigValue(props.configKey, input)
+    ? await store.updateConfigValue(configKey, props.configValue.value, input)
+    : props.configKey
+      ? await store.addConfigValue(configKey, input)
+      : await store.createConfigurationValue(configKey, input)
 
   if (!result.ok) {
     error.value = result.error
@@ -164,12 +188,38 @@ async function save() {
 <template>
   <el-dialog
     v-model="visible"
-    :title="configValue ? '编辑配置值' : '新增配置值'"
+    :title="dialogTitle"
     width="560px"
     destroy-on-close
   >
     <!-- 内容高度封顶：变体/规则再多也不把弹窗越撑越长，超出后内部滚动，底部按钮固定 -->
     <div class="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pr-1">
+      <!-- 新建配置项：可选已有配置项，也可直接输入新名称 -->
+      <div
+        v-if="!configKey && allowNewConfiguration"
+        class="grid grid-cols-12 items-center gap-2"
+      >
+        <label class="col-span-3 text-[11px] text-ink-muted">配置项</label>
+        <div class="col-span-9">
+          <el-select
+            v-model="configKeyInput"
+            size="small"
+            class="w-full"
+            filterable
+            allow-create
+            default-first-option
+            placeholder="选择已有配置项或输入新名称"
+          >
+            <el-option
+              v-for="item in store.configurations"
+              :key="item.config_key"
+              :label="item.config_key"
+              :value="item.config_key"
+            />
+          </el-select>
+        </div>
+      </div>
+
       <!-- @grid A：标签 3 列 + 控件 9 列 -->
       <div class="grid grid-cols-12 items-center gap-2">
         <label class="col-span-3 text-[11px] text-ink-muted">配置值</label>

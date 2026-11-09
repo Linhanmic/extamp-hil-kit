@@ -1,25 +1,29 @@
 /**
- * 业务数据的读取与解析（主进程侧）：出声位置、音量表、SLOT 映射、扬声器快照。
+ * 业务数据的读写（主进程侧）：出声位置、音量表、SLOT 映射、扬声器快照。
  *
  * 这些数据都由项目设置里的路径指向（空表示「还没配置」），相对路径按项目根解析。
- * 它们只做展示、不需要写回，因此这里只有读取，没有「读 → 改 → 写」的编辑器模型。
+ * 四类资料都支持整份写回：结构化内容由渲染层序列化成文本，这里只做路径解析、
+ * 合法性与越界校验以及落盘。
  *
  * 解析函数都是纯函数（文本进、结构出），便于单测；读取函数负责解析路径 + 读文件，
  * 文件缺失按「空数据」处理，只有文件存在但读不了 / 解析不了才报 error。
  */
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import type {
   OutputDocument,
   OutputLoadOutcome,
+  OutputSaveOutcome,
   OutputScenario,
   SlotMappingDocument,
   SlotMappingPlan,
   SlotMappingLoadOutcome,
+  SlotMappingSaveOutcome,
+  SlotMappingDeleteOutcome,
   SlotMappingScenario,
   SnapshotDocument,
   SnapshotFile,
-  SnapshotAppendOutcome,
+  SnapshotSaveOutcome,
   SnapshotLoadOutcome,
   VolumeTableDocument,
   VolumeTableLoadOutcome,
@@ -239,6 +243,65 @@ export function parseSlotMappingFileText(text: string): {
   return { vehicles, scenarios }
 }
 
+/** 解析 SLOT 映射方案文件的目标路径：目录取设置里的 SLOT 映射目录，文件名必须是纯 .txt 名 */
+function slotPlanTarget(
+  projectPath: string,
+  dirPath: string,
+  fileName: string,
+): { target?: string; error?: string } {
+  const base = resolveProjectPath(projectPath, dirPath)
+  if (!base) return { error: '还没有配置 SLOT 映射目录' }
+  if (typeof fileName !== 'string' || !fileName || basename(fileName) !== fileName) {
+    return { error: 'SLOT 映射方案文件名不正确' }
+  }
+  if (!fileName.toLowerCase().endsWith('.txt')) {
+    return { error: 'SLOT 映射方案必须是 .txt 文件' }
+  }
+  return { target: join(base, fileName) }
+}
+
+/** 整份写回一个 SLOT 映射方案文件（新增与编辑共用） */
+export function writeSlotPlan(
+  projectPath: string,
+  dirPath: string,
+  fileName: string,
+  text: string,
+): SlotMappingSaveOutcome {
+  const resolved = slotPlanTarget(projectPath, dirPath, fileName)
+  if (!resolved.target) return { error: resolved.error ?? 'SLOT 映射方案路径不正确' }
+  if (typeof text !== 'string') return { error: 'SLOT 映射方案内容不正确' }
+
+  try {
+    mkdirSync(dirname(resolved.target), { recursive: true })
+    writeFileSync(resolved.target, text, 'utf8')
+    return {
+      saved: {
+        filePath: resolved.target,
+        updatedAt: statSync(resolved.target).mtime.toISOString(),
+      },
+    }
+  } catch (error) {
+    return { error: `SLOT 映射方案写入失败（${resolved.target}）：${message(error)}` }
+  }
+}
+
+/** 删除一个 SLOT 映射方案文件 */
+export function deleteSlotPlan(
+  projectPath: string,
+  dirPath: string,
+  fileName: string,
+): SlotMappingDeleteOutcome {
+  const resolved = slotPlanTarget(projectPath, dirPath, fileName)
+  if (!resolved.target) return { error: resolved.error ?? 'SLOT 映射方案路径不正确' }
+
+  try {
+    unlinkSync(resolved.target)
+    return { deleted: true }
+  } catch (error) {
+    return { error: `SLOT 映射方案无法删除（${resolved.target}）：${message(error)}` }
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* 快照                                                               */
 /* ------------------------------------------------------------------ */
@@ -289,8 +352,26 @@ export function readOutput(projectPath: string, filePath = ''): OutputLoadOutcom
   }
 }
 
-/** 读取音量表文件 */
-export function readVolumeTable(projectPath: string, filePath = ''): VolumeTableLoadOutcome {
+/** 整份写回出声位置文件（渲染层已按格式生成文本） */
+export function writeOutput(
+  projectPath: string,
+  filePath: string,
+  text: string,
+): OutputSaveOutcome {
+  const target = resolveProjectPath(projectPath, filePath)
+  if (!target) return { error: '还没有配置出声位置文件' }
+  if (typeof text !== 'string') return { error: '出声位置内容不正确' }
+
+  try {
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, text, 'utf8')
+    return { saved: { filePath: target, updatedAt: statSync(target).mtime.toISOString() } }
+  } catch (error) {
+    return { error: `出声位置写入失败（${target}）：${message(error)}` }
+  }
+}
+
+/** 读取音量表文件 */export function readVolumeTable(projectPath: string, filePath = ''): VolumeTableLoadOutcome {
   const target = resolveProjectPath(projectPath, filePath)
   if (!target) return { unconfigured: true }
 
@@ -338,41 +419,24 @@ export function readSlotMapping(projectPath: string, dirPath = ''): SlotMappingL
   return { document: { plans } satisfies SlotMappingDocument }
 }
 
-/** 追加一个快照分节到 snapshot.ini 文件；保留原文件，拒绝同名分节 */
-export function appendSnapshot(
+/** 整份写回 snapshot.ini（新增 / 编辑 / 删除分节都走这一条，文本由渲染层生成） */
+export function writeSnapshotFile(
   projectPath: string,
   filePath: string,
-  section: string,
-  speakers: string[],
-): SnapshotAppendOutcome {
+  text: string,
+): SnapshotSaveOutcome {
   const target = resolveProjectPath(projectPath, filePath)
-  if (!target) return { unconfigured: true }
-
-  const name = normalizeVehicleList(section).join('/')
-  if (!name || /[[\]\r\n]/.test(name)) return { error: '适用车型分节名称不正确' }
-  const lines = speakers.map((speaker) => speaker.trim()).filter(Boolean)
-  if (!lines.length) return { error: '至少填写一个扬声器' }
+  if (!target) return { unconfigured: true, error: '还没有配置扬声器快照文件' }
+  if (typeof text !== 'string') return { error: '扬声器快照内容不正确' }
 
   try {
-    let text = ''
-    try {
-      text = readFileSync(target, 'utf8')
-    } catch (error) {
-      if (!isMissing(error)) throw error
-    }
-    const sections = [...text.matchAll(/^\[([^\]]+)\]/gm)].map((match) => match[1]?.trim())
-    if (sections.includes(name)) return { error: `分节「${name}」已存在` }
-
-    const eol = text.includes('\r\n') ? '\r\n' : '\n'
-    const addition = `${text.trimEnd() ? `${eol}${eol}` : ''}[${name}]${eol}${lines.join(eol)}${eol}`
     mkdirSync(dirname(target), { recursive: true })
-    writeFileSync(target, `${text.trimEnd()}${addition}`, 'utf8')
+    writeFileSync(target, text, 'utf8')
     return { saved: { filePath: target, updatedAt: statSync(target).mtime.toISOString() } }
   } catch (error) {
-    return { error: `快照写入失败：${message(error)}` }
+    return { error: `快照写入失败（${target}）：${message(error)}` }
   }
 }
-
 export function readSnapshotFile(projectPath: string, filePath = ''): SnapshotLoadOutcome {
   const target = resolveProjectPath(projectPath, filePath)
   if (!target) return { unconfigured: true }
