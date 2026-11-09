@@ -95,7 +95,7 @@ async function onRefresh() {
           <span class="col-span-1 flex items-center justify-center">
             <span class="size-1.5 rounded-full" :class="statusDot[item.status]" />
           </span>
-          <span class="col-span-9 min-w-0">
+          <span class="col-span-8 min-w-0">
             <span class="block truncate text-xs font-medium text-ink">
               {{ index + 1 }} · {{ item.title }}
             </span>
@@ -103,7 +103,7 @@ async function onRefresh() {
               {{ item.detail }}
             </span>
           </span>
-          <span class="col-span-2 justify-self-end">
+          <span class="col-span-3 justify-self-end">
             <el-tag size="small" :type="statusType[item.status]" effect="plain">
               {{ item.statusLabel }}
             </el-tag>

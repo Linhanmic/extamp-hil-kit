@@ -1,12 +1,12 @@
 import { computed, ref } from 'vue'
 
 // 外壳按设计网格划分：水平 12 列、垂直 48 行。
-// 两侧栏以「份数」保存并按份数占窗口宽度的固定比例（3/12、4/12），主内容取剩余空间，
+// 两侧栏以「份数」保存并按份数占窗口宽度的固定比例（左 2/12、右 3/12），主内容取剩余空间，
 // 因此区域始终精确落在网格份数上，窗口缩放时比例自动保持。
 const GRID_UNITS = 12
 
-const sidebarUnits = ref(3)
-const secondSidebarUnits = ref(4)
+const sidebarUnits = ref(2)
+const secondSidebarUnits = ref(3)
 
 // 面板高度 15/48；主内容列高度是 48 - 3 = 45 份，换算成列高的比例即 15/45
 const ROW_UNITS = 48
@@ -46,7 +46,7 @@ export function useLayoutSize(visible: LayoutVisibility) {
 
   const panelHeightPercent = computed(() => panelRatio.value * 100)
 
-  // 拖拽时把像素增量换算回网格份数，默认布局仍是 3 / 5 / 4
+  // 拖拽时把像素增量换算回网格份数，默认布局是 2 / 7 / 3（左 · 中 · 右）
   const resizeSidebar = (deltaX: number, availableWidth: number) => {
     if (availableWidth <= 0) return
     const unitPx = availableWidth / GRID_UNITS

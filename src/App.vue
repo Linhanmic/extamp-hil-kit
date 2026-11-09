@@ -106,7 +106,7 @@ const { contentColumns, panelHeightPercent, resizeSidebar, resizeSecondSidebar, 
 const contentRef = ref<HTMLElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 
-// 三栏轨道由 useLayoutSize 统一给出：两侧栏固定占 3 / 12 与 4 / 12 的窗口宽度，
+// 三栏轨道由 useLayoutSize 统一给出：两侧栏固定占 2 / 12 与 3 / 12 的窗口宽度，
 // 主内容吃剩余空间，收展右栏只改变主内容宽度。
 const onSidebarResize = (delta: number) => resizeSidebar(delta, contentRef.value?.clientWidth ?? 0)
 const onSecondSidebarResize = (delta: number) =>
@@ -155,11 +155,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         class="grid min-h-0 flex-1"
         :style="{ gridTemplateColumns: contentColumns }"
       >
-        <!-- 左栏：3 / 12 份 -->
+        <!-- 左栏：2 / 12 份 -->
         <AppSidebar v-show="visible.sidebar" />
         <SplitResizer v-show="visible.sidebar" direction="x" @resize="onSidebarResize" />
 
-        <!-- 主内容：5 / 12 份，内部纵向分为 main_content 与 panel -->
+        <!-- 主内容：剩余 7 / 12 份，内部纵向分为 main_content 与 panel -->
         <main ref="mainRef" class="flex min-h-0 min-w-0 flex-col bg-surface">
           <div class="min-h-0 flex-1 overflow-y-auto p-4">
             <RouterView />
@@ -171,7 +171,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           <AppPanel v-show="visible.panel" :style="{ height: `${panelHeightPercent}%` }" />
         </main>
 
-        <!-- 右栏：4 / 12 份 -->
+        <!-- 右栏：3 / 12 份 -->
         <SplitResizer
           v-show="visible.secondSidebar"
           direction="x"

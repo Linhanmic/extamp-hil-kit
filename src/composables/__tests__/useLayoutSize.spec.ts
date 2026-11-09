@@ -12,15 +12,15 @@ function setup(visible: Partial<LayoutVisibility> = {}) {
 }
 
 describe('useLayoutSize', () => {
-  // 份数是模块级共享状态，每个用例先复位到设计基准 左 3 · 右 4
+  // 份数是模块级共享状态，每个用例先复位到设计基准 左 2 · 右 3
   beforeEach(() => {
     const { layout } = setup()
-    layout.sidebarUnits.value = 3
-    layout.secondSidebarUnits.value = 4
+    layout.sidebarUnits.value = 2
+    layout.secondSidebarUnits.value = 3
   })
 
   it('右栏默认收起时只留左栏与主内容两条轨道', () => {
-    expect(setup().layout.contentColumns.value).toBe('minmax(0, 25.0000%) 4px minmax(0, 1fr)')
+    expect(setup().layout.contentColumns.value).toBe('minmax(0, 16.6667%) 4px minmax(0, 1fr)')
   })
 
   it('展开右栏只追加右栏轨道，左栏轨道不变', () => {
@@ -28,27 +28,27 @@ describe('useLayoutSize', () => {
 
     state.secondSidebar = true
     expect(layout.contentColumns.value).toBe(
-      'minmax(0, 25.0000%) 4px minmax(0, 1fr) 4px minmax(0, 33.3333%)',
+      'minmax(0, 16.6667%) 4px minmax(0, 1fr) 4px minmax(0, 25.0000%)',
     )
 
     state.secondSidebar = false
-    expect(layout.contentColumns.value).toBe('minmax(0, 25.0000%) 4px minmax(0, 1fr)')
+    expect(layout.contentColumns.value).toBe('minmax(0, 16.6667%) 4px minmax(0, 1fr)')
   })
 
-  it('收起左栏时右栏轨道保持 4 份', () => {
+  it('收起左栏时右栏轨道保持 3 份', () => {
     const { state, layout } = setup({ secondSidebar: true })
 
     state.sidebar = false
-    expect(layout.contentColumns.value).toBe('minmax(0, 1fr) 4px minmax(0, 33.3333%)')
+    expect(layout.contentColumns.value).toBe('minmax(0, 1fr) 4px minmax(0, 25.0000%)')
   })
 
   it('拖拽左栏在上下限内生效，超出上下限被夹住', () => {
     const { layout } = setup()
 
-    // 1200px 宽窗口下 1 份 = 100px，3 份 = 300px
+    // 1200px 宽窗口下 1 份 = 100px，2 份 = 200px
     layout.resizeSidebar(40, 1200)
-    expect(layout.sidebarUnits.value).toBeCloseTo(3.4)
-    expect(layout.contentColumns.value).toContain('28.3333%')
+    expect(layout.sidebarUnits.value).toBeCloseTo(2.4)
+    expect(layout.contentColumns.value).toContain('20.0000%')
 
     layout.resizeSidebar(-1000, 1200)
     expect(layout.sidebarUnits.value).toBeCloseTo(1.8)
@@ -61,7 +61,7 @@ describe('useLayoutSize', () => {
     const { state, layout } = setup({ secondSidebar: true })
 
     layout.resizeSecondSidebar(60, 1200)
-    expect(layout.secondSidebarUnits.value).toBeCloseTo(3.4)
+    expect(layout.secondSidebarUnits.value).toBeCloseTo(2.4)
 
     layout.resizeSecondSidebar(-1000, 1200)
     expect(layout.secondSidebarUnits.value).toBeCloseTo(5.6)
@@ -72,8 +72,8 @@ describe('useLayoutSize', () => {
     const { layout } = setup()
     layout.resizeSidebar(40, 0)
     layout.resizeSecondSidebar(40, 0)
-    expect(layout.sidebarUnits.value).toBe(3)
-    expect(layout.secondSidebarUnits.value).toBe(4)
+    expect(layout.sidebarUnits.value).toBe(2)
+    expect(layout.secondSidebarUnits.value).toBe(3)
   })
 
   it('面板高度在上下限内生效，并为上方内容留出空间', () => {
