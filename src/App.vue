@@ -93,11 +93,11 @@ watch(
 // 标题栏的项目设置入口
 const settingsVisible = ref(false)
 
-// 三块区域的显隐状态：右栏与底部面板默认收起，需要时从标题栏展开
+// 三块区域的显隐状态：底部面板默认收起；右栏承载运行流程，默认展开
 const visible = reactive({
   sidebar: true,
   panel: false,
-  secondSidebar: false,
+  secondSidebar: true,
 })
 
 const { contentColumns, panelHeightPercent, resizeSidebar, resizeSecondSidebar, resizePanel } =
