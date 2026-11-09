@@ -103,7 +103,7 @@ const emptyText = computed(() =>
 
 <!--
   @grid A：标题 6 · 视图切换 6；音源筛选 3 · 车型筛选 3。
-  表格 42 列使用原生表格，横向超出在表格内部滚动。
+  表格 42 列使用原生表格，横向超出在表格内部滚动；车型 / 音源列冻结在左、操作列冻结在右。
 -->
 <template>
   <div class="flex flex-col gap-3">
@@ -132,6 +132,7 @@ const emptyText = computed(() =>
             v-model="vehicleFilter"
             size="small"
             clearable
+            filterable
             placeholder="车型：全部"
             class="w-full"
           >
@@ -178,41 +179,64 @@ const emptyText = computed(() =>
       <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取音量表…</p>
       <el-empty v-else-if="!filteredRows.length" :description="emptyText" />
 
-      <!-- 0–39 表格 -->
-      <div v-else-if="viewMode === 'table'" class="overflow-x-auto border border-line">
-        <table class="w-full min-w-max border-collapse text-center text-[11px] text-ink">
-          <thead class="bg-surface-soft">
+      <!--
+        0–39 表格：车型与音源列固定在左侧、操作列固定在右侧，横向滚动时始终能对上当前行；
+        车型名过长时截断并保留完整提示，避免一列车名把表格撑到必须一直往右拖。
+      -->
+      <div v-else-if="viewMode === 'table'" class="max-h-[60vh] overflow-auto border border-line">
+        <table
+          class="w-full min-w-max table-fixed border-separate border-spacing-0 text-center text-[11px] text-ink"
+        >
+          <thead>
             <tr>
-              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">车型</th>
-              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">音源类型</th>
+              <th
+                class="sticky top-0 left-0 z-30 w-36 border-b border-r border-line bg-surface-soft px-2 py-2 text-left font-medium"
+              >
+                车型
+              </th>
+              <th
+                class="sticky top-0 left-36 z-30 w-[4.5rem] border-b border-r border-line bg-surface-soft px-1 py-2 font-medium"
+              >
+                音源类型
+              </th>
               <th
                 v-for="level in VOLUME_LEVELS"
                 :key="level"
-                class="border-b border-r border-line px-2 py-2 font-medium last:border-r-0"
+                class="sticky top-0 z-20 w-9 border-b border-r border-line bg-surface-soft px-1 py-2 font-medium text-ink-muted"
               >
                 {{ level }}
               </th>
-              <th class="border-b border-line px-3 py-2 font-medium whitespace-nowrap">操作</th>
+              <th
+                class="sticky top-0 right-0 z-30 w-20 border-b border-line bg-surface-soft px-1 py-2 font-medium"
+              >
+                操作
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in filteredRows" :key="`${row.vehicle}-${row.source}`">
-              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
-                {{ row.vehicle }}
+              <th
+                class="sticky left-0 z-10 w-36 border-b border-r border-line bg-surface px-2 py-1.5 text-left font-medium"
+              >
+                <span class="block truncate" :title="row.vehicle">{{ row.vehicle }}</span>
               </th>
-              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
-                {{ row.source }}
+              <th
+                class="sticky left-36 z-10 w-[4.5rem] border-b border-r border-line bg-surface px-1 py-1.5 font-medium"
+              >
+                <span class="block truncate" :title="row.source">{{ row.source }}</span>
               </th>
               <td
                 v-for="(value, level) in canonicalVolumeValues(row, store.levels)"
                 :key="level"
-                class="border-b border-r border-line px-2 py-1.5 whitespace-nowrap last:border-r-0"
+                class="w-9 border-b border-r border-line px-1 py-1.5 whitespace-nowrap"
               >
                 {{ value }}
               </td>
-              <td class="border-b border-line px-2 py-1.5 whitespace-nowrap">
-                <el-button size="small" link type="primary" @click="openEdit(row)">编辑</el-button>
-                <el-button size="small" link type="danger" @click="removeRow(row)">删除</el-button>
+              <td class="sticky right-0 z-10 w-20 border-b border-line bg-surface px-1 py-1.5">
+                <div class="flex items-center justify-center gap-1">
+                  <el-button size="small" link type="primary" @click="openEdit(row)">编辑</el-button>
+                  <el-button size="small" link type="danger" @click="removeRow(row)">删除</el-button>
+                </div>
               </td>
             </tr>
           </tbody>

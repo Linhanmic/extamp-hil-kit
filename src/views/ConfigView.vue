@@ -154,6 +154,7 @@ async function onRemoveVariant(
             v-model="vehicleFilter"
             size="small"
             clearable
+            filterable
             placeholder="车型：全部"
             class="w-full"
           >

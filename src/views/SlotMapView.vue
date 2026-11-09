@@ -134,7 +134,7 @@ async function generateSlotCpt() {
 
 <!--
   @grid A：标题 6 · 视图切换 6；详情左列表 3 · 右详情 9。
-  总览是动态列数的原生表格，列随映射文件数量增减，横向超出在表格内部滚动。
+  总览是动态列数的原生表格，列随映射文件数量增减，横向超出在表格内部滚动；音源类型列冻结在左。
 -->
 <template>
   <div class="flex flex-col gap-3">
@@ -175,6 +175,7 @@ async function generateSlotCpt() {
             v-model="vehicleFilter"
             size="small"
             clearable
+            filterable
             placeholder="车型：全部"
             class="w-full"
           >
@@ -222,33 +223,42 @@ async function generateSlotCpt() {
       <el-empty v-else-if="!store.hasData" description="该目录下还没有 SLOT 映射 txt 文件" />
       <el-empty v-else-if="!visiblePlans.length" description="未找到适用该车型的映射" />
 
-      <!-- 总览矩阵 -->
-      <div v-else-if="viewMode === 'overview'" class="overflow-x-auto border border-line">
-        <table class="w-full min-w-max border-collapse text-center text-[11px] text-ink">
-          <thead class="bg-surface-soft">
+      <!--
+        总览矩阵：音源类型列固定在左侧，方案名过长时截断（完整名在提示里），
+        横向滚动看后面的方案时仍能对上音源行，不会因为方案名太长而一直往右拖。
+      -->
+      <div v-else-if="viewMode === 'overview'" class="max-h-[60vh] overflow-auto border border-line">
+        <table
+          class="w-full min-w-max table-fixed border-separate border-spacing-0 text-center text-[11px] text-ink"
+        >
+          <thead>
             <tr>
-              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
+              <th
+                class="sticky top-0 left-0 z-30 w-32 border-b border-r border-line bg-surface-soft px-2 py-2 text-left font-medium"
+              >
                 音源类型
               </th>
               <th
                 v-for="plan in visiblePlans"
                 :key="plan.name"
-                class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap last:border-r-0"
-                :title="plan.filePath"
+                class="sticky top-0 z-20 w-32 border-b border-r border-line bg-surface-soft px-2 py-2 font-medium"
+                :title="displayName(plan.name)"
               >
-                {{ displayName(plan.name) }}
+                <span class="block truncate">{{ displayName(plan.name) }}</span>
               </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="title in titles" :key="title">
-              <th class="border-b border-r border-line px-3 py-2 font-medium whitespace-nowrap">
-                {{ title }}
+              <th
+                class="sticky left-0 z-10 w-32 border-b border-r border-line bg-surface px-2 py-2 text-left font-medium"
+              >
+                <span class="block truncate" :title="title">{{ title }}</span>
               </th>
               <td
                 v-for="plan in visiblePlans"
                 :key="plan.name"
-                class="border-b border-r border-line px-3 py-2 text-center whitespace-nowrap last:border-r-0"
+                class="w-32 border-b border-r border-line bg-surface px-2 py-2 text-center whitespace-nowrap"
                 :title="formatSlots(scenarioSlots(plan, title))"
               >
                 {{ formatSlots(scenarioSlots(plan, title)) }}
