@@ -13,14 +13,23 @@ import OutputScenarioFormDialog from '@/components/OutputScenarioFormDialog.vue'
 import type { OutputScenario } from '@/models'
 
 /**
- * 出声位置：场景文本 + 车型单选筛选。
+ * 出声位置：场景单选下拉 + 车型单选筛选。
  * 场景下方为适用车型，底部为出声 / 不出声扬声器关键字。
  */
 const store = useOutputStore()
 const conceptsStore = useConceptsStore()
-const keyword = ref('')
+const scenarioFilter = ref('')
 const vehicleFilter = ref('')
 const generating = ref(false)
+
+/** 场景下拉候选：按标题去重——同名场景可能是不同车型的差异实现，选中后一起展示 */
+const scenarioOptions = computed(() => {
+  const titles: string[] = []
+  for (const scenario of store.scenarios) {
+    if (scenario.title && !titles.includes(scenario.title)) titles.push(scenario.title)
+  }
+  return titles
+})
 
 const vehicleOptions = computed(() => {
   const names = new Set<string>()
@@ -30,10 +39,10 @@ const vehicleOptions = computed(() => {
   return [...names].sort((a, b) => a.localeCompare(b, 'zh-CN'))
 })
 
-const filteredScenarios = computed(() => {
-  const query = keyword.value.trim().toLowerCase()
-  return store.scenarios.filter((scenario) => {
-    if (query && !scenario.title.toLowerCase().includes(query)) return false
+const filteredScenarios = computed(() =>
+  store.scenarios.filter((scenario) => {
+    // 单选：只保留标题完全相等的场景，清除选择即回到全部
+    if (scenarioFilter.value && scenario.title !== scenarioFilter.value) return false
     if (
       vehicleFilter.value &&
       !scenario.allVehicles &&
@@ -42,11 +51,13 @@ const filteredScenarios = computed(() => {
       return false
     }
     return true
-  })
-})
+  }),
+)
 
 const emptyText = computed(() =>
-  keyword.value.trim() || vehicleFilter.value ? '未找到匹配的检查场景' : '该项目还没有出声位置数据',
+  scenarioFilter.value || vehicleFilter.value
+    ? '未找到匹配的检查场景'
+    : '该项目还没有出声位置数据',
 )
 
 function vehicleText(scenario: { allVehicles: boolean; vehicles: string[] }): string {
@@ -129,7 +140,7 @@ async function generateVehicleCpt() {
 </script>
 
 <!--
-  @grid A：标题 12；场景文本 4 · 车型单选 3。
+  @grid A：标题 12；场景下拉 5 · 车型单选 4。
   场景卡片内部按 标题 → 车型 → 步骤 → 出声关键字 → 不出声关键字排列。
 -->
 <template>
@@ -155,12 +166,27 @@ async function generateVehicleCpt() {
         </div>
       </div>
 
-      <!-- 场景文本 + 车型单选 -->
+      <!-- 场景单选 + 车型单选：场景名偏长，给 5 格并支持输入过滤 -->
       <div class="mt-3 grid grid-cols-12 items-center gap-2">
-        <div class="col-span-4">
-          <el-input v-model="keyword" size="small" clearable placeholder="场景" />
+        <div class="col-span-5">
+          <el-select
+            v-model="scenarioFilter"
+            size="small"
+            clearable
+            filterable
+            default-first-option
+            placeholder="场景：全部"
+            class="w-full"
+          >
+            <el-option
+              v-for="title in scenarioOptions"
+              :key="title"
+              :label="title"
+              :value="title"
+            />
+          </el-select>
         </div>
-        <div class="col-span-3">
+        <div class="col-span-4">
           <el-select
             v-model="vehicleFilter"
             size="small"
