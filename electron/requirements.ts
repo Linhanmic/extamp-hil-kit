@@ -116,6 +116,12 @@ export function registerRequirementsIpc() {
     try {
       const resolved = { ...config, filePath: resolveProjectPath(project.path, config.filePath) }
       const result = parseFile(resolved)
+      // 车型列有空单元格时整份不导入：缺填写的变体必须先在表里补齐
+      if (result.stats.blankCells) {
+        return {
+          error: `有 ${result.stats.blankCells} 个变体单元格为空，缺少适用情况：适用请写「●」，不适用请写「—」；补齐后重新预览再导入`,
+        } satisfies RequirementsSaveOutcome
+      }
       const settings = readSettings(project.path).document?.settings
       const saved = writeRequirements(project.path, result, settings?.requirementsPath ?? '')
       return { saved } satisfies RequirementsSaveOutcome

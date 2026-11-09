@@ -228,6 +228,40 @@ describe('parseRequirements', () => {
     expect(result.warnings[0]).toMatchObject({ row: 3 })
   })
 
+  it('变体单元格为空按错误报出，不适用写「—」不算错误', () => {
+    const result = parseRequirements(
+      table([
+        ['需求ID', '需求名称', '需求详情', 'MA16D平台', 'HFAF', 'QDWS'],
+        ['REQ_1', '有效需求', '…', '', '●变体1', '—'],
+        ['REQ_2', '另一条', '…', '', '', '●'],
+      ]),
+      MAPPING,
+    )
+
+    // 平台列整列忽略，所以只有 HFAF / QDWS 参与统计
+    expect(result.stats).toMatchObject({ blankCells: 1, notApplicableCells: 1, applicableCells: 2 })
+    const errors = result.warnings.filter((warning) => warning.severity === 'error')
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({ row: 3 })
+    expect(errors[0]?.message).toMatch(/单元格为空/)
+    expect(errors[0]?.message).toMatch(/HFAF/)
+  })
+
+  it('整行空白与缺需求ID的行不产生空单元格错误', () => {
+    const result = parseRequirements(
+      table([
+        ['需求ID', '需求名称', '需求详情', 'HFAF'],
+        ['REQ_1', '有效需求', '…', '●'],
+        [null, null, null, null],
+        ['', '没写ID', '…', ''],
+      ]),
+      MAPPING,
+    )
+
+    expect(result.stats.blankCells).toBe(0)
+    expect(result.warnings.some((warning) => warning.severity === 'error')).toBe(false)
+  })
+
   it('车型起始列必须在需求详情列之后', () => {
     expect(() =>
       parseRequirements(table([['需求ID', '需求名称', '需求详情', 'HFAF']]), {

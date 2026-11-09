@@ -18,6 +18,7 @@ const CONFIG_RESULT = {
     applicableCells: 1,
     notApplicableCells: 0,
     textCells: 0,
+    blankCells: 0,
   },
   warnings: [],
 }

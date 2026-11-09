@@ -159,10 +159,14 @@ export interface RequirementSheetProbe {
   columns: RequirementSheetColumn[]// 探测区间内的列，按列号顺序
   notes: string[]// 探测过程中的提示（如某列是兜底推断的）
 }
-/** 需求表解析告警：不阻断导入，逐条列给用户确认 */
+/** 需求表解析提示级别：warning 不阻断导入，error 阻断导入 */
+export type RequirementsIssueSeverity = 'warning' | 'error'
+
+/** 需求表解析提示：逐条列给用户确认；error 级存在时不允许导入落盘 */
 export interface RequirementsParseWarning {
   row: number// 出问题的行号（1 基，与 Excel 行号一致），0 表示整表级
   message: string
+  severity: RequirementsIssueSeverity// 默认 warning
 }
 /** 需求表解析统计 */
 export interface RequirementsParseStats {
@@ -176,6 +180,7 @@ export interface RequirementsParseStats {
   applicableCells: number
   notApplicableCells: number
   textCells: number// 不带「●」标记、按变体描述处理的单元格数
+  blankCells: number// 车型列里空白的单元格数（缺填写，按错误计）
 }
 /** 需求表解析结果 */
 export interface RequirementsParseResult {

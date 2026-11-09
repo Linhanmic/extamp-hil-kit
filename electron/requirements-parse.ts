@@ -9,7 +9,7 @@
  *   ●变体1    适用，变体描述就是「变体1」这个代号
  *   ●多行文本  适用，变体描述为「●」之后的全部文本（换行、标点原样保留）
  *   —         不适用
- *   空         未填写
+ *   空         缺填写：按错误报出（适用写「●」、不适用写「—」），存在空单元格时不允许导入
  *
  * 变体的合并规则：先按 NFKC 归一，再抹掉控制字符与空白字符得到 `key`（破折号、实心点
  * 等标点与符号原样保留），key 相同的单元格合并成同一个 Variant，原始描述进 `content`，
@@ -321,11 +321,12 @@ export function parseRequirements(
     applicableCells: 0,
     notApplicableCells: 0,
     textCells: 0,
+    blankCells: 0,
   }
 
-  const warn = (row: number, message: string) => {
+  const warn = (row: number, message: string, severity: 'warning' | 'error' = 'warning') => {
     if (warnings.length >= MAX_WARNINGS) return
-    warnings.push({ row, message })
+    warnings.push({ row, message, severity })
   }
 
   dataRows.forEach((row, offset) => {
@@ -361,7 +362,16 @@ export function parseRequirements(
 
     for (const column of vehicles.columns) {
       const mark = classifyCell(row[column.index - 1])
-      if (mark.kind === 'blank') continue
+      if (mark.kind === 'blank') {
+        // 空单元格是缺填写，不是「不适用」：不适用要显式写「—」，这里按错误报出
+        stats.blankCells++
+        warn(
+          rowNumber,
+          `${columnLabel(column)} 列的单元格为空，缺少适用情况（适用写「●」，不适用写「—」）`,
+          'error',
+        )
+        continue
+      }
       if (mark.kind === 'notApplicable') {
         stats.notApplicableCells++
         continue

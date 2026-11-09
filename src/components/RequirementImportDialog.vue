@@ -43,8 +43,13 @@ watch(visible, (open) => {
 const sheets = computed(() => file.value?.sheets ?? [])
 const vehicleOptions = computed(() => probe.value?.columns ?? [])
 const stats = computed(() => result.value?.stats ?? null)
-const warnings = computed(() => result.value?.warnings ?? [])
+const issues = computed(() => result.value?.warnings ?? [])
+const errors = computed(() => issues.value.filter((item) => item.severity === 'error'))
+const warnings = computed(() => issues.value.filter((item) => item.severity !== 'error'))
+const shownErrors = computed(() => errors.value.slice(0, 8))
 const shownWarnings = computed(() => warnings.value.slice(0, 5))
+/** 存在错误级提示（如变体单元格为空）时不允许导入 */
+const blocked = computed(() => errors.value.length > 0)
 
 function setColumn(field: keyof RequirementsColumnMapping, value: string | number) {
   updateMapping({ [field]: value })
@@ -221,6 +226,26 @@ function formatTime(value: string): string {
         </div>
 
         <el-alert
+          v-if="errors.length"
+          type="error"
+          :closable="false"
+          :title="`${errors.length} 个变体单元格为空，无法导入`"
+          class="mt-2"
+        >
+          <ul class="text-[11px] leading-5">
+            <li v-for="warning in shownErrors" :key="`${warning.row}-${warning.message}`">
+              第 {{ warning.row }} 行：{{ warning.message }}
+            </li>
+          </ul>
+          <p v-if="errors.length > shownErrors.length" class="text-[11px] text-ink-muted">
+            其余 {{ errors.length - shownErrors.length }} 条未展示
+          </p>
+          <p class="text-[11px] text-ink-muted">
+            在需求分析表里把空单元格补成「●…」（适用）或「—」（不适用）后，重新预览再导入。
+          </p>
+        </el-alert>
+
+        <el-alert
           v-if="warnings.length"
           type="warning"
           :closable="false"
@@ -262,7 +287,7 @@ function formatTime(value: string): string {
           <el-button
             type="primary"
             :loading="busy"
-            :disabled="!result || dirty"
+            :disabled="!result || dirty || blocked"
             @click="importAndSave"
           >
             导入
