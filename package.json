@@ -1,7 +1,7 @@
 {
   "name": "extamp-hil-kit",
   "productName": "ExtAmp HIL Kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "External Amplifier HIL Kit — 外置功放 HIL 测试工具台",
   "homepage": "https://github.com/Linhanmic/extamp-hil-kit",
