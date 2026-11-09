@@ -92,6 +92,26 @@ function vehicleText(vehicles: string[]): string {
 
 const selectedChangedCount = computed(() => selectedRows.value.filter((row) => row.changed).length)
 
+/**
+ * 按文件分组的适用条件提示：直接取每个文件的解析结果，比 store.warnings 的
+ * 「文件名：消息」拼接串可靠（消息里也含冒号），还能拿到路径用于跳转。
+ */
+const warningGroups = computed(() =>
+  store.entries
+    .filter((entry) => entry.analysis.warnings.length)
+    .map((entry) => ({ path: entry.path, name: entry.name, messages: entry.analysis.warnings })),
+)
+const warningCount = computed(() =>
+  warningGroups.value.reduce((sum, group) => sum + group.messages.length, 0),
+)
+/** 目录树上给有提示的文件亮一个黄点，方便定位是哪份 spec */
+const warningPaths = computed(() => new Set(warningGroups.value.map((group) => group.path)))
+
+/** 点提示里的文件名直接选中该 spec，省得到左边树里翻 */
+function jumpToSpec(path: string) {
+  selectedPath.value = path
+}
+
 async function prepareVehicleRun(): Promise<boolean> {
   if (!runVehicle.value) return true
   specRunning.value = true
@@ -199,6 +219,7 @@ async function onApply() {
       </div>
     </div>
 
+    <!-- 读取 / 写回失败：给出可执行的下一步，直接重新读一次 -->
     <el-alert
       v-if="store.error"
       class="w-[calc(11.5/12*100%)]"
@@ -206,18 +227,56 @@ async function onApply() {
       show-icon
       :closable="false"
       :title="store.error"
-      description="读取或保存 spec 文件失败，修正后重试即可。"
-    />
+    >
+      <div class="flex items-center justify-between gap-2">
+        <span class="min-w-0 text-[11px] leading-relaxed">
+          读取或保存 spec 文件失败，修正文件后可重新加载。
+        </span>
+        <el-button
+          size="small"
+          type="danger"
+          plain
+          :loading="store.loading"
+          @click="store.load()"
+        >
+          重新加载
+        </el-button>
+      </div>
+    </el-alert>
 
+    <!-- 适用条件提示：按文件分组、可滚动，文件名可点击跳转 -->
     <el-alert
-      v-if="store.warnings.length"
+      v-if="warningCount"
       class="w-[calc(11.5/12*100%)]"
       type="warning"
       show-icon
       :closable="false"
-      title="部分适用条件无法解析"
-      :description="store.warnings.join('；')"
-    />
+      :title="`${warningCount} 条适用条件提示（${warningGroups.length} 个文件）`"
+    >
+      <ul class="mt-1 max-h-44 overflow-y-auto pr-1">
+        <li
+          v-for="group in warningGroups"
+          :key="group.path"
+          class="border-b border-line py-1.5 last:border-b-0"
+        >
+          <button
+            type="button"
+            class="block w-full truncate rounded px-1 text-left text-[11px] font-medium text-primary outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+            :title="`跳转到 ${group.name}`"
+            @click="jumpToSpec(group.path)"
+          >
+            {{ group.name }}
+          </button>
+          <p
+            v-for="message in group.messages"
+            :key="message"
+            class="mt-0.5 break-words px-1 text-[11px] leading-relaxed text-ink-muted"
+          >
+            {{ message }}
+          </p>
+        </li>
+      </ul>
+    </el-alert>
 
     <div class="w-[calc(11.5/12*100%)]">
       <p v-if="store.loading" class="text-[11px] text-ink-muted">正在读取 spec 文件…</p>
@@ -259,6 +318,7 @@ async function onApply() {
                 selectable
                 :checked-paths="checkedPaths"
                 :collapse-version="collapseVersion"
+                :warning-paths="warningPaths"
                 @select="selectedPath = $event"
                 @toggle="onToggle"
               />
@@ -274,9 +334,20 @@ async function onApply() {
                 <h2 class="min-w-0 truncate text-[13px] font-medium text-ink" :title="selectedEntry.name">
                   {{ specDisplayName(selectedEntry.name) }}
                 </h2>
-                <el-tag v-if="selectedChangedCount" size="small" type="warning" effect="plain">
-                  {{ selectedChangedCount }} 个场景待更新
-                </el-tag>
+                <div class="flex shrink-0 items-center gap-1.5">
+                  <el-tag
+                    v-if="selectedEntry.analysis.warnings.length"
+                    size="small"
+                    type="warning"
+                    effect="plain"
+                    :title="`${selectedEntry.analysis.warnings.length} 条适用条件提示`"
+                  >
+                    {{ selectedEntry.analysis.warnings.length }} 条提示
+                  </el-tag>
+                  <el-tag v-if="selectedChangedCount" size="small" type="warning" effect="plain">
+                    {{ selectedChangedCount }} 个场景待更新
+                  </el-tag>
+                </div>
               </div>
               <p
                 v-if="selectedEntry.analysis.parsed.specCondition"
@@ -285,6 +356,23 @@ async function onApply() {
               >
                 规格书适用条件：{{ selectedEntry.analysis.parsed.specCondition }}
               </p>
+
+              <!-- 当前文件自己的适用条件提示就近展示，不用回顶部清单里翻 -->
+              <div
+                v-if="selectedEntry.analysis.warnings.length"
+                class="mt-1 max-h-24 overflow-y-auto rounded border border-line bg-surface px-2 py-1"
+              >
+                <p class="text-[11px] font-medium text-[var(--el-color-warning)]">
+                  {{ selectedEntry.analysis.warnings.length }} 条适用条件提示
+                </p>
+                <p
+                  v-for="message in selectedEntry.analysis.warnings"
+                  :key="message"
+                  class="mt-0.5 break-words text-[11px] leading-relaxed text-ink-muted"
+                >
+                  {{ message }}
+                </p>
+              </div>
             </div>
 
             <div class="grid grid-cols-12 items-center border-b border-line bg-surface-soft/50 text-[11px] font-medium text-ink">

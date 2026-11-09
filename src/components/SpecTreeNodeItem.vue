@@ -12,6 +12,8 @@ const props = defineProps<{
   checkedPaths?: Set<string>
   /** 根节点一键折叠时递增，所有目录同时收起 */
   collapseVersion?: number
+  /** 有适用条件提示的 spec 路径：文件名前亮一个提示点 */
+  warningPaths?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -63,12 +65,17 @@ function toggleChecked() {
       <button
         v-else
         type="button"
-        class="min-w-0 flex-1 truncate px-1 py-1 text-left text-[11px] outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
+        class="flex min-w-0 flex-1 items-center gap-1 px-1 py-1 text-left text-[11px] outline-none hover:bg-surface focus-visible:ring-1 focus-visible:ring-primary/40"
         :class="selectedPath === props.node.path ? 'bg-primary/10 text-primary' : 'text-ink'"
         :title="props.node.name"
         @click="emit('select', props.node.path)"
       >
-        {{ specDisplayName(props.node.name) }}
+        <span class="truncate">{{ specDisplayName(props.node.name) }}</span>
+        <span
+          v-if="props.warningPaths?.has(props.node.path)"
+          class="size-1.5 shrink-0 rounded-full bg-[var(--el-color-warning)]"
+          title="该文件有适用条件提示"
+        />
       </button>
     </div>
 
@@ -82,6 +89,7 @@ function toggleChecked() {
         :selectable="selectable"
         :checked-paths="checkedPaths"
         :collapse-version="collapseVersion"
+        :warning-paths="warningPaths"
         @select="emit('select', $event)"
         @toggle="(node, checked) => emit('toggle', node, checked)"
       />
