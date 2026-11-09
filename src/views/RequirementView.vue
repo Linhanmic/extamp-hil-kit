@@ -126,7 +126,7 @@ function onCreateConfig(requirement: Requirement, variant: Variant) {
         <div class="col-span-3">
           <el-input v-model="keyword" size="small" clearable placeholder="需求名称" />
         </div>
-        <div class="col-span-2">
+        <div class="col-span-3">
           <el-select
             v-model="vehicleFilter"
             size="small"
@@ -143,7 +143,7 @@ function onCreateConfig(requirement: Requirement, variant: Variant) {
             />
           </el-select>
         </div>
-        <div class="col-span-4">
+        <div class="col-span-3">
           <el-select
             v-model="requirementStatusFilter"
             size="small"
@@ -152,7 +152,7 @@ function onCreateConfig(requirement: Requirement, variant: Variant) {
             collapse-tags
             collapse-tags-tooltip
             :max-collapse-tags="1"
-            placeholder="需求关联状态：全部"
+            placeholder="状态：全部"
             class="w-full"
           >
             <el-option
@@ -168,7 +168,7 @@ function onCreateConfig(requirement: Requirement, variant: Variant) {
             v-model="variantStatusFilter"
             size="small"
             clearable
-            placeholder="变体关联状态：全部"
+            placeholder="变体：全部"
             class="w-full"
           >
             <el-option label="已关联" value="linked" />

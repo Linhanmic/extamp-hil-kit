@@ -93,22 +93,22 @@ function createConfigFromRequirement(requirement: Requirement) {
 </script>
 
 <template>
-  <!-- @grid A：首层与展开明细统一 12 列，需求 5 · 数量 1 · 状态 2 · 映射 2 · 操作 2；
+  <!-- @grid A：首层与展开明细统一 12 列，需求 3 · 数量 2 · 状态 2 · 映射 3 · 操作 2；
     明细 变体内容 5 · 车型 3 · 状态 2 · 操作 2。 -->
   <div class="min-w-0 border border-line">
     <div
       class="grid grid-cols-12 items-center gap-0 border-b border-line bg-surface-soft text-[11px] font-medium text-ink"
     >
-      <div class="col-span-5 px-3 py-2">需求名称</div>
-      <div class="col-span-1 px-2 py-2 text-center">变体数量</div>
+      <div class="col-span-3 px-3 py-2">需求名称</div>
+      <div class="col-span-2 px-2 py-2 text-center">变体数量</div>
       <div class="col-span-2 px-2 py-2 text-center">关联状态</div>
-      <div class="col-span-2 px-2 py-2 text-center">映射</div>
+      <div class="col-span-3 px-2 py-2 text-center">映射</div>
       <div class="col-span-2 px-2 py-2 text-center">操作</div>
     </div>
 
     <template v-for="requirement in requirements" :key="requirement.id">
       <div class="grid grid-cols-12 items-center gap-0 border-b border-line">
-        <div class="col-span-5 flex min-w-0 items-center gap-1 px-2 py-2">
+        <div class="col-span-3 flex min-w-0 items-center gap-1 px-2 py-2">
           <button
             type="button"
             class="grid size-5 shrink-0 place-items-center rounded text-ink-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -133,7 +133,7 @@ function createConfigFromRequirement(requirement: Requirement) {
             {{ requirement.name }}
           </span>
         </div>
-        <div class="col-span-1 flex items-center justify-center px-2 py-2">
+        <div class="col-span-2 flex items-center justify-center px-2 py-2">
           <el-tag size="small" type="info" effect="plain">
             {{ requirement.variants.length }}
           </el-tag>
@@ -147,7 +147,7 @@ function createConfigFromRequirement(requirement: Requirement) {
             {{ statusLabels[associations.get(requirement.id)!.status] }}
           </el-tag>
         </div>
-        <div class="col-span-2 flex items-center justify-center px-2 py-2">
+        <div class="col-span-3 flex items-center justify-center px-2 py-2">
           <el-segmented
             :model-value="requirementsStore.isParticipating(requirement.id) ? 'participate' : 'skip'"
             size="small"
