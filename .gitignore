@@ -17,6 +17,7 @@ coverage
 
 # electron-builder 输出与缓存
 release/
+release-tmp/
 *.blockmap
 .webpack/
 
