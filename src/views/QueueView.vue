@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useConfigsStore } from '@/stores/configs'
 import { useSpecsStore } from '@/stores/specs'
 import { useTasksStore } from '@/stores/tasks'
@@ -41,10 +42,15 @@ function statusType(status: QueueStatus) {
   return 'info'
 }
 
+function enqueueFeedback(name: string) {
+  ElMessage.success(`已入队：${name}`)
+}
+
 function addTask() {
   const task = tasksStore.tasks.find((item) => item.id === selectedTaskId.value)
   if (!task) return
   queueStore.enqueueTask(task, queueVehicle.value)
+  enqueueFeedback(task.name)
   selectedTaskId.value = ''
 }
 
@@ -54,6 +60,7 @@ function addScenario() {
     { path: scenarioSpecPath.value, heading: scenarioHeading.value },
     queueVehicle.value,
   )
+  enqueueFeedback(scenarioHeading.value)
   scenarioHeading.value = ''
 }
 
@@ -61,7 +68,18 @@ function addSpec() {
   const entry = specsStore.entries.find((item) => item.path === wholeSpecPath.value)
   if (!entry) return
   queueStore.enqueueSpec(entry.path, entry.name, queueVehicle.value)
+  enqueueFeedback(entry.name)
   wholeSpecPath.value = ''
+}
+
+function clearFinished() {
+  const cleared = queueStore.successCount + queueStore.failedCount
+  if (!cleared) {
+    ElMessage.info('没有已完成的队列项')
+    return
+  }
+  queueStore.clearFinished()
+  ElMessage.success(`已清除 ${cleared} 项完成记录`)
 }
 </script>
 
@@ -79,7 +97,7 @@ function addSpec() {
           <el-tag size="small" type="danger" effect="plain">失败 {{ queueStore.failedCount }}</el-tag>
         </div>
         <div class="col-span-6 flex justify-end gap-2">
-          <el-button size="small" :disabled="!queueStore.items.length" @click="queueStore.clearFinished">
+          <el-button size="small" :disabled="!queueStore.items.length" @click="clearFinished">
             清除已完成
           </el-button>
           <el-button

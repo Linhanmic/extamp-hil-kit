@@ -25,6 +25,8 @@ export default defineConfigWithVueTs(
     // unplugin 自动生成的声明文件
     'src/auto-imports.d.ts',
     'src/components.d.ts',
+    // 项目内技能包（第三方脚本，不参与应用 lint）
+    '.claude/**',
   ]),
 
   ...pluginVue.configs['flat/essential'],
